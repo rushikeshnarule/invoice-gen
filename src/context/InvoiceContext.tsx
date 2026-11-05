@@ -183,11 +183,26 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Dual-layer sync: persists to both localStorage and Documents/Invoice Gen Data/database.json
   useEffect(() => {
+    let themeSettings: any = undefined;
+    try {
+      const curTheme = localStorage.getItem('invoice-theme-settings');
+      const optMap = localStorage.getItem('invoice-theme-options-map');
+      const presets = localStorage.getItem('invoice-theme-presets');
+      themeSettings = {
+        currentThemeId: curTheme ? JSON.parse(curTheme).themeId : undefined,
+        optionsByTheme: optMap ? JSON.parse(optMap) : undefined,
+        presets: presets ? JSON.parse(presets) : undefined,
+      };
+    } catch {
+      // ignore
+    }
+
     saveSystemMemory({
       invoices,
       businessProfile,
       clients,
       hasCompletedSetup,
+      themeSettings,
     });
   }, [invoices, businessProfile, clients, hasCompletedSetup]);
 
@@ -799,6 +814,22 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setClients(sysDb.clients);
       }
 
+      if (sysDb.themeSettings) {
+        try {
+          if (sysDb.themeSettings.currentThemeId) {
+            localStorage.setItem('invoice-theme-settings', JSON.stringify({ themeId: sysDb.themeSettings.currentThemeId }));
+          }
+          if (sysDb.themeSettings.optionsByTheme) {
+            localStorage.setItem('invoice-theme-options-map', JSON.stringify(sysDb.themeSettings.optionsByTheme));
+          }
+          if (sysDb.themeSettings.presets) {
+            localStorage.setItem('invoice-theme-presets', JSON.stringify(sysDb.themeSettings.presets));
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       setHasCompletedSetup(true);
 
       saveSystemMemory(
@@ -807,6 +838,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           businessProfile: sysDb.businessProfile || businessProfile,
           clients: sysDb.clients || clients,
           hasCompletedSetup: true,
+          themeSettings: sysDb.themeSettings,
         },
         true
       );

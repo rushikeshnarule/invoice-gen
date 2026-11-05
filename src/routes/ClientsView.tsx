@@ -393,7 +393,7 @@ export const ClientsView: React.FC = () => {
               <h1 className="text-xl font-bold text-slate-900 tracking-tight">
                 Clients &amp; Commercial Accounts
               </h1>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
                 {clients.length} accounts
               </span>
             </div>
@@ -514,129 +514,37 @@ export const ClientsView: React.FC = () => {
                 const clientInvs = getClientInvoices(client.name);
                 const isExpanded = expandedClientId === clientId;
 
+                const locationStr = [
+                  client.address,
+                  [client.city, client.state].filter(Boolean).join(', '),
+                  client.pincode,
+                ].filter(Boolean).join(', ');
+
                 return (
-                  <div key={idx} className="transition-colors hover:bg-slate-50/50">
-                    <div className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      {/* Left: Client Information */}
-                      <div className="flex items-start gap-4 flex-1 min-w-0">
-                        <div className="size-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 shrink-0 mt-0.5">
-                          <RiBuildingLine className="size-5 text-slate-700" />
+                  <div key={idx} className="p-5 transition-colors hover:bg-slate-50/40 border-b border-slate-100 last:border-b-0 space-y-3">
+                    {/* Top Row: Client Name + Badges on Left, Actions on Right */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="size-10 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-700 shrink-0 shadow-2xs">
+                          <RiBuildingLine className="size-5" />
                         </div>
-                        <div className="space-y-1.5 min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-sm text-slate-900">{client.name}</span>
-                            <Badge color="neutral">{client.gstin ? 'B2B GST' : 'Consumer / POS'}</Badge>
-
-                            {/* Client Summary Badges */}
-                            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                              {metrics.invoiceCount} {metrics.invoiceCount === 1 ? 'Invoice' : 'Invoices'}
+                        <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-base text-slate-900 tracking-tight">{client.name}</h3>
+                          <Badge color="neutral">{client.gstin ? 'B2B GST' : 'Consumer / POS'}</Badge>
+                          {metrics.balanceDue > 0 ? (
+                            <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+                              {formatCurrency(metrics.balanceDue, '₹')} Due
                             </span>
-
-                            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
-                              Billed: {formatCurrency(metrics.totalBilled, '₹')}
+                          ) : metrics.invoiceCount > 0 ? (
+                            <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Settled
                             </span>
-
-                            {metrics.balanceDue > 0 ? (
-                              <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                                Due: {formatCurrency(metrics.balanceDue, '₹')}
-                              </span>
-                            ) : metrics.invoiceCount > 0 ? (
-                              <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Settled
-                              </span>
-                            ) : null}
-                          </div>
-
-                          <div className="text-xs text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono">
-                            <span>
-                              GSTIN: <strong className="text-slate-700">{client.gstin || 'None (Unregistered)'}</strong>
-                            </span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                              <RiMapPinLine className="size-3 text-slate-400" />
-                              {client.city}, {client.state} {client.pincode}
-                            </span>
-                            {client.phone && (
-                              <>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <RiPhoneLine className="size-3 text-slate-400" />
-                                  {client.phone}
-                                </span>
-                              </>
-                            )}
-                            {client.email && (
-                              <>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <RiMailLine className="size-3 text-slate-400" />
-                                  {client.email}
-                                </span>
-                              </>
-                            )}
-                            {metrics.latestInvoiceDate && (
-                              <>
-                                <span>•</span>
-                                <span className="flex items-center gap-1 text-slate-600 font-semibold">
-                                  <RiCalendarLine className="size-3 text-blue-500" />
-                                  Last Billed: {formatDate(metrics.latestInvoiceDate)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Preview of Purchased Items / Goods */}
-                          {metrics.itemsSummary.length > 0 && (
-                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                              <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                                <RiShoppingBagLine className="size-3" />
-                                Items Bought:
-                              </span>
-                              {metrics.itemsSummary.slice(0, 4).map((it, i) => (
-                                <span
-                                  key={i}
-                                  className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/80 font-mono truncate max-w-[140px]"
-                                  title={it}
-                                >
-                                  {it}
-                                </span>
-                              ))}
-                              {metrics.itemsSummary.length > 4 && (
-                                <span className="text-[10px] text-slate-400 font-mono">
-                                  +{metrics.itemsSummary.length - 4} more
-                                </span>
-                              )}
-                            </div>
-                          )}
+                          ) : null}
                         </div>
                       </div>
 
-                      {/* Right: Actions */}
-                      <div className="flex items-center gap-2 shrink-0 self-end lg:self-center flex-wrap justify-end">
-                        {/* Preferred Template Selector */}
-                        <div className="text-right mr-1">
-                          <label htmlFor={`client-theme-select-${clientId}`} className="block text-[10px] font-semibold text-slate-500 mb-0.5">
-                            Template:
-                          </label>
-                          <select
-                            id={`client-theme-select-${clientId}`}
-                            value={assignedThemeId}
-                            onChange={(e) => handleThemeChange(clientId, client.name, e.target.value)}
-                            className={`text-xs px-2 py-1 rounded-lg border font-semibold outline-none transition-colors cursor-pointer ${
-                              assignedThemeId
-                                ? 'bg-blue-50/60 border-blue-200 text-blue-900'
-                                : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                            }`}
-                          >
-                            <option value="">Default ({activeDefaultTheme.name})</option>
-                            {themes.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
+                      {/* Right Action Buttons */}
+                      <div className="flex items-center gap-2 self-start sm:self-center shrink-0 flex-wrap">
                         {/* View Invoices Ledger Toggle */}
                         <Button
                           size="small"
@@ -655,7 +563,7 @@ export const ClientsView: React.FC = () => {
                           leadingIcon={RiCalendarLine}
                           onClick={() => handleOpenMonthlyModal(client)}
                           title="Generate a consolidated monthly bill for this client"
-                          className="text-xs font-semibold text-purple-700 border-purple-200 bg-purple-50/50 hover:bg-purple-100/60"
+                          className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/70"
                         >
                           Monthly Bill
                         </Button>
@@ -667,9 +575,9 @@ export const ClientsView: React.FC = () => {
                           leadingIcon={RiAddLine}
                           onClick={() => handleCreateDailyBill(client)}
                           title="Create a regular daily invoice for this client"
-                          className="text-xs font-semibold"
+                          className="text-xs font-semibold shadow-xs"
                         >
-                          + Bill
+                          New Bill
                         </Button>
 
                         {/* Edit Client Button */}
@@ -678,6 +586,7 @@ export const ClientsView: React.FC = () => {
                           variant="secondary"
                           leadingIcon={RiEditLine}
                           onClick={() => handleStartEdit(client)}
+                          title="Edit Client"
                           className="text-xs font-semibold"
                         >
                           Edit
@@ -693,6 +602,121 @@ export const ClientsView: React.FC = () => {
                           className="text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50"
                         />
                       </div>
+                    </div>
+
+                    {/* Middle Row: Contact & Business Metadata Strip */}
+                    <div className="bg-slate-50/80 px-3.5 py-2 rounded-xl border border-slate-200/70 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600 font-mono">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-sans text-slate-400 font-medium">GSTIN:</span>
+                        <strong className="text-slate-800">{client.gstin || 'None (Unregistered)'}</strong>
+                      </div>
+
+                      {locationStr && (
+                        <>
+                          <span className="text-slate-300 hidden sm:inline">•</span>
+                          <div className="flex items-center gap-1 text-slate-600">
+                            <RiMapPinLine className="size-3.5 text-slate-400 shrink-0" />
+                            <span>{locationStr}</span>
+                          </div>
+                        </>
+                      )}
+
+                      {client.phone && (
+                        <>
+                          <span className="text-slate-300 hidden sm:inline">•</span>
+                          <div className="flex items-center gap-1 text-slate-600">
+                            <RiPhoneLine className="size-3.5 text-slate-400 shrink-0" />
+                            <span>{client.phone}</span>
+                          </div>
+                        </>
+                      )}
+
+                      {client.email && (
+                        <>
+                          <span className="text-slate-300 hidden sm:inline">•</span>
+                          <div className="flex items-center gap-1 text-slate-600">
+                            <RiMailLine className="size-3.5 text-slate-400 shrink-0" />
+                            <span>{client.email}</span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Preferred Template Selector with Controlled Width */}
+                      <div className="flex items-center gap-1.5 sm:ml-auto">
+                        <label htmlFor={`client-theme-select-${clientId}`} className="text-[11px] font-sans text-slate-400 font-medium whitespace-nowrap">
+                          Template:
+                        </label>
+                        <select
+                          id={`client-theme-select-${clientId}`}
+                          value={assignedThemeId}
+                          onChange={(e) => handleThemeChange(clientId, client.name, e.target.value)}
+                          className={`text-xs max-w-[190px] truncate px-2 py-0.5 rounded-lg border font-sans font-medium outline-none transition-colors cursor-pointer ${
+                            assignedThemeId
+                              ? 'bg-blue-50/70 border-blue-200 text-blue-900 font-semibold'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                          }`}
+                        >
+                          <option value="">Default ({activeDefaultTheme.name})</option>
+                          {themes.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Bottom Row: Financial Summary & Bought Items */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600 font-mono">
+                          <span className="text-[11px] font-sans text-slate-400">Total Billed:</span>
+                          <strong className="text-slate-900 font-semibold">{formatCurrency(metrics.totalBilled, '₹')}</strong>
+                        </div>
+
+                        <span className="text-slate-300">•</span>
+
+                        <div className="flex items-center gap-1.5 text-xs font-mono">
+                          <span className="text-[11px] font-sans text-slate-400">Balance:</span>
+                          <strong className={metrics.balanceDue > 0 ? 'text-rose-600 font-semibold' : 'text-emerald-700 font-semibold'}>
+                            {metrics.balanceDue > 0 ? formatCurrency(metrics.balanceDue, '₹') : 'Nil'}
+                          </strong>
+                        </div>
+
+                        {metrics.latestInvoiceDate && (
+                          <>
+                            <span className="text-slate-300">•</span>
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
+                              <RiCalendarLine className="size-3.5 text-blue-500 shrink-0" />
+                              <span>Last Billed: {formatDate(metrics.latestInvoiceDate)}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Items Bought Chips */}
+                      {metrics.itemsSummary.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                            <RiShoppingBagLine className="size-3 shrink-0" />
+                            Items Bought:
+                          </span>
+                          {metrics.itemsSummary.slice(0, 4).map((it, i) => (
+                            <span
+                              key={i}
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200/80 font-mono truncate max-w-[140px]"
+                              title={it}
+                            >
+                              {it}
+                            </span>
+                          ))}
+                          {metrics.itemsSummary.length > 4 && (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              +{metrics.itemsSummary.length - 4} more
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* ─── EXPANDABLE CLIENT INVOICES LEDGER ─── */}
@@ -713,7 +737,7 @@ export const ClientsView: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleOpenMonthlyModal(client)}
-                              className="text-xs font-semibold text-purple-700 hover:text-purple-800 underline cursor-pointer"
+                              className="text-xs font-semibold text-blue-600 hover:text-blue-700 underline cursor-pointer"
                             >
                               + Create Monthly Invoice
                             </button>
@@ -789,7 +813,7 @@ export const ClientsView: React.FC = () => {
                                       </td>
                                       <td className="py-2.5 px-3 whitespace-nowrap">
                                         {isMonthly ? (
-                                          <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-semibold font-sans">
+                                          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-semibold font-sans">
                                             Monthly {inv.data.billingPeriod ? `(${inv.data.billingPeriod})` : ''}
                                           </span>
                                         ) : (
@@ -821,14 +845,14 @@ export const ClientsView: React.FC = () => {
                                       </td>
                                       <td className="py-2.5 px-3 text-center whitespace-nowrap font-sans">
                                         <span
-                                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                          className={`px-2 py-0.5 rounded-md text-[11px] font-medium capitalize ${
                                             inv.status === 'paid'
-                                              ? 'bg-emerald-100 text-emerald-800'
+                                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                               : inv.status === 'sent'
-                                              ? 'bg-blue-100 text-blue-800'
+                                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
                                               : inv.status === 'overdue'
-                                              ? 'bg-rose-100 text-rose-800'
-                                              : 'bg-slate-100 text-slate-700'
+                                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                              : 'bg-slate-100 text-slate-700 border border-slate-200'
                                           }`}
                                         >
                                           {inv.status}
@@ -1251,7 +1275,7 @@ export const ClientsView: React.FC = () => {
             <ModalBody>
               <div className="space-y-4 pt-2 text-xs">
                 {/* Client Profile Box */}
-                <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-200 flex items-center justify-between">
+                <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200 flex items-center justify-between">
                   <div>
                     <span className="font-bold text-slate-900 text-sm block">
                       {monthlyModalClient.name}
@@ -1260,7 +1284,7 @@ export const ClientsView: React.FC = () => {
                       GSTIN: {monthlyModalClient.gstin || 'Unregistered'} • {monthlyModalClient.city}, {monthlyModalClient.state}
                     </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 uppercase">
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
                     Monthly Bill
                   </span>
                 </div>

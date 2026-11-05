@@ -107,12 +107,12 @@ const DEFAULT_FOOTER_STATS: Stat[] = [
 
 /** Gradient stops for the footer variant's icon tile, keyed by tone. */
 const TILE_TONES: Record<StatTone, string> = {
-  blue: "from-blue-500 to-blue-600",
-  orange: "from-orange-400 to-orange-500",
-  purple: "from-purple-500 to-purple-600",
-  pink: "from-pink-500 to-pink-600",
-  sky: "from-sky-400 to-sky-500",
-  emerald: "from-emerald-500 to-emerald-600",
+  blue: "bg-blue-50 text-blue-700 border border-blue-100",
+  orange: "bg-amber-50 text-amber-700 border border-amber-100",
+  purple: "bg-slate-100 text-slate-700 border border-slate-200",
+  pink: "bg-rose-50 text-rose-700 border border-rose-100",
+  sky: "bg-sky-50 text-sky-700 border border-sky-100",
+  emerald: "bg-emerald-50 text-emerald-700 border border-emerald-100",
 };
 
 const DELTA_STYLES: Record<
@@ -207,11 +207,11 @@ function FooterStatCard({ stat }: { stat: Stat }) {
       <div className="flex w-full items-start justify-between gap-2.5 p-2">
         <span
           className={cx(
-            "flex size-10 shrink-0 items-center justify-center rounded-2lg bg-linear-to-b",
+            "flex size-10 shrink-0 items-center justify-center rounded-2lg",
             TILE_TONES[stat.tone ?? "blue"],
           )}
         >
-          <stat.icon className="size-5 shrink-0 text-white" aria-hidden />
+          <stat.icon className="size-5 shrink-0" aria-hidden />
         </span>
         {stat.hint && <StatHint label={stat.label} hint={stat.hint} />}
       </div>

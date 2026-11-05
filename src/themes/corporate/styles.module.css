@@ -27,6 +27,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  gap: 16px;
   border-bottom: 2px solid var(--accent, #334155);
   padding-bottom: 8px;
   margin-bottom: 20px;
@@ -36,12 +37,15 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1;
 }
 
 .logo {
   max-height: 48px;
   max-width: 140px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .invoiceTitle {
@@ -55,12 +59,14 @@
   text-align: right;
   font-size: 8.5pt;
   color: #64748b;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 /* Two-column FROM / BILL TO header */
 .partiesGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 32px;
   margin-bottom: 24px;
 }
@@ -68,6 +74,9 @@
 .partyCol {
   border-left: 3px solid var(--accent, #94a3b8);
   padding-left: 12px;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .partyLabel {
@@ -84,12 +93,16 @@
   font-weight: 700;
   color: #0f172a;
   margin-bottom: 2px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .partyDetails {
   font-size: 8.5pt;
   color: #475569;
   line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Corporate Table */
@@ -221,7 +234,7 @@
 /* Formal Bottom Section */
 .bottomSection {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 24px;
   margin-bottom: 20px;
   break-inside: avoid;
@@ -232,13 +245,17 @@
   font-size: 8pt;
   color: #475569;
   line-height: 1.5;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Signature and Company Stamp side by side */
 .signStampGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
+  min-width: 0;
 }
 
 .signBox,

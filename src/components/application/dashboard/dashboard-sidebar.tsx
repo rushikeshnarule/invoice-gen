@@ -101,7 +101,7 @@ function NavItem({
         "transition-[width,background-color] duration-300 ease-in-out",
         collapsed ? "w-9" : "w-full",
         isSelected
-          ? "bg-linear-to-b from-accent-500 to-accent-600 shadow-nav-selected"
+          ? "bg-accent-600 text-white shadow-xs"
           : "hover:bg-background-secondary-hover",
       )}
     >

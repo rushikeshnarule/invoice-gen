@@ -30,6 +30,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  gap: 20px;
   padding-bottom: 12px;
 }
 
@@ -46,15 +47,22 @@
   font-weight: 400;
   letter-spacing: 0.5px;
   color: #292524;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .brandAddress {
   font-size: 8.5pt;
   color: #78716c;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .titleArea {
   text-align: right;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 .invoiceTitle {
@@ -70,6 +78,8 @@
   font-size: 9.5pt;
   color: #78716c;
   margin-top: 2px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Thin accent rule */
@@ -89,6 +99,9 @@
 
 .clientCol {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .sectionLabel {
@@ -266,6 +279,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  gap: 24px;
   margin-top: 20px;
   break-inside: avoid;
   page-break-inside: avoid;
@@ -275,6 +289,10 @@
   font-size: 8pt;
   color: #78716c;
   line-height: 1.5;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .bankBox strong {
@@ -283,6 +301,10 @@
 
 .signBox {
   text-align: right;
+  flex-shrink: 0;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .signatureImg {

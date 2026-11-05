@@ -46,9 +46,22 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      gap: 16px;
       border-bottom: 2px solid var(--accent, #2563eb);
       padding-bottom: 12px;
       margin-bottom: 16px;
+    }
+    .remote-header > div:first-child {
+      min-width: 0;
+      flex: 1;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+    .remote-header > div:last-child {
+      min-width: 0;
+      flex-shrink: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .remote-logo {
       max-height: 54px;
@@ -64,7 +77,7 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
     }
     .remote-meta-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 16px;
       margin-bottom: 16px;
       font-size: 9.5pt;
@@ -74,6 +87,9 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .remote-party-title {
       font-size: 8pt;
@@ -186,29 +202,34 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
     .contractor-header-box {
       text-align: center;
       border: 1.5px solid var(--accent, #0f172a);
-      padding: 6px 0;
+      padding: 6px 12px;
       font-size: 13pt;
       font-weight: 800;
       letter-spacing: 1.5px;
-      margin-bottom: -1.5px;
       background: #f8fafc;
       color: var(--accent, #0f172a);
     }
     .contractor-meta-bar {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      gap: 12px;
       border: 1.5px solid var(--accent, #0f172a);
-      padding: 4px 8px;
+      border-top: none;
+      padding: 5px 10px;
       font-size: 8.5pt;
-      margin-bottom: -1.5px;
       background: #fafafa;
+      min-width: 0;
     }
     .contractor-business-info {
       border: 1.5px solid var(--accent, #0f172a);
-      padding: 8px 10px;
+      border-top: none;
+      padding: 8px 12px;
       text-align: center;
-      margin-bottom: -1.5px;
       background: #ffffff;
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .contractor-company-name {
       font-size: 13pt;
@@ -217,15 +238,22 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
       margin-bottom: 2px;
       text-transform: uppercase;
       color: var(--accent, #0f172a);
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .contractor-company-address {
       font-size: 8pt;
       color: #1e293b;
       margin-bottom: 3px;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .contractor-inline-row {
       display: flex;
       justify-content: space-around;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
       font-size: 8pt;
       margin-top: 2px;
     }
@@ -236,12 +264,17 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
       font-size: 7.5pt;
       background: #f8fafc;
       border-radius: 4px;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .contractor-buyer-section {
       border: 1.5px solid var(--accent, #0f172a);
-      padding: 6px 10px;
-      margin-bottom: -1.5px;
+      border-top: none;
+      padding: 6px 12px;
       background: #ffffff;
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .contractor-section-heading {
       font-weight: 800;
@@ -254,17 +287,24 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
     }
     .contractor-buyer-body {
       padding-top: 2px;
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .contractor-buyer-meta {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      gap: 12px;
       margin-top: 3px;
       font-size: 8pt;
+      flex-wrap: wrap;
     }
     .contractor-table {
       width: 100%;
       border-collapse: collapse;
       border: 1.5px solid var(--accent, #0f172a);
+      border-top: none;
       font-size: 8pt;
     }
     .contractor-table th,
@@ -325,44 +365,55 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
     }
     .contractor-footer-grid {
       display: grid;
-      grid-template-columns: 1.4fr 1fr;
+      grid-template-columns: 1.15fr 1fr;
       border: 1.5px solid var(--accent, #0f172a);
       border-top: none;
       min-height: 85px;
       background: #ffffff;
     }
     .contractor-declaration-box {
-      padding: 6px 8px;
+      padding: 6px 10px;
       border-right: 1.5px solid var(--accent, #0f172a);
       font-size: 7.5pt;
       color: #1e293b;
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .contractor-signatory-box {
-      padding: 6px 8px;
+      padding: 6px 10px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       text-align: right;
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .contractor-sign-for {
       font-size: 8pt;
       font-weight: 700;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     .contractor-sign-assets {
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: 12px;
-      min-height: 42px;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      min-height: 48px;
     }
     .contractor-stamp-img {
       max-height: 45px;
       max-width: 65px;
       mix-blend-mode: multiply;
+      flex-shrink: 0;
     }
     .contractor-signature-img {
       max-height: 38px;
       max-width: 95px;
+      flex-shrink: 0;
     }
     .contractor-auth-label {
       font-size: 7.5pt;
@@ -371,6 +422,14 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
       padding-top: 2px;
       display: inline-block;
       margin-left: auto;
+      white-space: nowrap;
+    }
+    .contractor-invoice-root.paper-a5 .contractor-footer-grid {
+      grid-template-columns: 1fr;
+    }
+    .contractor-invoice-root.paper-a5 .contractor-declaration-box {
+      border-right: none;
+      border-bottom: 1.5px solid var(--accent, #0f172a);
     }
     @media print {
       .contractor-invoice-root {

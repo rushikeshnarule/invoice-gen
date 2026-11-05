@@ -281,9 +281,9 @@ export const InvoicesView: React.FC = () => {
               leadingIcon={RiCalendarLine}
               onClick={handleCreateMonthly}
               title="Create a consolidated monthly bill"
-              className="text-xs font-semibold text-purple-700 border-purple-200 bg-purple-50/50 hover:bg-purple-100/60"
+              className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/70"
             >
-              + Monthly Bill
+              Monthly Bill
             </Button>
 
             {/* Create Daily Invoice Button */}
@@ -294,7 +294,7 @@ export const InvoicesView: React.FC = () => {
               onClick={handleCreateDaily}
               className="text-xs shadow-xs font-semibold"
             >
-              + Daily Bill
+              Daily Bill
             </Button>
           </div>
         </div>
@@ -364,7 +364,7 @@ export const InvoicesView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTypeFilter('all')}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 ${
                     typeFilter === 'all'
                       ? 'bg-white text-slate-900 shadow-2xs'
                       : 'text-slate-500 hover:text-slate-800'
@@ -375,9 +375,9 @@ export const InvoicesView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTypeFilter('daily')}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 ${
                     typeFilter === 'daily'
-                      ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                      ? 'bg-white text-blue-700 shadow-2xs'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
@@ -386,9 +386,9 @@ export const InvoicesView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTypeFilter('monthly')}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-150 ${
                     typeFilter === 'monthly'
-                      ? 'bg-purple-600 text-white shadow-2xs font-bold'
+                      ? 'bg-white text-blue-700 shadow-2xs'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
@@ -403,7 +403,7 @@ export const InvoicesView: React.FC = () => {
                     key={s}
                     type="button"
                     onClick={() => setStatusFilter(s)}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold capitalize transition-all ${
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium capitalize transition-colors duration-150 ${
                       statusFilter === s
                         ? 'bg-white text-slate-900 shadow-2xs'
                         : 'text-slate-500 hover:text-slate-800'
@@ -478,7 +478,7 @@ export const InvoicesView: React.FC = () => {
                         {renderStatusChip(inv.status)}
 
                         {isMonthly ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200 font-sans">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 font-sans">
                             Monthly {inv.data.billingPeriod ? `• ${inv.data.billingPeriod}` : ''}
                           </span>
                         ) : (

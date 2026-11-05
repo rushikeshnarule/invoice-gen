@@ -310,7 +310,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
             </div>
             <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 p-0.5 border border-slate-200">
               <div
-                className="h-full rounded-full bg-blue-600 transition-all duration-200 ease-out"
+                className="h-full rounded-full bg-blue-600 transition-[width] duration-200 ease-out"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -325,7 +325,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               return (
                 <div
                   key={step.id}
-                  className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs transition-all duration-200 ${
+                  className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs transition-colors duration-150 ${
                     isDone
                       ? 'bg-slate-50 border border-slate-200 text-slate-800'
                       : isInProgress
@@ -353,7 +353,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                     </span>
                   )}
                   {isInProgress && (
-                    <span className="ml-auto text-[10px] font-mono text-blue-600 font-medium animate-pulse">
+                    <span className="ml-auto text-[10px] font-mono text-blue-600 font-medium">
                       In progress...
                     </span>
                   )}
@@ -419,9 +419,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('wizard')}
-            className={`py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors duration-150 cursor-pointer ${
               activeTab === 'wizard'
-                ? 'bg-white text-blue-700 font-bold shadow-2xs border border-slate-200'
+                ? 'bg-white text-blue-700 font-semibold shadow-2xs border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
@@ -432,16 +432,16 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('restore')}
-            className={`py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors duration-150 cursor-pointer ${
               activeTab === 'restore'
-                ? 'bg-white text-blue-700 font-bold shadow-2xs border border-slate-200'
+                ? 'bg-white text-blue-700 font-semibold shadow-2xs border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
             <RiDatabase2Line className="size-4 shrink-0" />
             <span>2. Load From Previous Session / Memory</span>
             {memoryInfo?.exists && (
-              <span className="size-2 rounded-full bg-emerald-500 animate-pulse ml-1" title="Saved memory detected" />
+              <span className="size-2 rounded-full bg-emerald-500 ml-1" title="Saved memory detected" />
             )}
           </button>
         </div>
@@ -460,9 +460,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/60 flex flex-col justify-between space-y-4">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
                       <RiFolder2Line className="size-4 text-blue-600" />
-                      Saved Machine Memory
+                      Saved machine memory
                     </span>
                     {memoryInfo?.exists ? (
                       <Chip color="lime" variant="caption">
@@ -525,9 +525,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/60 flex flex-col justify-between space-y-4">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
                       <RiShieldCheckLine className="size-4 text-emerald-600" />
-                      Backup File
+                      Backup file
                     </span>
                     <Chip color="blue" variant="caption">
                       .JSON

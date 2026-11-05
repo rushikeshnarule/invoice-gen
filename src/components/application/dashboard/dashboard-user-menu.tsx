@@ -86,8 +86,8 @@ export function DashboardUserMenu({
               </span>
               <ChevronUpDownSmall className="size-3.5 shrink-0 text-slate-400" />
             </span>
-            <span className="text-[10px] font-mono text-emerald-600 flex items-center gap-1">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-mono text-emerald-600 flex items-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
               Offline Ready
             </span>
           </div>
@@ -131,11 +131,11 @@ export function DashboardUserMenu({
           {/* Quick Ledger Overview */}
           <div className="grid grid-cols-2 gap-1.5 py-1">
             <div className="flex flex-col p-2 rounded-lg bg-slate-50 border border-slate-100 text-start">
-              <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Invoices</span>
+              <span className="text-[11px] text-slate-500 font-medium">Invoices</span>
               <span className="text-sm font-bold text-slate-800 font-mono">{invoices.length}</span>
             </div>
             <div className="flex flex-col p-2 rounded-lg bg-slate-50 border border-slate-100 text-start">
-              <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Clients</span>
+              <span className="text-[11px] text-slate-500 font-medium">Clients</span>
               <span className="text-sm font-bold text-slate-800 font-mono">{clients.length}</span>
             </div>
           </div>

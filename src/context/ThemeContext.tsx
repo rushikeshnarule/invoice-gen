@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import type { ThemeOptions, ThemePreset } from '../types';
 import { resolveOptions } from '../themes';
+import { saveSystemMemory } from '../services/systemStorage';
 
 interface ThemeContextValue {
   // Current theme
@@ -99,10 +100,39 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [getOptionsForTheme, currentThemeId]
   );
 
+  const syncToSystemMemory = useCallback(
+    (themeId: string, optionsMap: Record<string, Partial<ThemeOptions>>, currentPresets: ThemePreset[]) => {
+      try {
+        const rawInvoices = localStorage.getItem('offline-software-invoices-v2');
+        const rawBusiness = localStorage.getItem('offline-software-business-profile-v2');
+        const rawClients = localStorage.getItem('offline-software-clients-v2');
+        const rawSetup = localStorage.getItem('offline-software-setup-completed-v1');
+
+        if (rawBusiness || rawInvoices) {
+          saveSystemMemory({
+            invoices: rawInvoices ? JSON.parse(rawInvoices) : [],
+            businessProfile: rawBusiness ? JSON.parse(rawBusiness) : ({ name: '' } as any),
+            clients: rawClients ? JSON.parse(rawClients) : [],
+            hasCompletedSetup: Boolean(rawSetup),
+            themeSettings: {
+              currentThemeId: themeId,
+              optionsByTheme: optionsMap,
+              presets: currentPresets,
+            },
+          });
+        }
+      } catch {
+        // ignore
+      }
+    },
+    []
+  );
+
   const setThemeId = useCallback((id: string) => {
     setCurrentThemeId(id);
     saveToStorage(STORAGE_KEY, { themeId: id });
-  }, []);
+    syncToSystemMemory(id, userOptionsByTheme, presets);
+  }, [userOptionsByTheme, presets, syncToSystemMemory]);
 
   const setOptions = useCallback((partial: Partial<ThemeOptions>) => {
     setUserOptionsByTheme((prev) => {
@@ -112,9 +142,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         [currentThemeId]: { ...currentOverrides, ...partial },
       };
       saveToStorage(THEME_OPTIONS_MAP_KEY, next);
+      syncToSystemMemory(currentThemeId, next, presets);
       return next;
     });
-  }, [currentThemeId]);
+  }, [currentThemeId, presets, syncToSystemMemory]);
 
   const setThemeOptions = useCallback((targetThemeId: string, partial: Partial<ThemeOptions>) => {
     setUserOptionsByTheme((prev) => {
@@ -124,9 +155,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         [targetThemeId]: { ...currentOverrides, ...partial },
       };
       saveToStorage(THEME_OPTIONS_MAP_KEY, next);
+      syncToSystemMemory(targetThemeId, next, presets);
       return next;
     });
-  }, []);
+  }, [presets, syncToSystemMemory]);
 
   const resetOptions = useCallback((targetThemeId?: string) => {
     const idToReset = targetThemeId || currentThemeId;
@@ -134,9 +166,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const next = { ...prev };
       delete next[idToReset];
       saveToStorage(THEME_OPTIONS_MAP_KEY, next);
+      syncToSystemMemory(currentThemeId, next, presets);
       return next;
     });
-  }, [currentThemeId]);
+  }, [currentThemeId, presets, syncToSystemMemory]);
 
   const savePreset = useCallback((name: string) => {
     setPresets((prev) => {
@@ -149,9 +182,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
       const next = [...prev, preset];
       saveToStorage(PRESETS_KEY, next);
+      syncToSystemMemory(currentThemeId, userOptionsByTheme, next);
       return next;
     });
-  }, [currentThemeId, options]);
+  }, [currentThemeId, options, userOptionsByTheme, syncToSystemMemory]);
 
   const loadPreset = useCallback((presetId: string) => {
     const preset = presets.find((p) => p.id === presetId);
@@ -163,18 +197,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         [preset.themeId]: preset.options,
       };
       saveToStorage(THEME_OPTIONS_MAP_KEY, next);
+      saveToStorage(STORAGE_KEY, { themeId: preset.themeId });
+      syncToSystemMemory(preset.themeId, next, presets);
       return next;
     });
-    saveToStorage(STORAGE_KEY, { themeId: preset.themeId });
-  }, [presets]);
+  }, [presets, syncToSystemMemory]);
 
   const deletePreset = useCallback((presetId: string) => {
     setPresets((prev) => {
       const next = prev.filter((p) => p.id !== presetId);
       saveToStorage(PRESETS_KEY, next);
+      syncToSystemMemory(currentThemeId, userOptionsByTheme, next);
       return next;
     });
-  }, []);
+  }, [currentThemeId, userOptionsByTheme, syncToSystemMemory]);
 
   const exportPresets = useCallback(() => {
     return JSON.stringify(presets, null, 2);
@@ -187,6 +223,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setPresets((prev) => {
         const next = [...prev, ...imported];
         saveToStorage(PRESETS_KEY, next);
+        syncToSystemMemory(currentThemeId, userOptionsByTheme, next);
         return next;
       });
       return true;
@@ -194,7 +231,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.error('Failed to import presets:', e);
       return false;
     }
-  }, []);
+  }, [currentThemeId, userOptionsByTheme, syncToSystemMemory]);
 
   const setClientDefault = useCallback((clientId: string, themeId: string | null) => {
     setClientDefaults((prev) => {

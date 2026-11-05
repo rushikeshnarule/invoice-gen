@@ -7,9 +7,9 @@ import type {
   WatermarkType,
   PaperSize,
 } from '../../types';
-import { ACCENT_PALETTE } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 import { getTheme } from '../../themes';
+import { ColorPickerField } from './ColorPickerField';
 
 // BoardUI components
 import { SwitchCard } from '@/components/base/switch/switch-card';
@@ -97,12 +97,12 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
       {/* Panel Header */}
       <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
         <div>
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-            Theme Customization
+          <span className="text-xs font-medium text-slate-500 block">
+            Theme customization
           </span>
           <h3 className="text-base font-bold text-slate-900 tracking-tight mt-0.5 flex items-center gap-2">
             <span>{theme.name}</span>
-            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="text-xs font-normal px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
               {theme.paper.join(' / ')}
             </span>
           </h3>
@@ -151,57 +151,10 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
         {activeTab === 'styling' && (
           <div className="space-y-4">
             {/* Accent Color Palette */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-slate-700">
-                  Accent Colour
-                </span>
-                <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                  {options.accentColor.toUpperCase()}
-                </span>
-              </div>
-
-              {/* 10-Color Palette Swatches */}
-              <div className="grid grid-cols-5 gap-2 mb-2.5">
-                {ACCENT_PALETTE.map((hex) => {
-                  const isSelected = hex.toLowerCase() === options.accentColor.toLowerCase();
-                  return (
-                    <button
-                      key={hex}
-                      type="button"
-                      onClick={() => onChange({ accentColor: hex })}
-                      className={`h-8 rounded-lg transition-all relative flex items-center justify-center ${
-                        isSelected
-                          ? 'ring-2 ring-slate-900 scale-105 shadow-sm'
-                          : 'hover:scale-102 border border-black/10'
-                      }`}
-                      style={{ backgroundColor: hex }}
-                      title={hex}
-                    >
-                      {isSelected && <span className="size-2 rounded-full bg-white shadow" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Custom Hex Input */}
-              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                <input
-                  type="color"
-                  value={options.accentColor}
-                  onChange={(e) => onChange({ accentColor: e.target.value })}
-                  className="size-7 rounded border border-slate-300 bg-transparent cursor-pointer p-0"
-                />
-                <input
-                  type="text"
-                  value={options.accentColor}
-                  onChange={(e) => onChange({ accentColor: e.target.value })}
-                  placeholder="#2563EB"
-                  maxLength={7}
-                  className="flex-1 bg-transparent text-slate-900 font-mono text-xs outline-none"
-                />
-              </div>
-            </div>
+            <ColorPickerField
+              value={options.accentColor}
+              onChange={(hex) => onChange({ accentColor: hex })}
+            />
 
             {/* Typography Family */}
             <div>
@@ -366,8 +319,8 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
         {/* ─── TAB 2: COLUMNS & GST ─── */}
         {activeTab === 'columns' && (
           <div className="space-y-3">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-              Table Structure
+            <span className="text-xs font-medium text-slate-500 block">
+              Table structure
             </span>
 
             <SwitchCard
@@ -388,8 +341,8 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
             />
 
             <div className="pt-2 border-t border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">
-                Tax &amp; Amount Breakdown
+              <span className="text-xs font-medium text-slate-500 block mb-2">
+                Tax &amp; amount breakdown
               </span>
 
               <div className="space-y-2">
@@ -447,8 +400,8 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
         {/* ─── TAB 3: PAYMENT & LEGAL ─── */}
         {activeTab === 'footer' && (
           <div className="space-y-3">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-              Remittance Information
+            <span className="text-xs font-medium text-slate-500 block">
+              Remittance information
             </span>
 
             <SwitchCard
@@ -486,8 +439,8 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
             />
 
             <div className="pt-2 border-t border-slate-100 space-y-2">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-                Notes &amp; Policies
+              <span className="text-xs font-medium text-slate-500 block mb-1">
+                Notes &amp; policies
               </span>
 
               <SwitchCard
@@ -559,8 +512,8 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
             </div>
 
             <div>
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">
-                Saved Presets ({presets.length})
+              <span className="text-xs font-medium text-slate-500 block mb-2">
+                Saved presets ({presets.length})
               </span>
 
               {presets.length === 0 ? (

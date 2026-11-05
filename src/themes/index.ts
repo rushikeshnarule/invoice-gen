@@ -48,19 +48,43 @@ export const themeOrder = [
 
 export const THEMES = themeOrder.map((id) => themeRegistry[id]);
 
+// ─── Remote Theme Cache ───────────────────────────────────────────────
+// Preserves stable React component identities and ThemeDefinition references
+// across re-renders to prevent unmount/remount churn and layout recalculations.
+const remoteComponentCache = new Map<string, React.FC<any>>();
+const remoteThemeDefCache = new Map<string, ThemeDefinition & { isRemote?: boolean }>();
+
+function getRemoteComponent(remote: RemoteTemplateDefinition): React.FC<any> {
+  const existing = remoteComponentCache.get(remote.id);
+  if (existing) return existing;
+
+  const Comp: React.FC<any> = (props: any) => {
+    return React.createElement(DynamicRemoteTheme, { ...props, templateDef: remote });
+  };
+  Comp.displayName = `RemoteTheme_${remote.id}`;
+  remoteComponentCache.set(remote.id, Comp);
+  return Comp;
+}
+
 function remoteToThemeDef(remote: RemoteTemplateDefinition): ThemeDefinition & { isRemote?: boolean } {
-  return {
+  const cacheKey = `${remote.id}_${remote.updatedAt || '0'}`;
+  const cached = remoteThemeDefCache.get(cacheKey);
+  if (cached) return cached;
+
+  const def: ThemeDefinition & { isRemote?: boolean } = {
     id: remote.id,
     name: `${remote.name} (Netlify)`,
     description: remote.description || 'Cloud-synchronized invoice template from Netlify.',
     paper: remote.paper || ['A4', 'A5'],
     isRemote: true,
-    component: (props) => React.createElement(DynamicRemoteTheme, { ...props, templateDef: remote }),
+    component: getRemoteComponent(remote),
     defaultOptions: {
       ...DEFAULT_THEME_OPTIONS,
       ...(remote.defaultOptions || {}),
     },
   };
+  remoteThemeDefCache.set(cacheKey, def);
+  return def;
 }
 
 /**
@@ -89,12 +113,24 @@ export function resolveOptions(
   };
 }
 
+let cachedAllThemes: ThemeDefinition[] | null = null;
+let lastRemoteHash = '';
+
 /**
  * Get all themes as an array (both built-in and cached Netlify cloud templates).
+ * Uses memoization to return the exact same array reference if the template list hasn't changed.
  */
 export function getAllThemes(): ThemeDefinition[] {
   const builtIn = themeOrder.map((id) => themeRegistry[id]);
   const remoteList = getCachedRemoteTemplates();
+  const currentHash = `${remoteList.length}_${remoteList.map((r) => r.id + (r.updatedAt || '')).join(',')}`;
+
+  if (cachedAllThemes && lastRemoteHash === currentHash) {
+    return cachedAllThemes;
+  }
+
   const remoteThemes = remoteList.map(remoteToThemeDef);
-  return [...builtIn, ...remoteThemes];
+  cachedAllThemes = [...builtIn, ...remoteThemes];
+  lastRemoteHash = currentHash;
+  return cachedAllThemes;
 }

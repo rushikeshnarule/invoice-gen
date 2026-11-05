@@ -101,7 +101,7 @@
 /* Two column metadata */
 .metaGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   border: 1px solid #111827;
   margin-bottom: 14px;
 }
@@ -109,10 +109,16 @@
 .metaColLeft {
   padding: 8px 10px;
   border-right: 1px solid #111827;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .metaColRight {
   padding: 8px 10px;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .sectionHeading {
@@ -130,18 +136,23 @@
   display: flex;
   margin-bottom: 3px;
   font-size: 9pt;
+  min-width: 0;
 }
 
 .metaLabel {
   width: 110px;
   color: #4b5563;
   font-weight: 500;
+  flex-shrink: 0;
 }
 
 .metaVal {
   flex: 1;
   font-weight: 600;
   color: #111827;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Table */
@@ -272,7 +283,7 @@
 /* Bottom columns: Bank & Signature */
 .bottomSection {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   border: 1px solid #111827;
   margin-bottom: 12px;
   break-inside: avoid;
@@ -282,6 +293,9 @@
 .bankBlock {
   padding: 8px 10px;
   border-right: 1px solid #111827;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .signBlock {
@@ -290,6 +304,9 @@
   flex-direction: column;
   justify-content: space-between;
   text-align: center;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .signatureImage {

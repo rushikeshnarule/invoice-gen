@@ -12,12 +12,12 @@ import type {
   PaperSize,
   WatermarkType,
 } from '../../types';
-import { ACCENT_PALETTE } from '../../types';
 import { useInvoices } from '../../context/InvoiceContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getAllThemes, resolveOptions } from '../../themes';
 import { ThemePreview } from '../ThemePreview/ThemePreview';
 import { ShareInvoiceModal } from '../ShareInvoiceModal/ShareInvoiceModal';
+import { ColorPickerField } from '../ThemeOptions/ColorPickerField';
 import { recalculate } from '../../utils/buildRenderData';
 import { formatCurrency, formatNumber } from '../../utils';
 
@@ -74,7 +74,15 @@ interface InvoiceEditorProps {
 
 export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack }) => {
   const { getInvoice, updateInvoice, clients, businessProfile, updateBusinessProfile, saveClient } = useInvoices();
-  const { currentThemeId, getOptionsForTheme, setThemeOptions, resetOptions } = useTheme();
+  const {
+    currentThemeId,
+    getOptionsForTheme,
+    setThemeOptions,
+    resetOptions,
+    presets,
+    loadPreset,
+    savePreset,
+  } = useTheme();
   const themes = getAllThemes();
 
   const record = getInvoice(invoiceId);
@@ -83,6 +91,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   const [zoomLevel, setZoomLevel] = useState<number>(() =>
     themeId === 'thermal' ? 1.0 : 0.82
   );
+  const [newPresetName, setNewPresetName] = useState('');
 
   // Share Invoice Modal
   const [showShareModal, setShowShareModal] = useState(false);
@@ -664,9 +673,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                       <button
                         type="button"
                         onClick={() => setInvoiceData((prev) => ({ ...prev, invoiceType: 'daily' }))}
-                        className={`px-2.5 py-1 rounded-md transition-all ${
+                        className={`px-2.5 py-1 rounded-md transition-colors duration-150 ${
                           invoiceData.invoiceType !== 'monthly'
-                            ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                            ? 'bg-white text-blue-700 shadow-2xs font-semibold'
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
@@ -683,9 +692,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             billingPeriod: prev.billingPeriod || getMonthNameAndYear(ym),
                           }));
                         }}
-                        className={`px-2.5 py-1 rounded-md transition-all ${
+                        className={`px-2.5 py-1 rounded-md transition-colors duration-150 ${
                           invoiceData.invoiceType === 'monthly'
-                            ? 'bg-purple-600 text-white shadow-2xs font-bold'
+                            ? 'bg-white text-blue-700 shadow-2xs font-semibold'
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
@@ -709,7 +718,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                               billingPeriod: getMonthNameAndYear(ym),
                             }));
                           }}
-                          className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono outline-none focus:border-purple-600"
+                          className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono outline-none focus:border-blue-600"
                         />
                       </div>
                       <div>
@@ -719,7 +728,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                           value={invoiceData.billingPeriod || ''}
                           onChange={(e) => setInvoiceData((prev) => ({ ...prev, billingPeriod: e.target.value }))}
                           placeholder="e.g. April 2026 or 01/04/2026 to 30/04/2026"
-                          className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs outline-none focus:border-purple-600"
+                          className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs outline-none focus:border-blue-600"
                         />
                       </div>
                     </div>
@@ -827,40 +836,40 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                         </div>
                       </div>
 
-                      {/* Line Item Numeric Attributes */}
-                      <div className="grid grid-cols-6 gap-2">
+                      {/* Line Item Numeric Attributes - 2 Spacious 3-Column Rows */}
+                      <div className="grid grid-cols-3 gap-2.5">
                         {/* HSN/SAC */}
                         <div>
-                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">HSN/SAC</label>
+                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">HSN/SAC</label>
                           <input
                             type="text"
                             value={item.hsnSac || ''}
                             onChange={(e) => handleUpdateItem(index, { hsnSac: e.target.value })}
                             placeholder="998314"
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs font-mono outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs font-mono outline-none focus:border-blue-600 focus:bg-white"
                           />
                         </div>
 
                         {/* Quantity */}
                         <div>
-                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Qty</label>
+                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Quantity</label>
                           <input
                             type="number"
                             min="0"
                             step="any"
                             value={item.quantity === 0 ? '' : item.quantity}
                             onChange={(e) => handleUpdateItem(index, { quantity: e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)) })}
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-blue-600 focus:bg-white"
                           />
                         </div>
 
                         {/* Unit */}
                         <div>
-                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Unit</label>
+                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Unit</label>
                           <select
                             value={item.unit}
                             onChange={(e) => handleUpdateItem(index, { unit: e.target.value })}
-                            className="w-full bg-white border border-slate-200 rounded-md px-1 py-1 text-xs outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
                           >
                             <option value="Nos">Nos</option>
                             <option value="Pcs">Pcs</option>
@@ -889,20 +898,20 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                         {/* Rate */}
                         <div>
-                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Rate (₹)</label>
+                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Rate (₹)</label>
                           <input
                             type="number"
                             min="0"
                             step="any"
                             value={item.rate === 0 ? '' : item.rate}
                             onChange={(e) => handleUpdateItem(index, { rate: e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)) })}
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-blue-600 focus:bg-white"
                           />
                         </div>
 
                         {/* Discount % */}
                         <div>
-                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Disc %</label>
+                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Discount %</label>
                           <input
                             type="number"
                             min="0"
@@ -910,17 +919,17 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             value={item.discount ? item.discount : ''}
                             onChange={(e) => handleUpdateItem(index, { discount: e.target.value === '' ? 0 : Math.min(100, Math.max(0, Number(e.target.value))) })}
                             placeholder="0"
-                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs font-semibold text-rose-600 outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none focus:border-blue-600 focus:bg-white"
                           />
                         </div>
 
-                        {/* GST % */}
+                        {/* GST Rate */}
                         <div>
-                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">GST Rate</label>
+                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">GST Rate</label>
                           <select
                             value={item.gstRate}
                             onChange={(e) => handleUpdateItem(index, { gstRate: Number(e.target.value) })}
-                            className="w-full bg-white border border-slate-200 rounded-md px-1 py-1 text-xs font-semibold text-blue-700 outline-none"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs font-semibold text-blue-700 outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
                           >
                             <option value="0">0% (Nil)</option>
                             <option value="5">5%</option>
@@ -932,7 +941,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                       </div>
 
                       {/* Line Subtotal Banner */}
-                      <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/70 text-slate-500">
+                      <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/70 text-slate-500 flex-wrap gap-2">
                         <span>
                           Taxable: <strong className="text-slate-800">{formatCurrency(item.taxableAmount, '₹')}</strong>
                         </span>
@@ -1144,7 +1153,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  {/* GSTIN and Phone in 2 clean, spacious columns */}
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
                       <label className="block text-[10px] text-slate-500 font-medium mb-0.5">GSTIN</label>
                       <input
@@ -1157,11 +1167,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                           })
                         }
                         placeholder="27AADCS5678G1Z9"
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 font-mono text-xs outline-none uppercase"
+                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 font-mono text-xs outline-none uppercase focus:border-blue-600 focus:bg-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Phone</label>
+                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Phone Number</label>
                       <input
                         type="text"
                         value={invoiceData.client.phone || ''}
@@ -1172,24 +1182,26 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                           })
                         }
                         placeholder="+91 98200 12345"
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
+                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
                       />
                     </div>
-                    <div>
-                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Billing Email</label>
-                      <input
-                        type="email"
-                        value={invoiceData.client.email || ''}
-                        onChange={(e) =>
-                          setInvoiceData({
-                            ...invoiceData,
-                            client: { ...invoiceData.client, email: e.target.value },
-                          })
-                        }
-                        placeholder="billing@client.com"
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
-                      />
-                    </div>
+                  </div>
+
+                  {/* Billing Email - Full width for zero clipping of lengthy corporate emails */}
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Billing Email</label>
+                    <input
+                      type="email"
+                      value={invoiceData.client.email || ''}
+                      onChange={(e) =>
+                        setInvoiceData({
+                          ...invoiceData,
+                          client: { ...invoiceData.client, email: e.target.value },
+                        })
+                      }
+                      placeholder="billing@client.com"
+                      className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                    />
                   </div>
 
                   <div>
@@ -1203,12 +1215,14 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                           client: { ...invoiceData.client, address: e.target.value },
                         })
                       }
-                      className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
+                      placeholder="Street, Building, Area"
+                      className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
+                  {/* 5-Column Grid: City (2), State (2), Pincode (1) prevents state name truncation */}
+                  <div className="grid grid-cols-5 gap-2.5">
+                    <div className="col-span-2">
                       <label className="block text-[10px] text-slate-500 font-medium mb-0.5">City</label>
                       <input
                         type="text"
@@ -1219,10 +1233,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             client: { ...invoiceData.client, city: e.target.value },
                           })
                         }
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
+                        placeholder="Pune"
+                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
                       />
                     </div>
-                    <div>
+                    <div className="col-span-2">
                       <label className="block text-[10px] text-slate-500 font-medium mb-0.5">State</label>
                       <input
                         type="text"
@@ -1235,10 +1250,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             placeOfSupply: `${e.target.value} (${invoiceData.client.gstin ? invoiceData.client.gstin.slice(0, 2) : '27'})`,
                           })
                         }
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
+                        placeholder="Maharashtra"
+                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
                       />
                     </div>
-                    <div>
+                    <div className="col-span-1">
                       <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Pincode</label>
                       <input
                         type="text"
@@ -1249,7 +1265,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             client: { ...invoiceData.client, pincode: e.target.value },
                           })
                         }
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
+                        placeholder="411001"
+                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
                       />
                     </div>
                   </div>
@@ -1301,9 +1318,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                   </div>
 
                   {invoiceData.invoiceType === 'monthly' && (
-                    <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-purple-50/70 border border-purple-200">
+                    <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-blue-50/70 border border-blue-200">
                       <div>
-                        <label className="block text-[10px] font-semibold text-purple-900 mb-0.5">Billing Month</label>
+                        <label className="block text-[10px] font-semibold text-blue-900 mb-0.5">Billing Month</label>
                         <input
                           type="month"
                           value={invoiceData.billingMonth || invoiceData.invoiceDate.slice(0, 7)}
@@ -1315,30 +1332,31 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                               billingPeriod: getMonthNameAndYear(ym),
                             }));
                           }}
-                          className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-mono outline-none"
+                          className="w-full bg-white border border-blue-300 rounded px-2 py-1 text-xs font-mono outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-semibold text-purple-900 mb-0.5">Billing Period Header</label>
+                        <label className="block text-[10px] font-semibold text-blue-900 mb-0.5">Billing Period Header</label>
                         <input
                           type="text"
                           value={invoiceData.billingPeriod || ''}
                           onChange={(e) => setInvoiceData((prev) => ({ ...prev, billingPeriod: e.target.value }))}
                           placeholder="e.g. April 2026 or 01/04/2026 to 30/04/2026"
-                          className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs outline-none"
+                          className="w-full bg-white border border-blue-300 rounded px-2 py-1 text-xs outline-none"
                         />
                       </div>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* 2-Column Grid: Invoice Date & Due Date on Row 1, Place of Supply & Tax Treatment on Row 2 */}
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Invoice Date</label>
                       <input
                         type="date"
                         value={invoiceData.invoiceDate}
                         onChange={(e) => setInvoiceData({ ...invoiceData, invoiceDate: e.target.value })}
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
+                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
                       />
                     </div>
                     <div>
@@ -1347,7 +1365,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                         type="date"
                         value={invoiceData.dueDate || ''}
                         onChange={(e) => setInvoiceData({ ...invoiceData, dueDate: e.target.value })}
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
+                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
                       />
                     </div>
                     <div>
@@ -1357,7 +1375,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                         value={invoiceData.placeOfSupply || ''}
                         onChange={(e) => setInvoiceData({ ...invoiceData, placeOfSupply: e.target.value })}
                         placeholder="Maharashtra (27)"
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
+                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
                       />
                     </div>
                     <div>
@@ -1383,11 +1401,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             };
                           });
                         }}
-                        className="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-xs font-semibold text-blue-700 outline-none"
+                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs font-semibold text-blue-700 outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
                       >
-                        <option value="cgst_sgst">CGST + SGST</option>
-                        <option value="igst">IGST</option>
-                        <option value="none">Non-GST</option>
+                        <option value="cgst_sgst">CGST + SGST (Intra-State)</option>
+                        <option value="igst">IGST (Inter-State)</option>
+                        <option value="none">Non-GST / Exempt</option>
                       </select>
                     </div>
                   </div>
@@ -1713,79 +1731,122 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             {/* ══════════ TAB 5: THEME & STYLING CUSTOMIZER ══════════ */}
             {activeTab === 'styling' && (
               <div className="space-y-4">
-                {/* Header with Active Theme & Reset */}
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-2 shadow-2xs">
-                  <div>
-                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
-                      Live Theme Customization
-                    </span>
-                    <span className="font-bold text-xs text-slate-900 block">
-                      {themes.find((t) => t.id === themeId)?.name || themeId}
-                    </span>
+                {/* Header with Active Template Selector & Reset */}
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-medium text-slate-500 block">
+                        Template customizer
+                      </span>
+                      <span className="font-bold text-xs text-slate-900 block">
+                        Select &amp; Personalize Template
+                      </span>
+                    </div>
+                    <Button
+                      size="xs"
+                      variant="secondary"
+                      leadingIcon={RiRefreshLine}
+                      onClick={() => {
+                        resetOptions(themeId);
+                        toast.info(`Theme "${themeId}" reset to defaults`);
+                      }}
+                      className="text-[11px]"
+                    >
+                      Reset Defaults
+                    </Button>
                   </div>
-                  <Button
-                    size="xs"
-                    variant="secondary"
-                    leadingIcon={RiRefreshLine}
-                    onClick={() => {
-                      resetOptions(themeId);
-                      toast.info(`Theme "${themeId}" reset to defaults`);
-                    }}
-                    className="text-[11px]"
-                  >
-                    Reset Defaults
-                  </Button>
+
+                  {/* Template Picker Dropdown */}
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                      Active Template
+                    </label>
+                    <select
+                      value={themeId}
+                      onChange={(e) => {
+                        const nextTheme = e.target.value;
+                        setThemeId(nextTheme);
+                        if (nextTheme === 'thermal') setZoomLevel(1.0);
+                        updateInvoice(invoiceId, calculatedData, nextTheme);
+                      }}
+                      className="w-full bg-white text-slate-900 font-bold px-3 py-2 rounded-lg border border-slate-300 outline-none text-xs cursor-pointer hover:border-slate-400 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
+                    >
+                      {themes.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.paper.join('/')})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                {/* Accent Color Palette */}
-                <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2 shadow-2xs">
+                {/* Saved Presets / Quick Styler */}
+                <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5 shadow-2xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-700">Accent Colour</span>
-                    <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                      {activeOptions.accentColor.toUpperCase()}
+                    <span className="text-xs font-semibold text-slate-700">Theme Presets</span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {presets.length} saved
                     </span>
                   </div>
 
-                  {/* 10-Color Palette Swatches */}
-                  <div className="grid grid-cols-5 gap-2">
-                    {ACCENT_PALETTE.map((hex) => {
-                      const isSelected = hex.toLowerCase() === activeOptions.accentColor.toLowerCase();
-                      return (
-                        <button
-                          key={hex}
-                          type="button"
-                          onClick={() => setThemeOptions(themeId, { accentColor: hex })}
-                          className={`h-8 rounded-lg transition-all relative flex items-center justify-center cursor-pointer ${
-                            isSelected
-                              ? 'ring-2 ring-slate-900 scale-105 shadow-sm'
-                              : 'hover:scale-102 border border-black/10'
-                          }`}
-                          style={{ backgroundColor: hex }}
-                          title={hex}
-                        >
-                          {isSelected && <span className="size-2 rounded-full bg-white shadow" />}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {presets.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            loadPreset(e.target.value);
+                            toast.success('Preset styling applied');
+                          }
+                        }}
+                        defaultValue=""
+                        className="flex-1 bg-slate-50 text-slate-800 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none cursor-pointer"
+                      >
+                        <option value="" disabled>
+                          Load saved preset...
+                        </option>
+                        {presets.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.themeId})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-                  {/* Custom Hex Color Picker */}
-                  <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                    <input
-                      type="color"
-                      value={activeOptions.accentColor}
-                      onChange={(e) => setThemeOptions(themeId, { accentColor: e.target.value })}
-                      className="size-7 rounded border border-slate-300 bg-transparent cursor-pointer p-0"
-                    />
+                  {/* Quick Save Preset */}
+                  <div className="flex items-center gap-1.5 pt-1">
                     <input
                       type="text"
-                      value={activeOptions.accentColor}
-                      onChange={(e) => setThemeOptions(themeId, { accentColor: e.target.value })}
-                      placeholder="#2563EB"
-                      maxLength={7}
-                      className="flex-1 bg-transparent text-slate-900 font-mono text-xs outline-none"
+                      placeholder="Preset name (e.g. Blue Modern)"
+                      value={newPresetName}
+                      onChange={(e) => setNewPresetName(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-200 text-xs rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-600 focus:bg-white"
                     />
+                    <Button
+                      size="xs"
+                      variant="secondary"
+                      onClick={() => {
+                        if (!newPresetName.trim()) {
+                          toast.error('Enter a preset name');
+                          return;
+                        }
+                        savePreset(newPresetName.trim());
+                        toast.success(`Preset "${newPresetName.trim()}" saved!`);
+                        setNewPresetName('');
+                      }}
+                      className="text-[11px] shrink-0"
+                    >
+                      Save Preset
+                    </Button>
                   </div>
+                </div>
+
+                {/* Accent Color Palette with 60fps Debounced Picker */}
+                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <ColorPickerField
+                    value={activeOptions.accentColor}
+                    onChange={(hex) => setThemeOptions(themeId, { accentColor: hex })}
+                  />
                 </div>
 
                 {/* Typography & Font Size */}
@@ -1852,8 +1913,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                 {/* Table & Structure Toggles */}
                 <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5 shadow-2xs">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-                    Table Columns &amp; Tax Structure
+                  <span className="text-xs font-medium text-slate-500 block">
+                    Table columns &amp; tax structure
                   </span>
 
                   <SwitchCard
@@ -1892,8 +1953,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                 {/* Payment & Footer Visibility */}
                 <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5 shadow-2xs">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-                    Payment &amp; Sign-off Visibility
+                  <span className="text-xs font-medium text-slate-500 block">
+                    Payment &amp; sign-off visibility
                   </span>
 
                   <SwitchCard

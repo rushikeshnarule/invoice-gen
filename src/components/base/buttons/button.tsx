@@ -177,7 +177,7 @@ export function Button({
     >
       {Leading ? (
         iconGradient ? (
-          <span className="size-5 rounded-md bg-linear-to-b from-blue-500 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs mr-1">
+          <span className="size-5 rounded-md bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs mr-1">
             <Leading className={cx("size-3.5", directionalIconClass(Leading))} aria-hidden />
           </span>
         ) : (
@@ -221,7 +221,7 @@ export function ButtonLink({
     >
       {Leading ? (
         iconGradient ? (
-          <span className="size-5 rounded-md bg-linear-to-b from-blue-500 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs mr-1">
+          <span className="size-5 rounded-md bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs mr-1">
             <Leading className={cx("size-3.5", directionalIconClass(Leading))} aria-hidden />
           </span>
         ) : (

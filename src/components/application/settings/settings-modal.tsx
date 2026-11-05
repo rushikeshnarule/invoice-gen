@@ -385,7 +385,7 @@ export function SettingsModal({
             <div className="space-y-4">
               {/* Profile Header */}
               <div className="px-2 pt-1 pb-2 border-b border-slate-200/80">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                <span className="text-xs font-medium text-slate-500 block">
                   Configuration
                 </span>
                 <h3 className="font-bold text-sm text-slate-900 mt-0.5 truncate">
@@ -407,7 +407,7 @@ export function SettingsModal({
                       type="button"
                       onClick={() => setActiveTab(tab.id)}
                       className={cx(
-                        "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-left transition-all",
+                        "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors duration-150",
                         isSelected
                           ? "bg-white text-blue-700 shadow-2xs border border-slate-200/80"
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70",

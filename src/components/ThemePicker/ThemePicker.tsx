@@ -39,6 +39,153 @@ import {
   REMOTE_TEMPLATES_UPDATED_EVENT,
 } from '@/services/templateSyncService';
 
+interface TemplateCardProps {
+  theme: any;
+  isDefault: boolean;
+  tOptions: any;
+  thumbData: InvoiceRenderData;
+  onCustomize: () => void;
+  onSetDefault: () => void;
+  onDeleteRemote?: (id: string, name: string) => void;
+}
+
+const TemplateCard: React.FC<TemplateCardProps> = React.memo(({
+  theme: t,
+  isDefault,
+  tOptions,
+  thumbData,
+  onCustomize,
+  onSetDefault,
+  onDeleteRemote,
+}) => {
+  const isThermal = t.paper.includes('80mm');
+  const isA5 = t.paper.includes('A5') && !t.paper.includes('A4');
+  const baseScale = isThermal ? 0.52 : isA5 ? 0.32 : 0.23;
+  const paperWidth = isThermal ? '80mm' : isA5 ? '148mm' : '210mm';
+
+  return (
+    <div
+      className={`bg-white rounded-xl border overflow-hidden flex flex-col transition-colors duration-150 ${
+        isDefault
+          ? 'border-blue-600 shadow-xs ring-1 ring-blue-600/20'
+          : 'border-slate-200 hover:border-slate-300'
+      }`}
+    >
+      {/* Real-time Theme Thumbnail Container */}
+      <div
+        onClick={onCustomize}
+        className="h-48 w-full bg-slate-100 overflow-hidden relative flex justify-center border-b border-slate-100 cursor-pointer group"
+      >
+        <div className="w-full h-full flex justify-center items-start pt-3">
+          <div
+            className="origin-top pointer-events-none select-none"
+            style={{
+              transform: `scale(${baseScale})`,
+              width: paperWidth,
+            }}
+          >
+            <ThemePreview
+              themeId={t.id}
+              data={thumbData}
+              options={tOptions}
+              scale={1}
+              isThumbnail={true}
+            />
+          </div>
+        </div>
+
+        {/* Remote Netlify Badge */}
+        {t.isRemote && (
+          <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-blue-700 font-medium text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 z-10 border border-blue-200 shadow-2xs">
+            <RiCloudLine className="size-3 text-blue-600" />
+            <span>Netlify Cloud</span>
+          </div>
+        )}
+
+        {/* Active Badge */}
+        {isDefault && (
+          <div className="absolute top-3 right-3 bg-blue-600 shadow-xs text-white font-medium text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 z-10">
+            <RiCheckLine className="size-3" />
+            <span>Default theme</span>
+          </div>
+        )}
+
+        {/* Hover Overlay */}
+        <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center z-10">
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-xs text-slate-800 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm border border-slate-200">
+            Click to Customize
+          </span>
+        </div>
+      </div>
+
+      {/* Card Meta & Actions */}
+      <div className="p-4 flex flex-col flex-1 justify-between gap-3">
+        <div>
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm text-slate-900 truncate">{t.name}</h3>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                {t.paper.join('/')}
+              </span>
+              {t.isRemote && onDeleteRemote && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteRemote(t.id, t.name);
+                  }}
+                  className="text-slate-400 hover:text-rose-600 p-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                  title="Delete template from local cache"
+                >
+                  <RiDeleteBinLine className="size-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
+            {t.description}
+          </p>
+        </div>
+
+        {/* Card Button Actions */}
+        <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+          {isDefault ? (
+            <Button
+              size="small"
+              variant="primary"
+              leadingIcon={RiPaletteLine}
+              onClick={onCustomize}
+              className="w-full text-xs font-medium"
+            >
+              Customize Theme
+            </Button>
+          ) : (
+            <>
+              <Button
+                size="small"
+                variant="secondary"
+                onClick={onSetDefault}
+                className="flex-1 text-xs font-medium"
+              >
+                Set Default
+              </Button>
+              <Button
+                size="small"
+                variant="ghost"
+                onClick={onCustomize}
+                className="text-xs font-medium"
+              >
+                Customize
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+TemplateCard.displayName = 'TemplateCard';
+
 export const ThemePicker: React.FC = () => {
   const {
     currentThemeId,
@@ -46,6 +193,7 @@ export const ThemePicker: React.FC = () => {
     options,
     setOptions,
     resetOptions,
+    getOptionsForTheme,
   } = useTheme();
 
   const { invoices } = useInvoices();
@@ -172,6 +320,38 @@ export const ThemePicker: React.FC = () => {
               <span className="font-bold text-xs sm:text-sm text-slate-900 truncate max-w-[140px] sm:max-w-none">
                 Customizing: {activeTheme.name}
               </span>
+              <div className="relative group">
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md hover:bg-blue-100 flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Switch template"
+                >
+                  <span>Switch</span>
+                  <span className="text-[10px]">▾</span>
+                </button>
+                <div className="hidden group-hover:block absolute left-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-1.5 max-h-72 overflow-y-auto">
+                  {themes.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setThemeId(t.id);
+                        setZoomLevel(t.paper.includes('80mm') && !t.paper.includes('A4') ? 1.0 : 0.85);
+                      }}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between cursor-pointer ${
+                        t.id === currentThemeId
+                          ? 'bg-blue-50 font-bold text-blue-700'
+                          : 'hover:bg-slate-100 text-slate-700 font-medium'
+                      }`}
+                    >
+                      <span className="truncate">{t.name}</span>
+                      <span className="text-[10px] font-mono text-slate-500 shrink-0 ml-2">
+                        {t.paper.join('/')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <span className="text-[10px] font-mono font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full shrink-0 hidden sm:inline">
                 {options.paper === '80mm' ? 'Thermal 80mm' : `${options.paper} Format`}
               </span>
@@ -368,7 +548,7 @@ export const ThemePicker: React.FC = () => {
 
           <div className="hidden lg:flex text-xs text-slate-500 items-center gap-2">
             <span>Default:</span>
-            <span className="font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+            <span className="font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
               {activeTheme.name} ({options.paper})
             </span>
           </div>
@@ -378,146 +558,30 @@ export const ThemePicker: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {filteredThemes.map((t) => {
             const isDefault = t.id === currentThemeId;
-            const tOptions = resolveOptions(t.id, isDefault ? options : {});
+            const tOptions = getOptionsForTheme ? getOptionsForTheme(t.id) : resolveOptions(t.id);
             const isThermal = t.paper.includes('80mm');
-            const isA5 = t.paper.includes('A5') && !t.paper.includes('A4');
-            const baseScale = isThermal ? 0.52 : isA5 ? 0.32 : 0.23;
-            const paperWidth = isThermal ? '80mm' : isA5 ? '148mm' : '210mm';
 
             return (
-              <div
+              <TemplateCard
                 key={t.id}
-                className={`bg-white rounded-xl border overflow-hidden flex flex-col transition-all duration-150 ${
-                  isDefault
-                    ? 'border-blue-600 shadow-md ring-2 ring-blue-500/15'
-                    : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
-                }`}
-              >
-                {/* Real-time Theme Thumbnail Container */}
-                <div
-                  onClick={() => {
-                    setThemeId(t.id);
-                    setZoomLevel(isThermal ? 1.0 : 0.85);
-                    setViewMode('customize');
-                  }}
-                  className="h-48 w-full bg-slate-100 overflow-hidden relative flex justify-center border-b border-slate-100 cursor-pointer group"
-                >
-                  <div className="w-full h-full flex justify-center items-start pt-3 transition-transform duration-200 group-hover:scale-[1.03]">
-                    <div
-                      className="origin-top pointer-events-none select-none"
-                      style={{
-                        transform: `scale(${baseScale})`,
-                        width: paperWidth,
-                      }}
-                    >
-                      <ThemePreview
-                        themeId={t.id}
-                        data={thumbData}
-                        options={tOptions}
-                        scale={1}
-                        isThumbnail={true}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Remote Netlify Badge */}
-                  {(t as any).isRemote && (
-                    <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-blue-700 font-semibold text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 z-10 border border-blue-200 shadow-2xs">
-                      <RiCloudLine className="size-3 text-blue-600" />
-                      <span>Netlify Cloud</span>
-                    </div>
-                  )}
-
-                  {/* Active Badge */}
-                  {isDefault && (
-                    <div className="absolute top-3 right-3 bg-blue-600 shadow-sm text-white font-semibold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1 z-10">
-                      <RiCheckLine className="size-3" />
-                      <span>Default theme</span>
-                    </div>
-                  )}
-
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/10 transition-colors flex items-center justify-center z-10">
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-xs text-slate-800 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm border border-slate-200">
-                      Click to Customize
-                    </span>
-                  </div>
-                </div>
-
-                {/* Card Meta & Actions */}
-                <div className="p-4 flex flex-col flex-1 justify-between gap-3">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-sm text-slate-900 truncate">{t.name}</h3>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                          {t.paper.join('/')}
-                        </span>
-                        {(t as any).isRemote && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteRemoteTemplate(t.id);
-                              toast.info(`Removed "${t.name}" from cache`);
-                            }}
-                            className="text-slate-400 hover:text-rose-600 p-0.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
-                            title="Delete template from local cache"
-                          >
-                            <RiDeleteBinLine className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
-                      {t.description}
-                    </p>
-                  </div>
-
-                  {/* Card Button Actions */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
-                    {isDefault ? (
-                      <Button
-                        size="small"
-                        variant="primary"
-                        leadingIcon={RiPaletteLine}
-                        onClick={() => {
-                          setThemeId(t.id);
-                          setViewMode('customize');
-                        }}
-                        className="w-full text-xs"
-                      >
-                        Customize Theme
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          size="small"
-                          variant="secondary"
-                          onClick={() => {
-                            setThemeId(t.id);
-                            toast.success(`Theme "${t.name}" set as default`);
-                          }}
-                          className="flex-1 text-xs"
-                        >
-                          Set Default
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="ghost"
-                          onClick={() => {
-                            setThemeId(t.id);
-                            setViewMode('customize');
-                          }}
-                          className="text-xs"
-                        >
-                          Customize
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+                theme={t}
+                isDefault={isDefault}
+                tOptions={tOptions}
+                thumbData={thumbData}
+                onCustomize={() => {
+                  setThemeId(t.id);
+                  setZoomLevel(isThermal ? 1.0 : 0.85);
+                  setViewMode('customize');
+                }}
+                onSetDefault={() => {
+                  setThemeId(t.id);
+                  toast.success(`Theme "${t.name}" set as default`);
+                }}
+                onDeleteRemote={(id, name) => {
+                  deleteRemoteTemplate(id);
+                  toast.info(`Removed "${name}" from cache`);
+                }}
+              />
             );
           })}
         </div>

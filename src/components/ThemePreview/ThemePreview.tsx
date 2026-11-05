@@ -11,7 +11,7 @@ interface ThemePreviewProps {
   className?: string;
 }
 
-export const ThemePreview: React.FC<ThemePreviewProps> = ({
+const ThemePreviewComponent: React.FC<ThemePreviewProps> = ({
   themeId,
   data,
   options,
@@ -37,29 +37,37 @@ export const ThemePreview: React.FC<ThemePreviewProps> = ({
     const el = contentRef.current;
     if (!el) return;
 
-    const measure = () => {
-      if (el) {
-        const w = el.offsetWidth || el.scrollWidth;
-        const h = el.offsetHeight || el.scrollHeight;
-        if (w > 0 && h > 0) {
-          setContentSize((prev) => {
-            if (prev.width === w && prev.height === h) return prev;
-            return { width: w, height: h };
-          });
-        }
-      }
+    let rafId: number | null = null;
+    const updateSize = (w: number, h: number) => {
+      if (w <= 0 || h <= 0) return;
+      const roundW = Math.ceil(w);
+      const roundH = Math.ceil(h);
+      setContentSize((prev) => {
+        if (prev.width === roundW && prev.height === roundH) return prev;
+        return { width: roundW, height: roundH };
+      });
     };
 
-    measure();
-
     if (typeof ResizeObserver !== 'undefined') {
-      const ro = new ResizeObserver(() => {
-        measure();
+      const ro = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        const w = entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+        const h = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          updateSize(w, h);
+        });
       });
       ro.observe(el);
-      return () => ro.disconnect();
+      return () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        ro.disconnect();
+      };
+    } else {
+      updateSize(el.offsetWidth, el.offsetHeight);
     }
-  }, [isThumbnail, themeId, data, options]);
+  }, [isThumbnail, themeId]);
 
   // Thumbnail mode: lightweight rendering for gallery cards
   if (isThumbnail) {
@@ -244,4 +252,5 @@ export const ThemePreview: React.FC<ThemePreviewProps> = ({
   );
 };
 
+export const ThemePreview = React.memo(ThemePreviewComponent);
 export default ThemePreview;
