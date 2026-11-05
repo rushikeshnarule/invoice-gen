@@ -17,7 +17,6 @@ dist-mac
 *.zip
 *.dmg
 *.blockmap
-*.icns
 scripts/package-mac.py
 test_symlink
 
