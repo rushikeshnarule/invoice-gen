@@ -11,8 +11,9 @@ export interface DynamicRemoteThemeProps extends ThemeComponentProps {
 export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, options, templateDef }) => {
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
-  const isThermal = options.paper === '80mm';
-  const paperClass = isThermal ? 'paper-thermal' : `paper-${options.paper.toLowerCase()}`;
+  const paper = options.paper || 'A4';
+  const isThermal = paper === '80mm';
+  const paperClass = isThermal ? 'paper-thermal' : `paper-${paper.toLowerCase()}`;
 
   const defaultBaseCss = `
     .remote-invoice-root {
@@ -147,7 +148,9 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
     templateDef?.layout === 'contractor' ||
     templateDef?.id === 'construction-contractor' ||
     templateDef?.id?.includes('contractor') ||
-    templateDef?.id?.includes('construction');
+    templateDef?.id?.includes('construction') ||
+    (options as any)?.templateId === 'contractor' ||
+    (data as any)?._themeId === 'contractor';
 
   const contractorCss = `
     .contractor-invoice-root {
@@ -390,10 +393,14 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
     const totalQty = data.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     const primaryUnit = data.items.find((i) => i.unit)?.unit || 'Brass';
 
+    const hasItemDates = data.items.some((i) => Boolean(i.date));
+    const isMonthly = data.invoiceType === 'monthly' || Boolean(data.billingPeriod);
+    const showDateCol = isMonthly || hasItemDates;
+
     const showHsn = options.showHsnSacColumn !== false;
     const showDisc = options.showDiscountColumn !== false;
-    const colCount = 6 + (showHsn ? 1 : 0) + (showDisc ? 1 : 0);
-    const leftSpan = 2 + (showHsn ? 1 : 0);
+    const colCount = 6 + (showHsn ? 1 : 0) + (showDisc ? 1 : 0) + (showDateCol ? 1 : 0);
+    const leftSpan = 2 + (showHsn ? 1 : 0) + (showDateCol ? 1 : 0);
     const middleSpan = 2 + (showDisc ? 1 : 0);
 
     const getHsnForRate = (gstRate: number): string => {
@@ -419,12 +426,21 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
 
         {/* 1. Centered TAX INVOICE Header Box */}
         <div className="contractor-header-box">
-          {showGst ? 'TAX INVOICE' : 'INVOICE'}
+          {isMonthly
+            ? showGst
+              ? 'MONTHLY TAX INVOICE'
+              : 'MONTHLY INVOICE'
+            : showGst
+            ? 'TAX INVOICE'
+            : 'INVOICE'}
         </div>
 
         {/* 2. Invoice No. & Dated */}
         <div className="contractor-meta-bar">
           <div><strong>Invoice No.:</strong> {data.invoiceNumber}</div>
+          {data.billingPeriod && (
+            <div><strong>Billing Period:</strong> {data.billingPeriod}</div>
+          )}
           <div><strong>Dated:</strong> {formatDate(data.invoiceDate, options.numberFormat)}</div>
         </div>
 
@@ -492,6 +508,7 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
           <thead>
             <tr>
               <th style={{ width: '6%', textAlign: 'center' }}>Sr.<br/>No.</th>
+              {showDateCol && <th style={{ width: '12%', textAlign: 'center', whiteSpace: 'nowrap' }}>Date</th>}
               {showHsn && <th style={{ width: '12%', textAlign: 'center', whiteSpace: 'nowrap' }}>HSN/<br/>SAC</th>}
               <th>Description of Goods</th>
               <th style={{ width: '9%', textAlign: 'right' }}>Qty</th>
@@ -505,6 +522,11 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
             {data.items.map((item, idx) => (
               <tr key={item.id || idx}>
                 <td style={{ textAlign: 'center' }}>{item.sno || idx + 1}</td>
+                {showDateCol && (
+                  <td style={{ textAlign: 'center', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontSize: '8pt' }}>
+                    {item.date ? formatDate(item.date, options.numberFormat) : '—'}
+                  </td>
+                )}
                 {showHsn && (
                   <td style={{ textAlign: 'center', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                     {item.hsnSac || '—'}
@@ -741,12 +763,21 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
         </div>
 
         <div style={{ textAlign: 'right' }}>
-          <div className="remote-title">{showGst ? 'TAX INVOICE' : 'INVOICE'}</div>
+          <div className="remote-title">
+            {data.invoiceType === 'monthly'
+              ? showGst
+                ? 'MONTHLY TAX INVOICE'
+                : 'MONTHLY INVOICE'
+              : showGst
+              ? 'TAX INVOICE'
+              : 'INVOICE'}
+          </div>
           {data.copyLabel && (
             <div style={{ fontSize: '8pt', color: '#64748b', fontWeight: 600 }}>{data.copyLabel}</div>
           )}
           <div style={{ marginTop: '6px', fontSize: '9pt' }}>
             <div><strong>Invoice No:</strong> {data.invoiceNumber}</div>
+            {data.billingPeriod && <div><strong>Billing Period:</strong> {data.billingPeriod}</div>}
             <div><strong>Date:</strong> {formatDate(data.invoiceDate, options.numberFormat)}</div>
             {data.dueDate && <div><strong>Due Date:</strong> {formatDate(data.dueDate, options.numberFormat)}</div>}
             {data.placeOfSupply && <div><strong>Place of Supply:</strong> {data.placeOfSupply}</div>}
@@ -781,48 +812,61 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
       </div>
 
       {/* Line Items Table */}
-      <table className="remote-table">
-        <thead>
-          <tr>
-            <th style={{ width: '4%' }}>#</th>
-            <th style={{ width: '28%' }}>Item &amp; Description</th>
-            {options.showHsnSacColumn && <th style={{ width: '10%', textAlign: 'center', whiteSpace: 'nowrap' }}>HSN/SAC</th>}
-            <th style={{ width: '8%', textAlign: 'right' }}>Qty</th>
-            <th style={{ width: '11%', textAlign: 'right' }}>Rate ({options.currencySymbol})</th>
-            {options.showDiscountColumn && <th style={{ width: '7%', textAlign: 'right' }}>Disc%</th>}
-            {showGst && <th style={{ width: '11%', textAlign: 'right' }}>Taxable</th>}
-            {showGst && <th style={{ width: '7%', textAlign: 'right' }}>GST</th>}
-            <th style={{ width: '14%', textAlign: 'right' }}>Total ({options.currencySymbol})</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.items.map((item, idx) => (
-            <tr key={item.id || idx}>
-              <td>{item.sno || idx + 1}</td>
-              <td>
-                <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.description}</div>
-              </td>
-              {options.showHsnSacColumn && (
-                <td style={{ textAlign: 'center', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                  {item.hsnSac || '—'}
-                </td>
-              )}
-              <td style={{ textAlign: 'right' }}>{formatNumber(item.quantity, options.numberFormat)} {item.unit || 'Nos'}</td>
-              <td style={{ textAlign: 'right' }}>{formatCurrency(item.rate, '', options.numberFormat)}</td>
-              {options.showDiscountColumn && (
-                <td style={{ textAlign: 'right' }}>{item.discount ? `${item.discount}%` : '—'}</td>
-              )}
-              {showGst && (
-                <td style={{ textAlign: 'right' }}>{formatCurrency(item.taxableAmount, '', options.numberFormat)}</td>
-              )}
-              {showGst && (
-                <td style={{ textAlign: 'right' }}>{item.gstRate}%</td>
-              )}
-              <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.total, '', options.numberFormat)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {(() => {
+        const hasDates = data.items.some((i) => Boolean(i.date));
+        const showDates = data.invoiceType === 'monthly' || hasDates;
+
+        return (
+          <table className="remote-table">
+            <thead>
+              <tr>
+                <th style={{ width: '4%' }}>#</th>
+                {showDates && <th style={{ width: '10%', textAlign: 'center', whiteSpace: 'nowrap' }}>Date</th>}
+                <th style={{ width: showDates ? '24%' : '28%' }}>Item &amp; Description</th>
+                {options.showHsnSacColumn && <th style={{ width: '10%', textAlign: 'center', whiteSpace: 'nowrap' }}>HSN/SAC</th>}
+                <th style={{ width: '8%', textAlign: 'right' }}>Qty</th>
+                <th style={{ width: '11%', textAlign: 'right' }}>Rate ({options.currencySymbol})</th>
+                {options.showDiscountColumn && <th style={{ width: '7%', textAlign: 'right' }}>Disc%</th>}
+                {showGst && <th style={{ width: '11%', textAlign: 'right' }}>Taxable</th>}
+                {showGst && <th style={{ width: '7%', textAlign: 'right' }}>GST</th>}
+                <th style={{ width: '14%', textAlign: 'right' }}>Total ({options.currencySymbol})</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((item, idx) => (
+                <tr key={item.id || idx}>
+                  <td>{item.sno || idx + 1}</td>
+                  {showDates && (
+                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontSize: '8pt' }}>
+                      {item.date ? formatDate(item.date, options.numberFormat) : '—'}
+                    </td>
+                  )}
+                  <td>
+                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.description}</div>
+                  </td>
+                  {options.showHsnSacColumn && (
+                    <td style={{ textAlign: 'center', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                      {item.hsnSac || '—'}
+                    </td>
+                  )}
+                  <td style={{ textAlign: 'right' }}>{formatNumber(item.quantity, options.numberFormat)} {item.unit || 'Nos'}</td>
+                  <td style={{ textAlign: 'right' }}>{formatCurrency(item.rate, '', options.numberFormat)}</td>
+                  {options.showDiscountColumn && (
+                    <td style={{ textAlign: 'right' }}>{item.discount ? `${item.discount}%` : '—'}</td>
+                  )}
+                  {showGst && (
+                    <td style={{ textAlign: 'right' }}>{formatCurrency(item.taxableAmount, '', options.numberFormat)}</td>
+                  )}
+                  {showGst && (
+                    <td style={{ textAlign: 'right' }}>{item.gstRate}%</td>
+                  )}
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.total, '', options.numberFormat)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+      })()}
 
       {/* Tax Breakdown & Totals */}
       <div className="remote-summary-grid">

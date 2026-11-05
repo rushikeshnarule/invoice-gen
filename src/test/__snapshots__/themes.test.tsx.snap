@@ -4,7 +4,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
 <div>
   <div
     class="_invoiceContainer_368423 _paperA4_368423"
-    style="--accent: #dc2626; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
+    style="--accent: #dc2626; --accent-light: #dc262615; --accent-border: #dc262640; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
       class="_headerGrid_368423"
@@ -636,7 +636,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
 <div>
   <div
     class="_invoiceContainer_f43ed2 _paperA4_f43ed2"
-    style="--accent: #1e3a8a; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
+    style="--accent: #1e3a8a; --accent-light: #1e3a8a15; --accent-border: #1e3a8a40; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
       class="_topBar_f43ed2"
@@ -1353,7 +1353,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
 <div>
   <div
     class="_invoiceContainer_5ca51f _paperA4_5ca51f"
-    style="--accent: #0f766e; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 9pt; --font-size-sm: 8pt; --font-size-lg: 11pt; --font-size-xl: 14pt; --font-size-2xl: 19pt;"
+    style="--accent: #0f766e; --accent-light: #0f766e15; --accent-border: #0f766e40; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 9pt; --font-size-sm: 8pt; --font-size-lg: 11pt; --font-size-xl: 14pt; --font-size-2xl: 19pt;"
   >
     <div
       class="_headerRow_5ca51f"
@@ -1895,7 +1895,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
 <div>
   <div
     class="_invoiceContainer_41f0b7 _paperA4_41f0b7"
-    style="--accent: #334155; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
+    style="--accent: #334155; --accent-light: #33415515; --accent-border: #33415540; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
       class="_topHeader_41f0b7"
@@ -2576,7 +2576,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
 <div>
   <div
     class="_invoiceContainer_46e9ea _paperA4_46e9ea"
-    style="--accent: #b45309; --font-family: Georgia, 'Noto Sans Devanagari', 'Times New Roman', serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
+    style="--accent: #b45309; --accent-light: #b4530915; --accent-border: #b4530940; --font-family: Georgia, 'Noto Sans Devanagari', 'Times New Roman', serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
       class="_topBar_46e9ea"
@@ -3198,7 +3198,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
 <div>
   <div
     class="_invoiceContainer_2947d5 _paperA4_2947d5"
-    style="--accent: #111827; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
+    style="--accent: #111827; --accent-light: #11182715; --accent-border: #11182740; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
       class="_headerGrid_2947d5"
@@ -3833,7 +3833,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
 <div>
   <div
     class="_invoiceContainer_717718 _paperA4_717718"
-    style="--accent: #2563eb; --font-family: 'Inter', 'Noto Sans Devanagari', system-ui, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
+    style="--accent: #2563eb; --accent-light: #2563eb15; --accent-border: #2563eb40; --font-family: 'Inter', 'Noto Sans Devanagari', system-ui, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
       class="_topBand_717718"
@@ -3864,7 +3864,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         <div
           class="_bandTitle_717718"
         >
-          INVOICE
+          TAX INVOICE
         </div>
         <div
           class="_bandMeta_717718"
@@ -4486,7 +4486,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
 <div>
   <div
     class="_receiptContainer_aadc0e"
-    style="--accent: #000000; --font-family: 'SFMono-Regular', Consolas, 'Noto Sans Devanagari', 'Liberation Mono', Menlo, monospace; --font-size-base: 9pt; --font-size-sm: 8pt; --font-size-lg: 11pt; --font-size-xl: 14pt; --font-size-2xl: 19pt; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;"
+    style="--accent: #000000; --accent-light: #00000015; --accent-border: #00000040; --font-family: 'SFMono-Regular', Consolas, 'Noto Sans Devanagari', 'Liberation Mono', Menlo, monospace; --font-size-base: 9pt; --font-size-sm: 8pt; --font-size-lg: 11pt; --font-size-xl: 14pt; --font-size-2xl: 19pt; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;"
   >
     <div
       class="_centerHeader_aadc0e"

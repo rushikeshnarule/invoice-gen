@@ -4,7 +4,7 @@
 // and automatic system storage directly in the user's Documents folder.
 // This ensures memory survives uninstalls, restarts, and re-downloads on both Mac and Windows.
 
-const { app, BrowserWindow, shell, Menu } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -397,6 +397,52 @@ async function createWindow() {
     mainWindow = null;
   });
 }
+
+// ─── Native PDF Export & Print IPC ──────────────────────────────────────
+ipcMain.handle('desktop:save-pdf', async (event, args) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+  const rawFilename = (args && args.defaultFilename) ? args.defaultFilename : 'invoice.pdf';
+  const safeFilename = rawFilename.replace(/[\\/:*?"<>|]/g, '-');
+  
+  let defaultDir;
+  try {
+    defaultDir = app.getPath('documents');
+  } catch {
+    defaultDir = process.env.USERPROFILE || process.env.HOME || '.';
+  }
+
+  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+    title: 'Save Invoice as PDF',
+    defaultPath: path.join(defaultDir, safeFilename),
+    filters: [
+      { name: 'PDF Document', extensions: ['pdf'] },
+      { name: 'All Files', extensions: ['*'] }
+    ],
+  });
+
+  if (canceled || !filePath) {
+    return { success: false, canceled: true };
+  }
+
+  try {
+    const pdfBuffer = await event.sender.printToPDF({
+      printBackground: true,
+      pageSize: args?.paper === 'A5' ? 'A5' : 'A4',
+    });
+    fs.writeFileSync(filePath, pdfBuffer);
+    return { success: true, filePath };
+  } catch (err) {
+    console.error('Failed to generate PDF:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('desktop:print', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+  if (!win) return { success: false };
+  win.webContents.print({ silent: false, printBackground: true });
+  return { success: true };
+});
 
 app.whenReady().then(createWindow);
 

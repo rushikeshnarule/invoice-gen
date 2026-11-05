@@ -13,7 +13,8 @@ interface ThemeContextValue {
   // Options
   options: ThemeOptions;
   setOptions: (options: Partial<ThemeOptions>) => void;
-  resetOptions: () => void;
+  setThemeOptions: (targetThemeId: string, options: Partial<ThemeOptions>) => void;
+  resetOptions: (themeId?: string) => void;
   getOptionsForTheme: (themeId: string) => ThemeOptions;
   getUserOptionsForTheme: (themeId: string) => Partial<ThemeOptions>;
 
@@ -115,10 +116,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, [currentThemeId]);
 
-  const resetOptions = useCallback(() => {
+  const setThemeOptions = useCallback((targetThemeId: string, partial: Partial<ThemeOptions>) => {
+    setUserOptionsByTheme((prev) => {
+      const currentOverrides = prev[targetThemeId] || {};
+      const next = {
+        ...prev,
+        [targetThemeId]: { ...currentOverrides, ...partial },
+      };
+      saveToStorage(THEME_OPTIONS_MAP_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const resetOptions = useCallback((targetThemeId?: string) => {
+    const idToReset = targetThemeId || currentThemeId;
     setUserOptionsByTheme((prev) => {
       const next = { ...prev };
-      delete next[currentThemeId];
+      delete next[idToReset];
       saveToStorage(THEME_OPTIONS_MAP_KEY, next);
       return next;
     });
@@ -200,6 +214,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setThemeId,
     options,
     setOptions,
+    setThemeOptions,
     resetOptions,
     getOptionsForTheme,
     getUserOptionsForTheme,

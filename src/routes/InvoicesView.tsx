@@ -1,7 +1,7 @@
 // ─── Desktop Invoices Workspace ──────────────────────────────────────
 // Offline commercial invoice management for PC desktop software.
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useInvoices } from '../context/InvoiceContext';
 import { useTheme } from '../context/ThemeContext';
 import { getTheme } from '../themes';
@@ -35,11 +35,14 @@ import {
   RiDownload2Line,
   RiUpload2Line,
   RiAlertLine,
+  RiCalendarLine,
 } from '@remixicon/react';
 
 export const InvoicesView: React.FC = () => {
   const {
     invoices,
+    activeInvoiceId,
+    setActiveInvoiceId,
     createInvoice,
     deleteInvoice,
     duplicateInvoice,
@@ -52,9 +55,16 @@ export const InvoicesView: React.FC = () => {
   // Search filter query & status filter
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'sent' | 'draft' | 'overdue'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'daily' | 'monthly'>('all');
 
   // Active editing invoice ID (if non-null, shows InvoiceEditor)
-  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(activeInvoiceId);
+
+  useEffect(() => {
+    if (activeInvoiceId) {
+      setEditingInvoiceId(activeInvoiceId);
+    }
+  }, [activeInvoiceId]);
 
   const [showImportModal, setShowImportModal] = useState(false);
   const [importJsonText, setImportJsonText] = useState('');
@@ -73,6 +83,9 @@ export const InvoicesView: React.FC = () => {
   const totalGstLiabilities = invoices.reduce((s, inv) => s + (inv?.data?.totalTax || 0), 0);
   const paidInvoicesCount = invoices.filter((inv) => inv?.status === 'paid').length;
 
+  const dailyCount = invoices.filter((inv) => inv?.data?.invoiceType !== 'monthly').length;
+  const monthlyCount = invoices.filter((inv) => inv?.data?.invoiceType === 'monthly').length;
+
   // Filtered invoices list
   const filteredInvoices = invoices.filter((inv) => {
     if (!inv || !inv.data) return false;
@@ -87,7 +100,13 @@ export const InvoicesView: React.FC = () => {
       businessName.includes(q);
 
     const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesType =
+      typeFilter === 'all' ||
+      (typeFilter === 'monthly'
+        ? inv.data.invoiceType === 'monthly'
+        : inv.data.invoiceType !== 'monthly');
+
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   const getEffectiveTheme = (invThemeId?: string, clientId?: string, clientName?: string): string => {
@@ -97,18 +116,35 @@ export const InvoicesView: React.FC = () => {
     return currentThemeId;
   };
 
-  const handleCreateDefault = () => {
-    const created = createInvoice('services', currentThemeId);
+  const handleCreateDaily = () => {
+    const created = createInvoice({ type: 'goods', invoiceType: 'daily', themeId: currentThemeId });
     setEditingInvoiceId(created.id);
-    toast.success(`Created ${created.invoiceNumber}. Live editor open.`);
+    setActiveInvoiceId(created.id);
+    toast.success(`Created Daily Bill ${created.invoiceNumber}. Live editor open.`);
+  };
+
+  const handleCreateMonthly = () => {
+    const created = createInvoice({ type: 'goods', invoiceType: 'monthly', themeId: 'contractor' });
+    setEditingInvoiceId(created.id);
+    setActiveInvoiceId(created.id);
+    toast.success(`Created Monthly Invoice ${created.invoiceNumber}. Live editor open.`);
   };
 
   const handlePrint = (invoiceId: string, themeId: string) => {
     toast.info('Opening print dialog...');
-    const printUrl = `/print/${invoiceId}?theme=${themeId}&auto=true`;
+    const printUrl = `/print/${invoiceId}?theme=${themeId}&action=print`;
     const win = window.open(printUrl, '_blank');
     if (!win) {
       window.location.href = printUrl;
+    }
+  };
+
+  const handleSavePdf = (invoiceId: string, themeId: string) => {
+    toast.info('Opening Save as PDF...');
+    const pdfUrl = `/print/${invoiceId}?theme=${themeId}&action=save-pdf`;
+    const win = window.open(pdfUrl, '_blank');
+    if (!win) {
+      window.location.href = pdfUrl;
     }
   };
 
@@ -183,7 +219,10 @@ export const InvoicesView: React.FC = () => {
     return (
       <InvoiceEditor
         invoiceId={editingInvoiceId}
-        onBack={() => setEditingInvoiceId(null)}
+        onBack={() => {
+          setEditingInvoiceId(null);
+          setActiveInvoiceId(null);
+        }}
       />
     );
   }
@@ -207,7 +246,7 @@ export const InvoicesView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Local billing ledger. Changes save automatically to your machine.
+              Local billing ledger. Create daily delivery bills or consolidated monthly statements.
             </p>
           </div>
 
@@ -235,15 +274,27 @@ export const InvoicesView: React.FC = () => {
               Restore
             </Button>
 
-            {/* Create New Invoice Button */}
+            {/* Create Monthly Invoice Button */}
+            <Button
+              size="small"
+              variant="secondary"
+              leadingIcon={RiCalendarLine}
+              onClick={handleCreateMonthly}
+              title="Create a consolidated monthly bill"
+              className="text-xs font-semibold text-purple-700 border-purple-200 bg-purple-50/50 hover:bg-purple-100/60"
+            >
+              + Monthly Bill
+            </Button>
+
+            {/* Create Daily Invoice Button */}
             <Button
               size="small"
               variant="primary"
               leadingIcon={RiAddLine}
-              onClick={handleCreateDefault}
-              className="text-xs shadow-xs"
+              onClick={handleCreateDaily}
+              className="text-xs shadow-xs font-semibold"
             >
-              Create Invoice
+              + Daily Bill
             </Button>
           </div>
         </div>
@@ -296,9 +347,9 @@ export const InvoicesView: React.FC = () => {
         {/* ─── INVOICE DIRECTORY TABLE ─── */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           {/* Filter & Search Bar */}
-          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-64">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="w-56">
                 <SearchField
                   aria-label="Filter customer invoices"
                   placeholder="Search invoice # or client..."
@@ -306,6 +357,43 @@ export const InvoicesView: React.FC = () => {
                   onChange={setSearchQuery}
                   size="small"
                 />
+              </div>
+
+              {/* Invoice Type Pills Filter */}
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-xs">
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('all')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                    typeFilter === 'all'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  All ({invoices.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('daily')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                    typeFilter === 'daily'
+                      ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Daily ({dailyCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('monthly')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                    typeFilter === 'monthly'
+                      ? 'bg-purple-600 text-white shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Monthly ({monthlyCount})
+                </button>
               </div>
 
               {/* Status Pills Filter */}
@@ -341,16 +429,17 @@ export const InvoicesView: React.FC = () => {
                 </div>
                 <h3 className="text-sm font-bold text-slate-800">No invoices found</h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                  {searchQuery || statusFilter !== 'all'
+                  {searchQuery || statusFilter !== 'all' || typeFilter !== 'all'
                     ? 'No invoices match your current search query or filter. Try clearing filters or searching for a different client.'
-                    : 'Your invoice ledger is empty. Click "Create Invoice" above to generate your first invoice.'}
+                    : 'Your invoice ledger is empty. Click "+ Daily Bill" or "+ Monthly Bill" above to generate your first invoice.'}
                 </p>
-                {(searchQuery || statusFilter !== 'all') && (
+                {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all') && (
                   <button
                     type="button"
                     onClick={() => {
                       setSearchQuery('');
                       setStatusFilter('all');
+                      setTypeFilter('all');
                     }}
                     className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
                   >
@@ -362,6 +451,7 @@ export const InvoicesView: React.FC = () => {
               filteredInvoices.map((inv) => {
               const effectiveThemeId = getEffectiveTheme(inv.themeId, inv.clientId, inv.clientName);
               const theme = getTheme(effectiveThemeId);
+              const isMonthly = inv.data.invoiceType === 'monthly';
 
               return (
                 <div
@@ -370,7 +460,10 @@ export const InvoicesView: React.FC = () => {
                 >
                   {/* Left: Invoice Info */}
                   <div
-                    onClick={() => setEditingInvoiceId(inv.id)}
+                    onClick={() => {
+                      setEditingInvoiceId(inv.id);
+                      setActiveInvoiceId(inv.id);
+                    }}
                     className="flex items-center gap-3.5 cursor-pointer flex-1 min-w-0 mr-4"
                   >
                     <div className="size-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 group-hover:border-blue-300 group-hover:bg-blue-50/50 transition-colors shrink-0">
@@ -383,6 +476,16 @@ export const InvoicesView: React.FC = () => {
                           {inv.invoiceNumber}
                         </span>
                         {renderStatusChip(inv.status)}
+
+                        {isMonthly ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200 font-sans">
+                            Monthly {inv.data.billingPeriod ? `• ${inv.data.billingPeriod}` : ''}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 font-sans">
+                            Daily
+                          </span>
+                        )}
                       </div>
 
                       <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5 truncate">
@@ -391,6 +494,15 @@ export const InvoicesView: React.FC = () => {
                         <span>{inv.date}</span>
                         <span>•</span>
                         <span>{inv.data.items.length} items</span>
+                        {inv.data.items.length > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="text-slate-600 truncate max-w-[280px]" title={inv.data.items.map((it) => it.description).join(', ')}>
+                              Bought: {inv.data.items.map((it) => it.description).filter(Boolean).slice(0, 2).join(', ')}
+                              {inv.data.items.length > 2 ? ` (+${inv.data.items.length - 2} more)` : ''}
+                            </span>
+                          </>
+                        )}
                         <span>•</span>
                         <span className="font-mono text-[11px] text-blue-700 font-semibold">{theme.name}</span>
                       </div>
@@ -427,9 +539,17 @@ export const InvoicesView: React.FC = () => {
                       <IconButton
                         icon={RiPrinterLine}
                         size="small"
-                        aria-label="Print / Save as PDF"
-                        title="Print / Save as PDF"
+                        aria-label="Print Invoice"
+                        title="Print Invoice"
                         onClick={() => handlePrint(inv.id, effectiveThemeId)}
+                      />
+
+                      <IconButton
+                        icon={RiDownload2Line}
+                        size="small"
+                        aria-label="Save as PDF"
+                        title="Save as PDF"
+                        onClick={() => handleSavePdf(inv.id, effectiveThemeId)}
                       />
 
                       <IconButton

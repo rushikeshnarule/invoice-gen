@@ -42,14 +42,14 @@ describe('PrintInvoice and PDF Filename Synchronization', () => {
     );
 
     // Initial state: preparing
-    expect(screen.getByText(/Preparing invoice for print/i)).toBeInTheDocument();
+    expect(screen.getByText(/Preparing invoice/i)).toBeInTheDocument();
 
     // After loading: document.title should be the invoice number
     await waitFor(() => {
       expect(document.title).toBe('INV-001');
     });
 
-    expect(screen.getByText('INV-001')).toBeInTheDocument();
+    expect(screen.getAllByText('INV-001').length).toBeGreaterThan(0);
   });
 
   it('sanitizes illegal path/filename characters like slashes in invoiceNumber for valid PDF saving', async () => {

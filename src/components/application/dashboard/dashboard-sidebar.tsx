@@ -3,9 +3,6 @@
 import { useTemplateCopy } from "@/components/foundations/template-copy/template-copy";
 
 import {
-  useCallback,
-  useEffect,
-  useRef,
   useState,
   type ComponentType,
   type ReactNode,
@@ -13,15 +10,12 @@ import {
 import {
   RiCloseLine,
   RiHomeLine,
-  RiSearchLine,
   RiSideBarFill,
   RiSettings4Line,
 } from "@remixicon/react";
 import { SettingsModal } from "@/components/application/settings/settings-modal";
 import { ThemeToggle } from "@/components/application/theme/theme-toggle";
 import { Badge } from "@/components/base/badges/badge";
-import { CloseButton } from "@/components/base/buttons/close-button";
-import { Kbd } from "@/components/base/kbd/kbd";
 import { cx } from "@/utils/cx";
 import { DashboardTeamMenu } from "./dashboard-team-menu";
 import { DashboardUserMenu } from "./dashboard-user-menu";
@@ -158,42 +152,32 @@ const DEFAULT_NAV: DashboardNavItem[] = [
  */
 function NavRows({
   items,
-  query,
   selected,
   collapsed,
-  secondaryMatch,
 }: {
   items: DashboardNavItem[];
-  query: string;
   selected: string;
   collapsed: boolean;
-  /** Whether Support or Settings matches, so "No results" only shows when nothing does. */
-  secondaryMatch: boolean;
 }) {
-  const localize = useTemplateCopy();
-  const shown = items.filter((item) => item.label.toLocaleLowerCase().includes(query));
-  if (shown.length === 0 && !secondaryMatch && !collapsed) {
-    return localize(<p className="px-2 py-3 text-body-regular text-text-tertiary">No results</p>);
-  }
-  return shown.map((item) => {
-      const isSelected = selected === item.key;
-      return (
-        <NavItem
-          key={item.key}
-          icon={item.icon}
-          label={item.label}
-          href={item.href}
-          isSelected={isSelected}
-          collapsed={collapsed}
-          onClick={item.onClick}
-          badge={
-            item.badge !== undefined ? (
-              <Badge color={isSelected ? "primary" : "neutral"}>{item.badge}</Badge>
-            ) : undefined
-          }
-        />
-      );
-    });
+  return items.map((item) => {
+    const isSelected = selected === item.key;
+    return (
+      <NavItem
+        key={item.key}
+        icon={item.icon}
+        label={item.label}
+        href={item.href}
+        isSelected={isSelected}
+        collapsed={collapsed}
+        onClick={item.onClick}
+        badge={
+          item.badge !== undefined ? (
+            <Badge color={isSelected ? "primary" : "neutral"}>{item.badge}</Badge>
+          ) : undefined
+        }
+      />
+    );
+  });
 }
 
 export function DashboardSidebar({
@@ -230,60 +214,7 @@ export function DashboardSidebar({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"identity" | "address" | "banking" | "terms" | "backup">("identity");
   const [suppressUserHover, setSuppressUserHover] = useState(false);
-  const [searchActive, setSearchActive] = useState(false);
-  const [query, setQuery] = useState("");
-  const searchTriggerRef = useRef<HTMLButtonElement>(null);
-  const searchFieldRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const collapsed = mobile ? false : collapsedState;
-  const normalizedQuery = query.trim().toLocaleLowerCase();
-  const matches = (label: string) => label.toLocaleLowerCase().includes(normalizedQuery);
-  const secondaryLabels = ["Business Profile", "Settings", "Bank Details"];
-  const secondaryMatch = secondaryLabels.some(matches);
-
-  const activateSearch = useCallback(() => {
-    if (!mobile) setCollapsed(false);
-    setSearchActive(true);
-  }, [mobile]);
-
-  const deactivateSearch = useCallback((restoreFocus: boolean) => {
-    setQuery("");
-    setSearchActive(false);
-    if (restoreFocus) {
-      window.requestAnimationFrame(() => searchTriggerRef.current?.focus());
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!searchActive) return;
-    const frame = window.requestAnimationFrame(() => searchInputRef.current?.focus());
-    return () => window.cancelAnimationFrame(frame);
-  }, [searchActive]);
-
-  useEffect(() => {
-    if (!searchActive) return;
-
-    const onOutsideClick = (event: MouseEvent) => {
-      const target = event.target;
-      if (target instanceof Node && searchFieldRef.current?.contains(target)) return;
-      deactivateSearch(false);
-    };
-
-    document.addEventListener("click", onOutsideClick);
-    return () => document.removeEventListener("click", onOutsideClick);
-  }, [deactivateSearch, searchActive]);
-
-  useEffect(() => {
-    const onShortcut = (event: KeyboardEvent) => {
-      if (event.key.toLocaleLowerCase() === "l" && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        activateSearch();
-      }
-    };
-
-    window.addEventListener("keydown", onShortcut);
-    return () => window.removeEventListener("keydown", onShortcut);
-  }, [activateSearch]);
 
   return localize((
     <aside
@@ -321,18 +252,8 @@ export function DashboardSidebar({
               : "flex-row items-center justify-between",
           )}
         >
-          {/* The clip is here to hide the label as `max-width` animates shut,
-              but it also cropped the trigger's hover pill down to four corner
-              arcs. Same trick as the scroller: pad the clip box out by the
-              pill's 8px reach and pull it back with a negative margin, so the
-              widths below are 16px larger than the footprint they produce. */}
           <div
-            className={cx(
-              "-m-2 min-w-0 overflow-hidden p-2 transition-[max-width,opacity,transform] duration-300 ease-in-out",
-              mobile && flat && searchActive
-                ? "max-w-0 scale-95 opacity-0"
-                : "max-w-[206px] scale-100 opacity-100",
-            )}
+            className="-m-2 min-w-0 overflow-hidden p-2 transition-[max-width,opacity,transform] duration-300 ease-in-out max-w-[206px] scale-100 opacity-100"
           >
             <DashboardUserMenu
               collapsed={collapsed}
@@ -349,58 +270,7 @@ export function DashboardSidebar({
               }
             />
           </div>
-          {mobile && flat ? (
-            <div
-              ref={searchFieldRef}
-              className={cx(
-                "flex h-9 items-center overflow-hidden rounded-full bg-background-tertiary-default transition-[width,box-shadow] duration-300 ease-in-out",
-                searchActive
-                  ? "w-full gap-2 pe-2.5 ps-2 ring-2 ring-inset ring-border-button-active"
-                  : "w-9 gap-0 px-2",
-              )}
-            >
-              <button
-                ref={searchTriggerRef}
-                type="button"
-                aria-label="Search"
-                onClick={activateSearch}
-                className="flex size-5 shrink-0 cursor-pointer items-center justify-center text-foreground-icon-secondary"
-              >
-                <RiSearchLine className="size-5" aria-hidden />
-              </button>
-              <input
-                ref={searchInputRef}
-                type="search"
-                aria-label="Filter template navigation"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    event.preventDefault();
-                    deactivateSearch(true);
-                  }
-                }}
-                placeholder="Search..."
-                tabIndex={searchActive ? 0 : -1}
-                className={cx(
-                  "min-w-0 bg-transparent text-body-medium tracking-[-0.015em] text-text-primary outline-none placeholder:text-text-tertiary",
-                  "transition-[width,opacity] duration-200 ease-in-out",
-                  searchActive
-                    ? "w-full flex-1 opacity-100 delay-100"
-                    : "pointer-events-none w-0 flex-none opacity-0 delay-0",
-                )}
-              />
-              <CloseButton
-                size="2xs"
-                aria-label="Clear navigation search"
-                onClick={() => deactivateSearch(true)}
-                className={cx(
-                  "shrink-0 bg-background-tertiary-hover transition-opacity duration-150",
-                  searchActive ? "opacity-100 delay-150" : "pointer-events-none opacity-0 delay-0",
-                )}
-              />
-            </div>
-          ) : mobile ? (
+          {mobile ? (
             <button
               type="button"
               aria-label="Close sidebar"
@@ -416,7 +286,6 @@ export function DashboardSidebar({
               aria-expanded={!collapsed}
               onClick={() => {
                 const isExpanding = collapsedState;
-                if (!isExpanding) deactivateSearch(false);
                 setCollapsed(!collapsedState);
                 setSuppressUserHover(isExpanding);
               }}
@@ -434,64 +303,6 @@ export function DashboardSidebar({
         </div>
 
         <div className="flex w-full flex-col gap-3">
-          {/* Quick search */}
-          {!flat && (searchActive && !collapsed ? (
-            <div
-              ref={searchFieldRef}
-              className="flex w-full items-center gap-2 rounded-full bg-background-tertiary-default py-2 pe-2.5 ps-2 ring-2 ring-inset ring-border-button-active transition-[background-color,box-shadow] duration-[var(--input-transition-ms)] ease"
-            >
-              <RiSearchLine className="size-5 shrink-0 text-foreground-icon-secondary" aria-hidden />
-              <input
-                ref={searchInputRef}
-                type="search"
-                aria-label="Filter template navigation"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    event.preventDefault();
-                    deactivateSearch(true);
-                  }
-                }}
-                placeholder="Search navigation…"
-                className="min-w-0 flex-1 bg-transparent text-body-medium text-text-primary outline-none placeholder:text-text-tertiary"
-              />
-              <CloseButton
-                size="2xs"
-                aria-label="Clear navigation search"
-                onClick={() => deactivateSearch(true)}
-                className="bg-background-tertiary-hover"
-              />
-            </div>
-          ) : (
-            <button
-              ref={searchTriggerRef}
-              type="button"
-              aria-label="Quick Search"
-              title={collapsed ? "Quick Search" : undefined}
-              onClick={activateSearch}
-              className={cx(
-                "flex cursor-pointer items-center gap-2 p-2 hover:bg-background-tertiary-hover/55",
-                "transition-[width,border-radius,background-color] duration-300 ease-in-out",
-                collapsed
-                  ? "w-9 rounded-full bg-background-tertiary-default"
-                  : "w-full rounded-full bg-background-tertiary-default",
-              )}
-            >
-              <span className={cx("flex min-w-0 items-center gap-2", !collapsed && "flex-1")}>
-                <RiSearchLine className="size-5 shrink-0 text-foreground-icon-secondary" aria-hidden />
-                <Collapsible collapsed={collapsed}>
-                  <span className="text-body-medium whitespace-nowrap text-text-secondary">
-                    Quick Search
-                  </span>
-                </Collapsible>
-              </span>
-              <Collapsible collapsed={collapsed}>
-                <Kbd>⌘L</Kbd>
-              </Collapsible>
-            </button>
-          ))}
-
           {/* Primary nav. The 2px inset is for the expanded rail only: the
               collapsed column is exactly as wide as a 36px item, so padding
               here pushes every item 2px right and the rail's own clip shaves
@@ -499,10 +310,8 @@ export function DashboardSidebar({
           <nav className={cx("flex w-full flex-col gap-1", !collapsed && "px-0.5")}>
             <NavRows
               items={items}
-              query={normalizedQuery}
               selected={selected}
               collapsed={collapsed}
-              secondaryMatch={secondaryMatch}
             />
           </nav>
         </div>
@@ -520,17 +329,15 @@ export function DashboardSidebar({
           ))}
         {/* Secondary nav: Preferences & Settings */}
         <nav className="flex w-full flex-col gap-1">
-          {matches("Settings") && (
-            <NavItem
-              icon={RiSettings4Line}
-              label="Settings"
-              collapsed={collapsed}
-              onClick={() => {
-                setSettingsTab("identity");
-                setSettingsOpen(true);
-              }}
-            />
-          )}
+          <NavItem
+            icon={RiSettings4Line}
+            label="Settings"
+            collapsed={collapsed}
+            onClick={() => {
+              setSettingsTab("identity");
+              setSettingsOpen(true);
+            }}
+          />
         </nav>
 
         {/* Business account card → opens profile popover & settings */}

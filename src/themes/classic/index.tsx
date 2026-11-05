@@ -9,6 +9,8 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
   const paperClass = options.paper === 'A5' ? styles.paperA5 : styles.paperA4;
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
+  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
 
   return (
     <div
@@ -19,7 +21,15 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
 
       {/* Top Bar with Title & Copy Badge */}
       <div className={styles.topBar}>
-        <div className={styles.invoiceTitle}>{showGst ? 'TAX INVOICE' : 'INVOICE'}</div>
+        <div className={styles.invoiceTitle}>
+          {data.invoiceType === 'monthly'
+            ? showGst
+              ? 'MONTHLY TAX INVOICE'
+              : 'MONTHLY INVOICE'
+            : showGst
+            ? 'TAX INVOICE'
+            : 'INVOICE'}
+        </div>
         {data.copyLabel && (
           <div className={styles.copyBadge}>{data.copyLabel}</div>
         )}
@@ -85,6 +95,12 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
             <span className={styles.metaLabel}>Invoice Date:</span>
             <span className={styles.metaVal}>{formatDate(data.invoiceDate, options.numberFormat)}</span>
           </div>
+          {data.billingPeriod && (
+            <div className={styles.metaRow}>
+              <span className={styles.metaLabel}>Billing Period:</span>
+              <span className={styles.metaVal}>{data.billingPeriod}</span>
+            </div>
+          )}
           {data.dueDate && (
             <div className={styles.metaRow}>
               <span className={styles.metaLabel}>Due Date:</span>
@@ -122,6 +138,7 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
         <thead>
           <tr>
             <th style={{ width: '32px' }} className={styles.centerCol}>#</th>
+            {showDateCol && <th style={{ width: '80px', whiteSpace: 'nowrap' }} className={styles.centerCol}>Date</th>}
             <th>Item Description</th>
             {options.showHsnSacColumn && <th style={{ width: '75px', whiteSpace: 'nowrap' }} className={styles.centerCol}>HSN/SAC</th>}
             <th style={{ width: '50px' }} className={styles.numCol}>Qty</th>
@@ -135,6 +152,11 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
           {data.items.map((item, idx) => (
             <tr key={item.id || idx}>
               <td className={styles.centerCol}>{item.sno || idx + 1}</td>
+              {showDateCol && (
+                <td className={styles.centerCol} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontSize: '8pt' }}>
+                  {item.date ? formatDate(item.date, options.numberFormat) : '—'}
+                </td>
+              )}
               <td>
                 <div className={styles.itemDesc}>{item.description}</div>
               </td>

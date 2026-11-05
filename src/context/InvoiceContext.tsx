@@ -3,7 +3,7 @@
 // Stores real commercial invoices, client profiles, and business settings locally.
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { BusinessInfo, BankDetails, ClientInfo, InvoiceRenderData } from '../types';
+import type { BusinessInfo, BankDetails, ClientInfo, InvoiceRenderData, LineItem } from '../types';
 import type {
   InvoiceRecord,
 } from '../utils/initialOfflineData';
@@ -17,6 +17,26 @@ import {
 import { recalculate } from '../utils/buildRenderData';
 import { loadSystemMemory, saveSystemMemory } from '../services/systemStorage';
 
+export interface CreateInvoiceOptions {
+  type?: 'services' | 'goods' | 'retail';
+  themeId?: string;
+  invoiceType?: 'daily' | 'monthly';
+  billingPeriod?: string;
+  billingMonth?: string;
+  clientName?: string;
+  initialItems?: LineItem[];
+}
+
+export interface ClientMetrics {
+  invoiceCount: number;
+  totalBilled: number;
+  amountPaid: number;
+  balanceDue: number;
+  latestInvoiceDate: string | null;
+  earliestInvoiceDate: string | null;
+  itemsSummary: string[];
+}
+
 interface InvoiceContextValue {
   invoices: InvoiceRecord[];
   businessProfile: BusinessInfo & { bankDetails: BankDetails };
@@ -26,7 +46,19 @@ interface InvoiceContextValue {
 
   // Invoice CRUD
   getInvoice: (id: string) => InvoiceRecord | undefined;
-  createInvoice: (type?: 'services' | 'goods' | 'retail', themeId?: string) => InvoiceRecord;
+  createInvoice: (
+    typeOrOptions?: 'services' | 'goods' | 'retail' | CreateInvoiceOptions,
+    themeId?: string
+  ) => InvoiceRecord;
+  createMonthlyInvoice: (
+    clientName: string,
+    billingMonth: string,
+    billingPeriod?: string,
+    items?: LineItem[],
+    themeId?: string
+  ) => InvoiceRecord;
+  getClientInvoices: (clientName: string) => InvoiceRecord[];
+  getClientMetrics: (clientName: string) => ClientMetrics;
   updateInvoice: (id: string, data: InvoiceRenderData, themeId?: string) => void;
   deleteInvoice: (id: string) => void;
   duplicateInvoice: (id: string) => InvoiceRecord;
@@ -180,6 +212,8 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             date: cleanData.invoiceDate,
             total: cleanData.grandTotalRounded,
             status: cleanData.status,
+            invoiceType: cleanData.invoiceType || 'daily',
+            billingPeriod: cleanData.billingPeriod,
             themeId: themeId !== undefined ? themeId : inv.themeId,
             data: cleanData,
             updatedAt: new Date().toISOString(),
@@ -193,40 +227,72 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 
   const createInvoice = useCallback(
-    (type: 'services' | 'goods' | 'retail' = 'services', themeId?: string) => {
+    (
+      typeOrOptions: 'services' | 'goods' | 'retail' | CreateInvoiceOptions = 'services',
+      themeIdArg?: string
+    ) => {
+      const isOptions = typeof typeOrOptions === 'object' && typeOrOptions !== null;
+      const type = isOptions ? typeOrOptions.type || 'services' : typeOrOptions;
+      const invoiceType = isOptions ? typeOrOptions.invoiceType || 'daily' : 'daily';
+      const billingPeriod = isOptions ? typeOrOptions.billingPeriod : undefined;
+      const billingMonth = isOptions ? typeOrOptions.billingMonth : undefined;
+      const targetClientName = isOptions ? typeOrOptions.clientName : undefined;
+      const passedItems = isOptions ? typeOrOptions.initialItems : undefined;
+      const passedTheme = isOptions ? typeOrOptions.themeId : themeIdArg;
+
       const timestamp = Date.now();
       const prefix = type === 'retail' ? 'POS-2026-' : 'INV-2026-';
       const today = new Date().toISOString().split('T')[0];
 
-      let initialClient = clients[0] || {
-        name: '',
-        address: '',
-        city: '',
-        state: businessProfile.state || 'Maharashtra (27)',
-        pincode: '',
-        phone: '',
-        email: '',
-        gstin: '',
-      };
-      const initialTheme = themeId || (type === 'retail' ? 'thermal' : 'classic');
+      let initialClient = targetClientName
+        ? clients.find((c) => c.name.toLowerCase() === targetClientName.toLowerCase()) || {
+            name: targetClientName,
+            address: '',
+            city: '',
+            state: businessProfile.state || 'Maharashtra (27)',
+            pincode: '',
+            phone: '',
+            email: '',
+            gstin: '',
+          }
+        : clients[0] || {
+            name: '',
+            address: '',
+            city: '',
+            state: businessProfile.state || 'Maharashtra (27)',
+            pincode: '',
+            phone: '',
+            email: '',
+            gstin: '',
+          };
 
-      const initialItems: InvoiceRenderData['items'] = [
-        {
-          id: `item-${timestamp}-1`,
-          sno: 1,
-          description: type === 'retail' ? 'Retail Item' : type === 'goods' ? 'Goods Supply' : 'Consulting & Professional Services',
-          hsnSac: type === 'retail' ? '850440' : type === 'goods' ? '851762' : '998314',
-          quantity: 1,
-          unit: type === 'retail' ? 'Pcs' : type === 'goods' ? 'Nos' : 'Hrs',
-          rate: 0,
-          discount: 0,
-          discountAmount: 0,
-          taxableAmount: 0,
-          gstRate: 0,
-          gstAmount: 0,
-          total: 0,
-        },
-      ];
+      const initialTheme = passedTheme || (type === 'retail' ? 'thermal' : invoiceType === 'monthly' ? 'contractor' : 'classic');
+
+      const initialItems: InvoiceRenderData['items'] = passedItems && passedItems.length > 0
+        ? passedItems
+        : [
+            {
+              id: `item-${timestamp}-1`,
+              sno: 1,
+              date: invoiceType === 'monthly' ? (billingMonth ? `${billingMonth}-01` : today) : today,
+              description:
+                type === 'retail'
+                  ? 'Retail Item'
+                  : type === 'goods'
+                  ? 'Goods Supply'
+                  : 'Consulting & Professional Services',
+              hsnSac: type === 'retail' ? '850440' : type === 'goods' ? '851762' : '998314',
+              quantity: 1,
+              unit: type === 'retail' ? 'Pcs' : type === 'goods' ? 'Nos' : 'Hrs',
+              rate: 0,
+              discount: 0,
+              discountAmount: 0,
+              taxableAmount: 0,
+              gstRate: 0,
+              gstAmount: 0,
+              total: 0,
+            },
+          ];
 
       let counter = invoices.length + 101;
       let invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
@@ -236,6 +302,9 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       const rawInvoice: InvoiceRenderData = {
+        invoiceType,
+        billingPeriod,
+        billingMonth,
         invoiceNumber,
         invoiceDate: today,
         dueDate: today,
@@ -281,6 +350,8 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         date: today,
         total: cleanData.grandTotalRounded,
         status: 'draft',
+        invoiceType: cleanData.invoiceType || 'daily',
+        billingPeriod: cleanData.billingPeriod,
         themeId: initialTheme,
         data: cleanData,
         createdAt: new Date().toISOString(),
@@ -297,6 +368,142 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return createdRecord;
     },
     [invoices, clients, businessProfile]
+  );
+
+  const getClientInvoices = useCallback(
+    (clientName: string): InvoiceRecord[] => {
+      const norm = clientName.trim().toLowerCase();
+      const cId = getClientId(clientName);
+      return invoices.filter(
+        (inv) => (inv.clientName && inv.clientName.trim().toLowerCase() === norm) || inv.clientId === cId
+      );
+    },
+    [invoices]
+  );
+
+  const getClientMetrics = useCallback(
+    (clientName: string): ClientMetrics => {
+      const clientInvoices = getClientInvoices(clientName);
+      const invoiceCount = clientInvoices.length;
+      const totalBilled = clientInvoices.reduce((s, inv) => s + (inv?.total || 0), 0);
+      const amountPaid = clientInvoices.reduce(
+        (s, inv) => s + (inv?.status === 'paid' ? (inv?.total || 0) : (inv?.data?.amountPaid || 0)),
+        0
+      );
+      const balanceDue = clientInvoices.reduce(
+        (s, inv) => s + (inv?.status === 'paid' ? 0 : (inv?.data?.balanceDue || 0)),
+        0
+      );
+
+      const dates = clientInvoices
+        .map((inv) => inv?.date)
+        .filter(Boolean)
+        .sort();
+
+      const earliestInvoiceDate = dates.length > 0 ? dates[0] : null;
+      const latestInvoiceDate = dates.length > 0 ? dates[dates.length - 1] : null;
+
+      const itemsSet = new Set<string>();
+      clientInvoices.forEach((inv) => {
+        inv?.data?.items?.forEach((it) => {
+          if (it?.description?.trim()) {
+            itemsSet.add(it.description.trim());
+          }
+        });
+      });
+
+      return {
+        invoiceCount,
+        totalBilled,
+        amountPaid,
+        balanceDue,
+        earliestInvoiceDate,
+        latestInvoiceDate,
+        itemsSummary: Array.from(itemsSet),
+      };
+    },
+    [getClientInvoices]
+  );
+
+  const createMonthlyInvoice = useCallback(
+    (
+      clientName: string,
+      billingMonth: string,
+      billingPeriod?: string,
+      items?: LineItem[],
+      themeId?: string
+    ): InvoiceRecord => {
+      let periodLabel = billingPeriod;
+      if (!periodLabel && billingMonth) {
+        try {
+          const [year, month] = billingMonth.split('-').map(Number);
+          const dateObj = new Date(year, month - 1, 1);
+          periodLabel = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        } catch {
+          periodLabel = billingMonth;
+        }
+      }
+
+      let lineItems = items;
+      if (!lineItems || lineItems.length === 0) {
+        // Collect daily deliveries made to this client in this month
+        const clientInvoices = getClientInvoices(clientName);
+        const dailyInvoicesInMonth = clientInvoices.filter((inv) => {
+          const invDate = inv?.date || '';
+          return invDate.startsWith(billingMonth) && inv?.data?.invoiceType !== 'monthly';
+        });
+
+        if (dailyInvoicesInMonth.length > 0) {
+          const extracted: LineItem[] = [];
+          let sno = 1;
+          for (const dInv of dailyInvoicesInMonth) {
+            for (const it of dInv.data.items) {
+              extracted.push({
+                ...it,
+                id: `item-${Date.now()}-${sno}`,
+                sno,
+                date: it.date || dInv.date,
+              });
+              sno++;
+            }
+          }
+          lineItems = extracted;
+        }
+      }
+
+      if (!lineItems || lineItems.length === 0) {
+        const defaultItemDate = billingMonth ? `${billingMonth}-01` : new Date().toISOString().split('T')[0];
+        lineItems = [
+          {
+            id: `item-${Date.now()}-1`,
+            sno: 1,
+            date: defaultItemDate,
+            description: 'Material Supply / Work Executed',
+            hsnSac: '998314',
+            quantity: 1,
+            unit: 'Nos',
+            rate: 0,
+            discount: 0,
+            discountAmount: 0,
+            taxableAmount: 0,
+            gstRate: 18,
+            gstAmount: 0,
+            total: 0,
+          },
+        ];
+      }
+
+      return createInvoice({
+        type: 'goods',
+        invoiceType: 'monthly',
+        billingMonth,
+        billingPeriod: periodLabel || billingMonth,
+        clientName,
+        initialItems: lineItems,
+        themeId: themeId || 'contractor',
+      });
+    },
+    [getClientInvoices, createInvoice]
   );
 
   const deleteInvoice = useCallback((id: string) => {
@@ -628,6 +835,9 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setActiveInvoiceId,
     getInvoice,
     createInvoice,
+    createMonthlyInvoice,
+    getClientInvoices,
+    getClientMetrics,
     updateInvoice,
     deleteInvoice,
     duplicateInvoice,

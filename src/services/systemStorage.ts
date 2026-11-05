@@ -14,6 +14,11 @@ export interface SystemStorageDatabase {
   businessProfile: BusinessInfo & { bankDetails: BankDetails };
   clients: ClientInfo[];
   hasCompletedSetup: boolean;
+  themeSettings?: {
+    currentThemeId?: string;
+    optionsByTheme?: Record<string, any>;
+    presets?: any[];
+  };
   updatedAt: string;
   version: number;
 }
@@ -129,6 +134,11 @@ export function saveSystemMemory(
     businessProfile: BusinessInfo & { bankDetails: BankDetails };
     clients: ClientInfo[];
     hasCompletedSetup: boolean;
+    themeSettings?: {
+      currentThemeId?: string;
+      optionsByTheme?: Record<string, any>;
+      presets?: any[];
+    };
   },
   immediate = false
 ): void {
@@ -138,6 +148,17 @@ export function saveSystemMemory(
     localStorage.setItem(STORAGE_BUSINESS_KEY, JSON.stringify(payload.businessProfile));
     localStorage.setItem(STORAGE_CLIENTS_KEY, JSON.stringify(payload.clients));
     localStorage.setItem(STORAGE_SETUP_KEY, JSON.stringify(payload.hasCompletedSetup));
+    if (payload.themeSettings) {
+      if (payload.themeSettings.currentThemeId) {
+        localStorage.setItem('invoice-theme-settings', JSON.stringify({ themeId: payload.themeSettings.currentThemeId }));
+      }
+      if (payload.themeSettings.optionsByTheme) {
+        localStorage.setItem('invoice-theme-options-map', JSON.stringify(payload.themeSettings.optionsByTheme));
+      }
+      if (payload.themeSettings.presets) {
+        localStorage.setItem('invoice-theme-presets', JSON.stringify(payload.themeSettings.presets));
+      }
+    }
   } catch (e) {
     console.warn('localStorage save warning:', e);
   }

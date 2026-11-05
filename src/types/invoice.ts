@@ -38,6 +38,7 @@ export interface ClientInfo {
 export interface LineItem {
   id: string;
   sno: number;
+  date?: string;            // Date of purchase/delivery for this item (crucial for monthly invoices)
   description: string;
   hsnSac?: string;
   quantity: number;
@@ -77,6 +78,11 @@ export interface BankDetails {
 }
 
 export interface InvoiceRenderData {
+  // Invoice type & billing period
+  invoiceType?: 'daily' | 'monthly'; // 'daily' is standard single-day bill; 'monthly' is consolidated monthly invoice
+  billingPeriod?: string;            // e.g. "April 2026" or "01-04-2026 to 30-04-2026"
+  billingMonth?: string;             // e.g. "2026-04"
+
   // Invoice metadata
   invoiceNumber: string;
   invoiceDate: string;

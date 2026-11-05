@@ -161,6 +161,9 @@ export function recalculate(
 
   return {
     ...data,
+    invoiceType: data.invoiceType || 'daily',
+    billingPeriod: data.billingPeriod,
+    billingMonth: data.billingMonth,
     status,
     items: cleanItems,
     gstType,

@@ -9,6 +9,8 @@ export interface InvoiceRecord {
   clientName: string;
   clientId: string;
   date: string;
+  invoiceType?: 'daily' | 'monthly';
+  billingPeriod?: string;
   total: number;
   status: 'paid' | 'sent' | 'draft' | 'overdue' | 'cancelled';
   themeId?: string;

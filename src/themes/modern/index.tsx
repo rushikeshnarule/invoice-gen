@@ -9,6 +9,8 @@ export const ModernTheme: React.FC<ThemeComponentProps> = ({ data, options }) =>
   const paperClass = options.paper === 'A5' ? styles.paperA5 : styles.paperA4;
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
+  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
 
   return (
     <div
@@ -36,8 +38,19 @@ export const ModernTheme: React.FC<ThemeComponentProps> = ({ data, options }) =>
         </div>
 
         <div className={styles.bandRight}>
-          <div className={styles.bandTitle}>INVOICE</div>
+          <div className={styles.bandTitle}>
+            {data.invoiceType === 'monthly'
+              ? showGst
+                ? 'MONTHLY TAX INVOICE'
+                : 'MONTHLY INVOICE'
+              : showGst
+              ? 'TAX INVOICE'
+              : 'INVOICE'}
+          </div>
           <div className={styles.bandMeta}>#{data.invoiceNumber}</div>
+          {data.billingPeriod && (
+            <div className={styles.bandMeta}>Period: {data.billingPeriod}</div>
+          )}
           <div className={styles.bandMeta}>
             Date: {formatDate(data.invoiceDate, options.numberFormat)}
           </div>
@@ -80,6 +93,7 @@ export const ModernTheme: React.FC<ThemeComponentProps> = ({ data, options }) =>
           <thead>
             <tr>
               <th style={{ width: '32px' }} className={styles.centerCol}>#</th>
+              {showDateCol && <th style={{ width: '80px', whiteSpace: 'nowrap' }} className={styles.centerCol}>Date</th>}
               <th>Description</th>
               {options.showHsnSacColumn && <th style={{ width: '75px', whiteSpace: 'nowrap' }} className={styles.centerCol}>HSN/SAC</th>}
               <th style={{ width: '50px' }} className={styles.numCol}>Qty</th>
@@ -93,6 +107,11 @@ export const ModernTheme: React.FC<ThemeComponentProps> = ({ data, options }) =>
             {data.items.map((item, idx) => (
               <tr key={item.id || idx}>
                 <td className={styles.centerCol}>{item.sno || idx + 1}</td>
+                {showDateCol && (
+                  <td className={styles.centerCol} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontSize: '8pt' }}>
+                    {item.date ? formatDate(item.date, options.numberFormat) : '—'}
+                  </td>
+                )}
                 <td>
                   <span className={styles.itemDesc}>{item.description}</span>
                 </td>

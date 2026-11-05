@@ -2,7 +2,17 @@
 // Desktop workstation for editing line items, taxes, clients, payments, and previewing live.
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { InvoiceRenderData, LineItem, PaymentInfo, GSTType } from '../../types';
+import type {
+  InvoiceRenderData,
+  LineItem,
+  PaymentInfo,
+  GSTType,
+  ThemeFontFamily,
+  ThemeFontSize,
+  PaperSize,
+  WatermarkType,
+} from '../../types';
+import { ACCENT_PALETTE } from '../../types';
 import { useInvoices } from '../../context/InvoiceContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getAllThemes, resolveOptions } from '../../themes';
@@ -14,6 +24,7 @@ import { formatCurrency, formatNumber } from '../../utils';
 // BoardUI Components
 import { Button } from '@/components/base/buttons/button';
 import { toast } from '@/components/base/toast/toast';
+import { SwitchCard } from '@/components/base/switch/switch-card';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -36,7 +47,25 @@ import {
   RiShieldCheckLine,
   RiEditLine,
   RiCheckboxCircleLine,
+  RiPaletteLine,
+  RiDownload2Line,
+  RiRefreshLine,
+  RiTableLine,
+  RiBankCardLine,
+  RiCalendarLine,
+  RiQrCodeLine,
 } from '@remixicon/react';
+
+function getMonthNameAndYear(ym: string): string {
+  if (!ym) return '';
+  try {
+    const [year, month] = ym.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, 1);
+    return dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  } catch {
+    return ym;
+  }
+}
 
 interface InvoiceEditorProps {
   invoiceId: string;
@@ -45,11 +74,11 @@ interface InvoiceEditorProps {
 
 export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack }) => {
   const { getInvoice, updateInvoice, clients, businessProfile, updateBusinessProfile, saveClient } = useInvoices();
-  const { currentThemeId, options: contextOptions } = useTheme();
+  const { currentThemeId, getOptionsForTheme, setThemeOptions, resetOptions } = useTheme();
   const themes = getAllThemes();
 
   const record = getInvoice(invoiceId);
-  const [activeTab, setActiveTab] = useState<'items' | 'parties' | 'branding' | 'payment'>('items');
+  const [activeTab, setActiveTab] = useState<'items' | 'parties' | 'branding' | 'payment' | 'styling'>('items');
   const [themeId, setThemeId] = useState<string>(() => record?.themeId || currentThemeId);
   const [zoomLevel, setZoomLevel] = useState<number>(() =>
     themeId === 'thermal' ? 1.0 : 0.82
@@ -164,8 +193,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
   // Options for the active theme
   const activeOptions = useMemo(() => {
-    return resolveOptions(themeId, contextOptions);
-  }, [themeId, contextOptions]);
+    return getOptionsForTheme ? getOptionsForTheme(themeId) : resolveOptions(themeId);
+  }, [themeId, getOptionsForTheme]);
 
   // Handle saving to offline storage
   const handleSave = () => {
@@ -177,7 +206,18 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   const handlePrint = () => {
     updateInvoice(invoiceId, calculatedData, themeId);
     toast.info('Opening print layout...');
-    const url = `/print/${invoiceId}?theme=${themeId}&auto=true`;
+    const url = `/print/${invoiceId}?theme=${themeId}&action=print`;
+    const win = window.open(url, '_blank');
+    if (!win) {
+      window.location.href = url;
+    }
+  };
+
+  // Direct Save as PDF
+  const handleSavePdf = () => {
+    updateInvoice(invoiceId, calculatedData, themeId);
+    toast.info('Opening Save as PDF...');
+    const url = `/print/${invoiceId}?theme=${themeId}&action=save-pdf`;
     const win = window.open(url, '_blank');
     if (!win) {
       window.location.href = url;
@@ -228,6 +268,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
       const rate = preset?.rate !== undefined ? preset.rate : 1000;
       const discount = preset?.discount || 0;
       const gstRate = preset?.gstRate !== undefined ? preset.gstRate : 18;
+      const defaultDate =
+        preset?.date ||
+        (prev.invoiceType === 'monthly'
+          ? (prev.billingMonth ? `${prev.billingMonth}-01` : prev.invoiceDate)
+          : prev.invoiceDate);
 
       const baseAmount = qty * rate;
       const discountAmount = discount > 0 ? Math.round(((baseAmount * discount) / 100) * 100) / 100 : 0;
@@ -238,6 +283,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
       const newItem: LineItem = {
         id: `item-${Date.now()}-${prev.items.length + 1}`,
         sno: prev.items.length + 1,
+        date: defaultDate,
         description: preset?.description || 'New Service / Product Description',
         hsnSac: preset?.hsnSac || '998314',
         quantity: qty,
@@ -267,6 +313,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
         ...target,
         id: `item-${Date.now()}`,
         sno: prev.items.length + 1,
+        date: target.date,
       };
       return { ...prev, items: [...prev.items, copy] };
     });
@@ -484,6 +531,15 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                 </option>
               ))}
             </select>
+            <button
+              type="button"
+              onClick={() => setActiveTab('styling')}
+              title="Customize Theme Colors, Fonts & Layout"
+              className="p-1 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors flex items-center gap-1 font-semibold text-[11px] cursor-pointer"
+            >
+              <RiPaletteLine className="size-3.5" />
+              <span className="hidden md:inline">Customize</span>
+            </button>
           </div>
 
           {/* Zoom Controls (hidden on narrow screens to protect CTA visibility) */}
@@ -542,12 +598,22 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
           <Button
             size="small"
-            variant="primary"
+            variant="secondary"
             leadingIcon={RiPrinterLine}
             onClick={handlePrint}
+            className="text-xs font-semibold shrink-0"
+          >
+            Print
+          </Button>
+
+          <Button
+            size="small"
+            variant="primary"
+            leadingIcon={RiDownload2Line}
+            onClick={handleSavePdf}
             className="text-xs shadow-xs font-semibold shrink-0"
           >
-            Print / PDF
+            Save PDF
           </Button>
         </div>
       </div>
@@ -574,10 +640,13 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                 Buyer &amp; Dates
               </SegmentedControlItem>
               <SegmentedControlItem id="branding" className="text-xs font-medium">
-                Photo, Stamp &amp; Sign
+                Logo &amp; Stamp
               </SegmentedControlItem>
               <SegmentedControlItem id="payment" className="text-xs font-medium">
                 Pay &amp; Terms
+              </SegmentedControlItem>
+              <SegmentedControlItem id="styling" className="text-xs font-medium">
+                Style &amp; Theme
               </SegmentedControlItem>
             </SegmentedControl>
           </div>
@@ -587,9 +656,79 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             {/* ══════════ TAB 1: LINE ITEMS & AMOUNTS ══════════ */}
             {activeTab === 'items' && (
               <div className="space-y-4">
+                {/* Invoice Classification & Billing Period Bar */}
+                <div className="p-3 bg-slate-50/90 rounded-xl border border-slate-200 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[11px] font-bold text-slate-800">Invoice Classification:</span>
+                    <div className="inline-flex rounded-lg bg-slate-200/70 p-0.5 text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setInvoiceData((prev) => ({ ...prev, invoiceType: 'daily' }))}
+                        className={`px-2.5 py-1 rounded-md transition-all ${
+                          invoiceData.invoiceType !== 'monthly'
+                            ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Daily Invoice (Regular)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ym = invoiceData.billingMonth || invoiceData.invoiceDate.slice(0, 7);
+                          setInvoiceData((prev) => ({
+                            ...prev,
+                            invoiceType: 'monthly',
+                            billingMonth: ym,
+                            billingPeriod: prev.billingPeriod || getMonthNameAndYear(ym),
+                          }));
+                        }}
+                        className={`px-2.5 py-1 rounded-md transition-all ${
+                          invoiceData.invoiceType === 'monthly'
+                            ? 'bg-purple-600 text-white shadow-2xs font-bold'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Monthly Invoice (Consolidated)
+                      </button>
+                    </div>
+                  </div>
+
+                  {invoiceData.invoiceType === 'monthly' && (
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/80">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Billing Month</label>
+                        <input
+                          type="month"
+                          value={invoiceData.billingMonth || invoiceData.invoiceDate.slice(0, 7)}
+                          onChange={(e) => {
+                            const ym = e.target.value;
+                            setInvoiceData((prev) => ({
+                              ...prev,
+                              billingMonth: ym,
+                              billingPeriod: getMonthNameAndYear(ym),
+                            }));
+                          }}
+                          className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono outline-none focus:border-purple-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Billing Period Header</label>
+                        <input
+                          type="text"
+                          value={invoiceData.billingPeriod || ''}
+                          onChange={(e) => setInvoiceData((prev) => ({ ...prev, billingPeriod: e.target.value }))}
+                          placeholder="e.g. April 2026 or 01/04/2026 to 30/04/2026"
+                          className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs outline-none focus:border-purple-600"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-700">
-                    Line items
+                    Line items ({invoiceData.items.length})
                   </span>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -640,6 +779,51 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                           >
                             <RiDeleteBinLine className="size-3.5" />
                           </button>
+                        </div>
+                      </div>
+
+                      {/* Line Item Date (Crucial for Monthly Invoices & Multi-Day Deliveries) */}
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/60 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] text-slate-500 font-medium shrink-0 flex items-center gap-1">
+                            <RiCalendarLine className="size-3 text-slate-400" />
+                            Supply Date:
+                          </label>
+                          <input
+                            type="date"
+                            value={item.date || ''}
+                            onChange={(e) => handleUpdateItem(index, { date: e.target.value })}
+                            className="bg-white border border-slate-200 rounded px-2 py-0.5 text-xs font-mono outline-none focus:border-blue-500 text-slate-800"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {!item.date ? (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateItem(index, { date: invoiceData.invoiceDate })}
+                              className="text-[10px] text-blue-600 hover:underline cursor-pointer"
+                            >
+                              Set to bill date ({invoiceData.invoiceDate})
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetDate = item.date;
+                                if (!targetDate) return;
+                                setInvoiceData((prev) => ({
+                                  ...prev,
+                                  items: prev.items.map((it) => ({ ...it, date: targetDate })),
+                                }));
+                                toast.success(`Applied date ${targetDate} to all items`);
+                              }}
+                              className="text-[10px] text-slate-500 hover:text-slate-800 hover:underline cursor-pointer"
+                              title="Apply this date to all items"
+                            >
+                              Copy date to all items
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -1109,7 +1293,44 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                 {/* Dates & Supply Section */}
                 <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-3">
-                  <span className="font-bold text-slate-900 block">Invoice Dates &amp; Tax Jurisdiction</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 block">Invoice Dates &amp; Tax Jurisdiction</span>
+                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                      {invoiceData.invoiceType === 'monthly' ? 'Monthly Bill' : 'Daily Bill'}
+                    </span>
+                  </div>
+
+                  {invoiceData.invoiceType === 'monthly' && (
+                    <div className="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-purple-50/70 border border-purple-200">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-purple-900 mb-0.5">Billing Month</label>
+                        <input
+                          type="month"
+                          value={invoiceData.billingMonth || invoiceData.invoiceDate.slice(0, 7)}
+                          onChange={(e) => {
+                            const ym = e.target.value;
+                            setInvoiceData((prev) => ({
+                              ...prev,
+                              billingMonth: ym,
+                              billingPeriod: getMonthNameAndYear(ym),
+                            }));
+                          }}
+                          className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-mono outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-purple-900 mb-0.5">Billing Period Header</label>
+                        <input
+                          type="text"
+                          value={invoiceData.billingPeriod || ''}
+                          onChange={(e) => setInvoiceData((prev) => ({ ...prev, billingPeriod: e.target.value }))}
+                          placeholder="e.g. April 2026 or 01/04/2026 to 30/04/2026"
+                          className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <div>
                       <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Invoice Date</label>
@@ -1485,6 +1706,253 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                       className="w-full bg-white border border-slate-200 rounded-md px-2 py-1 text-xs outline-none"
                     />
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* ══════════ TAB 5: THEME & STYLING CUSTOMIZER ══════════ */}
+            {activeTab === 'styling' && (
+              <div className="space-y-4">
+                {/* Header with Active Theme & Reset */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-2 shadow-2xs">
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
+                      Live Theme Customization
+                    </span>
+                    <span className="font-bold text-xs text-slate-900 block">
+                      {themes.find((t) => t.id === themeId)?.name || themeId}
+                    </span>
+                  </div>
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    leadingIcon={RiRefreshLine}
+                    onClick={() => {
+                      resetOptions(themeId);
+                      toast.info(`Theme "${themeId}" reset to defaults`);
+                    }}
+                    className="text-[11px]"
+                  >
+                    Reset Defaults
+                  </Button>
+                </div>
+
+                {/* Accent Color Palette */}
+                <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-700">Accent Colour</span>
+                    <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                      {activeOptions.accentColor.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {/* 10-Color Palette Swatches */}
+                  <div className="grid grid-cols-5 gap-2">
+                    {ACCENT_PALETTE.map((hex) => {
+                      const isSelected = hex.toLowerCase() === activeOptions.accentColor.toLowerCase();
+                      return (
+                        <button
+                          key={hex}
+                          type="button"
+                          onClick={() => setThemeOptions(themeId, { accentColor: hex })}
+                          className={`h-8 rounded-lg transition-all relative flex items-center justify-center cursor-pointer ${
+                            isSelected
+                              ? 'ring-2 ring-slate-900 scale-105 shadow-sm'
+                              : 'hover:scale-102 border border-black/10'
+                          }`}
+                          style={{ backgroundColor: hex }}
+                          title={hex}
+                        >
+                          {isSelected && <span className="size-2 rounded-full bg-white shadow" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Hex Color Picker */}
+                  <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                    <input
+                      type="color"
+                      value={activeOptions.accentColor}
+                      onChange={(e) => setThemeOptions(themeId, { accentColor: e.target.value })}
+                      className="size-7 rounded border border-slate-300 bg-transparent cursor-pointer p-0"
+                    />
+                    <input
+                      type="text"
+                      value={activeOptions.accentColor}
+                      onChange={(e) => setThemeOptions(themeId, { accentColor: e.target.value })}
+                      placeholder="#2563EB"
+                      maxLength={7}
+                      className="flex-1 bg-transparent text-slate-900 font-mono text-xs outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Typography & Font Size */}
+                <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-3 shadow-2xs">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Font Family
+                    </label>
+                    <SegmentedControl
+                      aria-label="Font Family"
+                      selectedKeys={new Set([activeOptions.fontFamily])}
+                      onSelectionChange={(keys) => {
+                        const val = Array.from(keys)[0];
+                        if (val) setThemeOptions(themeId, { fontFamily: String(val) as ThemeFontFamily });
+                      }}
+                      className="w-full bg-slate-100 p-0.5"
+                    >
+                      <SegmentedControlItem id="system" className="text-xs">System</SegmentedControlItem>
+                      <SegmentedControlItem id="inter" className="text-xs">Inter</SegmentedControlItem>
+                      <SegmentedControlItem id="serif" className="text-xs">Serif</SegmentedControlItem>
+                      <SegmentedControlItem id="mono" className="text-xs">Mono</SegmentedControlItem>
+                    </SegmentedControl>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Base Font Size
+                    </label>
+                    <SegmentedControl
+                      aria-label="Font Size"
+                      selectedKeys={new Set([activeOptions.fontSize])}
+                      onSelectionChange={(keys) => {
+                        const val = Array.from(keys)[0];
+                        if (val) setThemeOptions(themeId, { fontSize: String(val) as ThemeFontSize });
+                      }}
+                      className="w-full bg-slate-100 p-0.5"
+                    >
+                      <SegmentedControlItem id="small" className="text-xs">Small (9pt)</SegmentedControlItem>
+                      <SegmentedControlItem id="normal" className="text-xs">Normal (11pt)</SegmentedControlItem>
+                      <SegmentedControlItem id="large" className="text-xs">Large (13pt)</SegmentedControlItem>
+                    </SegmentedControl>
+                  </div>
+
+                  {themeId !== 'thermal' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Paper Format
+                      </label>
+                      <SegmentedControl
+                        aria-label="Paper Format"
+                        selectedKeys={new Set([activeOptions.paper])}
+                        onSelectionChange={(keys) => {
+                          const val = Array.from(keys)[0];
+                          if (val) setThemeOptions(themeId, { paper: String(val) as PaperSize });
+                        }}
+                        className="w-full bg-slate-100 p-0.5"
+                      >
+                        <SegmentedControlItem id="A4" className="text-xs">A4 (Standard)</SegmentedControlItem>
+                        <SegmentedControlItem id="A5" className="text-xs">A5 (Compact)</SegmentedControlItem>
+                      </SegmentedControl>
+                    </div>
+                  )}
+                </div>
+
+                {/* Table & Structure Toggles */}
+                <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5 shadow-2xs">
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                    Table Columns &amp; Tax Structure
+                  </span>
+
+                  <SwitchCard
+                    title="HSN / SAC Code Column"
+                    description="Show tax classification code column"
+                    icon={RiTableLine}
+                    isSelected={activeOptions.showHsnSacColumn}
+                    onChange={(val) => setThemeOptions(themeId, { showHsnSacColumn: val })}
+                    className="border-slate-200 bg-slate-50/50"
+                  />
+
+                  <SwitchCard
+                    title="Discount Column"
+                    description="Show item-level discount percentage"
+                    isSelected={activeOptions.showDiscountColumn}
+                    onChange={(val) => setThemeOptions(themeId, { showDiscountColumn: val })}
+                    className="border-slate-200 bg-slate-50/50"
+                  />
+
+                  <SwitchCard
+                    title="Tax Summary Table"
+                    description="Detailed CGST, SGST &amp; IGST rate breakdown"
+                    isSelected={activeOptions.showTaxSummaryTable}
+                    onChange={(val) => setThemeOptions(themeId, { showTaxSummaryTable: val })}
+                    className="border-slate-200 bg-slate-50/50"
+                  />
+
+                  <SwitchCard
+                    title="Amount in Words"
+                    description="Formal Indian numbering nomenclature"
+                    isSelected={activeOptions.showAmountInWords}
+                    onChange={(val) => setThemeOptions(themeId, { showAmountInWords: val })}
+                    className="border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+
+                {/* Payment & Footer Visibility */}
+                <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5 shadow-2xs">
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                    Payment &amp; Sign-off Visibility
+                  </span>
+
+                  <SwitchCard
+                    title="Bank Account Remittance"
+                    description="Account number, IFSC, branch in footer"
+                    icon={RiBankCardLine}
+                    isSelected={activeOptions.showBankDetails}
+                    onChange={(val) => setThemeOptions(themeId, { showBankDetails: val })}
+                    className="border-slate-200 bg-slate-50/50"
+                  />
+
+                  <SwitchCard
+                    title="Dynamic UPI QR Code"
+                    description="Instant mobile payment QR on printed invoice"
+                    icon={RiQrCodeLine}
+                    isSelected={activeOptions.showUpiQr}
+                    onChange={(val) => setThemeOptions(themeId, { showUpiQr: val })}
+                    className="border-slate-200 bg-slate-50/50"
+                  />
+
+                  <SwitchCard
+                    title="Authorized Signatory &amp; Stamp"
+                    description="Show signatory seal and signature line"
+                    icon={RiShieldCheckLine}
+                    isSelected={activeOptions.showSignature}
+                    onChange={(val) => setThemeOptions(themeId, { showSignature: val })}
+                    className="border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+
+                {/* Watermark Selector */}
+                <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2 shadow-2xs">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Document Watermark
+                  </label>
+                  <SegmentedControl
+                    aria-label="Watermark"
+                    selectedKeys={new Set([activeOptions.watermark])}
+                    onSelectionChange={(keys) => {
+                      const val = Array.from(keys)[0];
+                      if (val) setThemeOptions(themeId, { watermark: String(val) as WatermarkType });
+                    }}
+                    className="w-full bg-slate-100 p-0.5"
+                  >
+                    <SegmentedControlItem id="none" className="text-xs">None</SegmentedControlItem>
+                    <SegmentedControlItem id="PAID" className="text-xs">PAID</SegmentedControlItem>
+                    <SegmentedControlItem id="DRAFT" className="text-xs">DRAFT</SegmentedControlItem>
+                    <SegmentedControlItem id="custom" className="text-xs">Custom</SegmentedControlItem>
+                  </SegmentedControl>
+
+                  {activeOptions.watermark === 'custom' && (
+                    <input
+                      type="text"
+                      value={activeOptions.watermarkCustomText}
+                      onChange={(e) => setThemeOptions(themeId, { watermarkCustomText: e.target.value })}
+                      placeholder="e.g. CONFIDENTIAL / SPECIMEN"
+                      className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                    />
+                  )}
                 </div>
               </div>
             )}

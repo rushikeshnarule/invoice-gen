@@ -45,8 +45,11 @@ export function getWatermarkText(
 
 /** CSS variables from theme options */
 export function themeVars(options: ThemeOptions): React.CSSProperties {
+  const accent = options.accentColor || '#2563EB';
   return {
-    '--accent': options.accentColor,
+    '--accent': accent,
+    '--accent-light': `${accent}15`,
+    '--accent-border': `${accent}40`,
     '--font-family': getFontFamily(options.fontFamily),
     '--font-size-base': `${getBaseFontSize(options.fontSize)}pt`,
     '--font-size-sm': `${getBaseFontSize(options.fontSize) - 1}pt`,

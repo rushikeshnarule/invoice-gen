@@ -22,6 +22,7 @@ import { SearchField } from '@/components/base/search-field/search-field';
 import { toast } from '@/components/base/toast/toast';
 import {
   RiPrinterLine,
+  RiDownload2Line,
   RiCheckLine,
   RiPaletteLine,
   RiArrowLeftLine,
@@ -119,7 +120,15 @@ export const ThemePicker: React.FC = () => {
   const thumbData = React.useMemo(() => invoices[0]?.data || createSampleData(3), [invoices]);
 
   const handlePrint = () => {
-    const printUrl = `/print/sample?theme=${currentThemeId}&auto=true&variant=${dataVariant}`;
+    const printUrl = `/print/sample?theme=${currentThemeId}&action=print&variant=${dataVariant}`;
+    const win = window.open(printUrl, '_blank');
+    if (!win) {
+      window.location.href = printUrl;
+    }
+  };
+
+  const handleSavePdf = () => {
+    const printUrl = `/print/sample?theme=${currentThemeId}&action=save-pdf&variant=${dataVariant}`;
     const win = window.open(printUrl, '_blank');
     if (!win) {
       window.location.href = printUrl;
@@ -221,15 +230,24 @@ export const ThemePicker: React.FC = () => {
               </button>
             </div>
 
-            {/* Print CTA with BoardUI Primary Button */}
+            {/* Print and Save PDF buttons */}
             <Button
               size="small"
-              variant="primary"
+              variant="secondary"
               leadingIcon={RiPrinterLine}
               onClick={handlePrint}
               className="text-xs shadow-xs font-semibold shrink-0"
             >
-              Print / Save as PDF
+              Print
+            </Button>
+            <Button
+              size="small"
+              variant="primary"
+              leadingIcon={RiDownload2Line}
+              onClick={handleSavePdf}
+              className="text-xs shadow-xs font-semibold shrink-0"
+            >
+              Save as PDF
             </Button>
           </div>
         </div>
@@ -297,7 +315,7 @@ export const ThemePicker: React.FC = () => {
               size="small"
               variant="secondary"
               leadingIcon={RiRefreshLine}
-              onClick={resetOptions}
+              onClick={() => resetOptions()}
               className="text-xs font-medium"
             >
               Reset Defaults

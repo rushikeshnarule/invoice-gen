@@ -1,11 +1,28 @@
-import React, { useEffect, useState, useRef, Suspense } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { buildRenderData, type RenderDataWithTheme } from '../utils/buildRenderData';
 import { getTheme, resolveOptions } from '../themes';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from '@/components/base/buttons/button';
-import { RiPrinterLine, RiArrowLeftLine, RiShareForwardLine } from '@remixicon/react';
+import { toast } from '@/components/base/toast/toast';
+import { RiPrinterLine, RiArrowLeftLine, RiShareForwardLine, RiDownload2Line } from '@remixicon/react';
 import { ShareInvoiceModal } from '../components/ShareInvoiceModal/ShareInvoiceModal';
+
+declare global {
+  interface Window {
+    invoiceDesktop?: {
+      isDesktop?: boolean;
+      platform?: string;
+      savePdf?: (options: { defaultFilename: string; paper?: string }) => Promise<{
+        success: boolean;
+        canceled?: boolean;
+        filePath?: string;
+        error?: string;
+      }>;
+      print?: () => Promise<{ success: boolean }>;
+    };
+  }
+}
 
 export const PrintInvoice: React.FC = () => {
   const { invoiceId } = useParams<{ invoiceId: string }>();
@@ -15,13 +32,16 @@ export const PrintInvoice: React.FC = () => {
 
   const [data, setData] = useState<RenderDataWithTheme | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSavingPdf, setIsSavingPdf] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const isMountedRef = useRef(true);
 
   // Theme override from query param, loaded record, or context
   const themeParam = searchParams.get('theme');
   const variantParam = searchParams.get('variant');
-  const autoPrint = searchParams.get('auto') === 'true';
+  const actionParam = searchParams.get('action'); // 'print' | 'save-pdf'
+  const autoPrint = searchParams.get('auto') === 'true' || actionParam === 'print';
+  const autoSavePdf = actionParam === 'save-pdf';
 
   const activeThemeId = themeParam || data?._themeId || currentThemeId;
   const theme = getTheme(activeThemeId);
@@ -69,23 +89,67 @@ export const PrintInvoice: React.FC = () => {
     };
   }, [data?.invoiceNumber]);
 
+  const handlePrint = () => {
+    if (data?.invoiceNumber) {
+      document.title = data.invoiceNumber.trim().replace(/[\\/:*?"<>|]/g, '-');
+    }
+    window.print();
+  };
+
+  const handleSavePdf = async () => {
+    if (!data) return;
+    const safeTitle = data.invoiceNumber.trim().replace(/[\\/:*?"<>|]/g, '-');
+    const defaultFilename = `${safeTitle}.pdf`;
+
+    if (window.invoiceDesktop?.savePdf) {
+      setIsSavingPdf(true);
+      try {
+        const res = await window.invoiceDesktop.savePdf({
+          defaultFilename,
+          paper: options.paper,
+        });
+        if (res.success && res.filePath) {
+          toast.success(`Saved PDF to: ${res.filePath}`);
+        } else if (!res.canceled && res.error) {
+          toast.error(`Failed to save PDF: ${res.error}`);
+        }
+      } catch (err: any) {
+        toast.error(`Error saving PDF: ${err?.message || err}`);
+      } finally {
+        setIsSavingPdf(false);
+      }
+    } else {
+      // In web browser fallback: set title to exact filename and open print dialog
+      document.title = safeTitle;
+      toast.info('Choose "Save as PDF" in the printer destination dropdown.');
+      window.print();
+    }
+  };
+
   useEffect(() => {
-    if (!loading && data && autoPrint) {
+    if (!loading && data) {
       if (data.invoiceNumber) {
         document.title = data.invoiceNumber.trim().replace(/[\\/:*?"<>|]/g, '-');
       }
-      // Delay slightly for font rendering and styles to paint
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
-      return () => clearTimeout(timer);
+
+      if (autoSavePdf) {
+        const timer = setTimeout(() => {
+          handleSavePdf();
+        }, 500);
+        return () => clearTimeout(timer);
+      } else if (autoPrint) {
+        const timer = setTimeout(() => {
+          window.print();
+        }, 500);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [loading, data, autoPrint]);
+  }, [loading, data, autoPrint, autoSavePdf]);
 
   if (loading || !data) {
     return (
       <div style={{ padding: 40, fontFamily: 'sans-serif', textAlign: 'center', color: '#64748b' }}>
-        Preparing invoice for print...
+        Preparing invoice for document workstation...
       </div>
     );
   }
@@ -134,20 +198,29 @@ export const PrintInvoice: React.FC = () => {
             Share
           </Button>
 
+          {/* Dedicated Print Button */}
+          <Button
+            size="small"
+            variant="secondary"
+            leadingIcon={RiPrinterLine}
+            aria-label="Print Invoice"
+            onClick={handlePrint}
+            className="text-xs font-semibold shrink-0"
+          >
+            Print
+          </Button>
+
+          {/* Dedicated Save PDF Button */}
           <Button
             size="small"
             variant="primary"
-            leadingIcon={RiPrinterLine}
-            aria-label="Print or Save as PDF"
-            onClick={() => {
-              if (data?.invoiceNumber) {
-                document.title = data.invoiceNumber.trim().replace(/[\\/:*?"<>|]/g, '-');
-              }
-              window.print();
-            }}
+            leadingIcon={RiDownload2Line}
+            aria-label="Save as PDF"
+            onClick={handleSavePdf}
+            disabled={isSavingPdf}
             className="text-xs shadow-xs font-semibold shrink-0"
           >
-            Print / Save as PDF
+            {isSavingPdf ? 'Saving PDF...' : 'Save PDF'}
           </Button>
         </div>
       </div>
@@ -160,17 +233,11 @@ export const PrintInvoice: React.FC = () => {
         themeId={activeThemeId}
       />
 
-      {/* Invoice Document Body */}
-      <div className="flex justify-center p-6 print:p-0">
-        <Suspense
-          fallback={
-            <div style={{ padding: 40, fontFamily: 'sans-serif', textAlign: 'center' }}>
-              Rendering {theme.name}...
-            </div>
-          }
-        >
+      {/* Printable Invoice Root */}
+      <div className="invoice-print-wrapper py-6 sm:py-10 flex justify-center">
+        <div className="print-content-sheet bg-white shadow-lg print:shadow-none print:m-0">
           <Component data={data} options={options} />
-        </Suspense>
+        </div>
       </div>
     </div>
   );
