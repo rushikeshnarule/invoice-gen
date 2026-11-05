@@ -1,0 +1,26 @@
+/* Express POS Thermal (80mm) */
+.remote-invoice-root.theme-remote-express-pos-thermal {
+  font-family: 'Courier New', Courier, monospace !important;
+  background: #ffffff !important;
+  border: none !important;
+  padding: 4mm 2mm !important;
+  color: #000000 !important;
+}
+.remote-invoice-root.theme-remote-express-pos-thermal .remote-title {
+  font-size: 14pt !important;
+  text-align: center !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+}
+.remote-invoice-root.theme-remote-express-pos-thermal .remote-table th {
+  background: #f1f5f9 !important;
+  color: #000000 !important;
+  border-top: 1px dashed #000000 !important;
+  border-bottom: 1px dashed #000000 !important;
+  font-size: 7.5pt !important;
+}
+.remote-invoice-root.theme-remote-express-pos-thermal .remote-grand-total {
+  font-size: 12pt !important;
+  border-top: 1px solid #000000 !important;
+  border-bottom: 2px double #000000 !important;
+}

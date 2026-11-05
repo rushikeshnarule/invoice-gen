@@ -1,0 +1,67 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Excel Small Business Sales Invoice
+   Inspired by Microsoft Excel Small Business Commercial Invoice Template
+   Features: Deep navy corporate header, dual billing/shipping, alternating rows
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice {
+  border: 1px solid #cbd5e1;
+  border-top: 6px solid #1e3a8a;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice .remote-header {
+  border-bottom: 2px solid #1e3a8a;
+  padding-bottom: 16px;
+}
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice .remote-title {
+  color: #1e3a8a !important;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice .remote-party-box {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  border-left: 3px solid #1e3a8a !important;
+  border-radius: 6px;
+}
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice .remote-party-title {
+  color: #1e3a8a !important;
+  font-weight: 700;
+}
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice .remote-table {
+  border: 1px solid #cbd5e1;
+}
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice .remote-table th {
+  background: #1e3a8a !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 8.5pt;
+  padding: 8px 10px;
+  border: 1px solid #172554;
+}
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice .remote-table td {
+  border: 1px solid #e2e8f0;
+  padding: 7px 10px;
+}
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice .remote-table tbody tr:nth-child(even) {
+  background: #f1f5f9;
+}
+
+.remote-invoice-root.theme-remote-excel-small-business-invoice .remote-grand-total {
+  color: #1e3a8a !important;
+  font-weight: 800;
+  font-size: 13pt;
+  border-top: 2px solid #1e3a8a !important;
+  border-bottom: 3px double #1e3a8a !important;
+  background: #eff6ff;
+}

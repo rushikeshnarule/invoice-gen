@@ -1,0 +1,76 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Excel Service & Consulting Invoice (Blocky Design)
+   Inspired by Microsoft Excel Service Invoice (Blocky Design)
+   Features: Charcoal block headers, consulting hourly/SAC schedules, modern blocks
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.remote-invoice-root.theme-remote-excel-service-invoice {
+  border: 2px solid #334155;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-header {
+  background: #1e293b;
+  color: #ffffff;
+  padding: 16px 20px;
+  margin: -16mm -18mm 20px -18mm;
+  border-bottom: none;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice.paper-a5 .remote-header {
+  margin: -10mm -12mm 14px -12mm;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-header div,
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-header strong {
+  color: #f1f5f9;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-title {
+  color: #38bdf8 !important;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-party-box {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-top: 3px solid #334155 !important;
+  border-radius: 4px;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-party-title {
+  color: #0f172a !important;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 8pt;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-table {
+  border: 1px solid #334155;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-table th {
+  background: #334155 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 8.5pt;
+  padding: 8px 10px;
+  border: 1px solid #1e293b;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-table td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
+}
+
+.remote-invoice-root.theme-remote-excel-service-invoice .remote-grand-total {
+  color: #0f172a !important;
+  font-weight: 800;
+  font-size: 13pt;
+  border-top: 2px solid #334155 !important;
+  border-bottom: 3px solid #334155 !important;
+  background: #f1f5f9;
+}

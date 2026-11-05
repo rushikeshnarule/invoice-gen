@@ -1,0 +1,148 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Construction Contractor Commercial Tax Invoice Template
+   Optimized for Building Material Suppliers, Civil Contractors & Infrastructure
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.contractor-invoice-root.theme-remote-construction-contractor {
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  border: 2px solid var(--accent, #0f172a);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+/* Header Banner */
+.theme-remote-construction-contractor .contractor-header-box {
+  background: #f8fafc;
+  color: var(--accent, #0f172a);
+  border-bottom: 2px solid var(--accent, #0f172a);
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+/* Meta Bar (Invoice No. & Date) */
+.theme-remote-construction-contractor .contractor-meta-bar {
+  border-bottom: 1.5px solid var(--accent, #0f172a);
+  background: #fafafa;
+  font-weight: 500;
+}
+
+/* Contractor Company Header */
+.theme-remote-construction-contractor .contractor-business-info {
+  border-bottom: 2px solid var(--accent, #0f172a);
+  background: #ffffff;
+}
+
+.theme-remote-construction-contractor .contractor-company-name {
+  font-size: 13.5pt;
+  font-weight: 900;
+  color: var(--accent, #0f172a);
+}
+
+.theme-remote-construction-contractor .contractor-bank-bar {
+  background: #f8fafc;
+  border: 1px dashed #64748b;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+/* Buyer Details */
+.theme-remote-construction-contractor .contractor-buyer-section {
+  border-bottom: 2px solid var(--accent, #0f172a);
+  background: #ffffff;
+}
+
+.theme-remote-construction-contractor .contractor-section-heading {
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--accent, #0f172a);
+}
+
+/* Item Grid Table */
+.theme-remote-construction-contractor .contractor-table {
+  border: 2px solid var(--accent, #0f172a);
+}
+
+.theme-remote-construction-contractor .contractor-table th {
+  background: #f1f5f9;
+  color: #000000;
+  border: 1px solid var(--accent, #0f172a);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.theme-remote-construction-contractor .contractor-table td {
+  border: 1px solid var(--accent, #0f172a);
+}
+
+/* Tax Totals & Net Total Rows */
+.theme-remote-construction-contractor .contractor-total-row td {
+  border: 1px solid var(--accent, #0f172a);
+}
+
+.theme-remote-construction-contractor .contractor-qty-total-row td {
+  background: #f8fafc;
+  border-top: 2px solid var(--accent, #0f172a);
+  border-bottom: 2px solid var(--accent, #0f172a);
+}
+
+.theme-remote-construction-contractor .contractor-net-total-row td {
+  background: var(--accent, #0f172a);
+  color: #ffffff;
+  border-top: 2px solid var(--accent, #0f172a);
+  border-bottom: 2px solid var(--accent, #0f172a);
+}
+
+/* Amount in Words Box */
+.theme-remote-construction-contractor .contractor-words-box {
+  border-left: 2px solid var(--accent, #0f172a);
+  border-right: 2px solid var(--accent, #0f172a);
+  border-bottom: 1.5px solid var(--accent, #0f172a);
+  background: #ffffff;
+}
+
+/* HSN/SAC Tax Schedule */
+.theme-remote-construction-contractor .contractor-tax-schedule {
+  border-left: 2px solid var(--accent, #0f172a);
+  border-right: 2px solid var(--accent, #0f172a);
+  border-bottom: 1.5px solid var(--accent, #0f172a);
+}
+
+.theme-remote-construction-contractor .contractor-tax-schedule th {
+  background: #f1f5f9;
+  color: #000000;
+  border: 1px solid var(--accent, #0f172a);
+}
+
+.theme-remote-construction-contractor .contractor-tax-schedule td {
+  border: 1px solid var(--accent, #0f172a);
+}
+
+.theme-remote-construction-contractor .contractor-tax-words-box {
+  border-left: 2px solid var(--accent, #0f172a);
+  border-right: 2px solid var(--accent, #0f172a);
+  border-bottom: 2px solid var(--accent, #0f172a);
+  background: #fafafa;
+}
+
+/* Footer Section */
+.theme-remote-construction-contractor .contractor-footer-grid {
+  border-left: 2px solid var(--accent, #0f172a);
+  border-right: 2px solid var(--accent, #0f172a);
+  border-bottom: 2px solid var(--accent, #0f172a);
+  background: #ffffff;
+}
+
+.theme-remote-construction-contractor .contractor-declaration-box {
+  border-right: 1.5px solid var(--accent, #0f172a);
+}
+
+@media print {
+  .contractor-invoice-root.theme-remote-construction-contractor {
+    box-shadow: none !important;
+    border: 2px solid #000000 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+}

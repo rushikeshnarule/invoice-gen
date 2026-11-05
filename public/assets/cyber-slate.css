@@ -1,0 +1,24 @@
+/* Cyber Slate Modern */
+.remote-invoice-root.theme-remote-cyber-slate {
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.remote-invoice-root.theme-remote-cyber-slate .remote-title {
+  color: #1e293b !important;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+.remote-invoice-root.theme-remote-cyber-slate .remote-header-badge {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+.remote-invoice-root.theme-remote-cyber-slate .remote-table th {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+}
+.remote-invoice-root.theme-remote-cyber-slate .remote-grand-total {
+  color: #2563eb !important;
+  border-top: 2px solid #1e293b !important;
+  border-bottom: 2px solid #1e293b !important;
+}

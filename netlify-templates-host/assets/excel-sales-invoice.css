@@ -1,0 +1,72 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Excel Sales Invoice (Simple Lines Design)
+   Inspired by Microsoft Excel Official Sales Invoice Template
+   Features: Classic Excel accounting green, crisp ruled lines, double-underline total
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.remote-invoice-root.theme-remote-excel-sales-invoice {
+  border: 1px solid #d1d5db;
+  border-top: 5px solid #107c41;
+  background: #ffffff;
+  color: #111827;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.remote-invoice-root.theme-remote-excel-sales-invoice .remote-header {
+  border-bottom: 2px solid #107c41;
+  padding-bottom: 14px;
+}
+
+.remote-invoice-root.theme-remote-excel-sales-invoice .remote-title {
+  color: #107c41 !important;
+  font-family: "Segoe UI", -apple-system, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.remote-invoice-root.theme-remote-excel-sales-invoice .remote-party-box {
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  border-left: 3px solid #107c41 !important;
+  border-radius: 4px;
+}
+
+.remote-invoice-root.theme-remote-excel-sales-invoice .remote-party-title {
+  color: #15803d !important;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.remote-invoice-root.theme-remote-excel-sales-invoice .remote-table {
+  border: 1px solid #d1d5db;
+}
+
+.remote-invoice-root.theme-remote-excel-sales-invoice .remote-table th {
+  background: #107c41 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 8.5pt;
+  padding: 8px 10px;
+  border: 1px solid #0d6535;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.remote-invoice-root.theme-remote-excel-sales-invoice .remote-table td {
+  border: 1px solid #e5e7eb;
+  padding: 7px 10px;
+}
+
+.remote-invoice-root.theme-remote-excel-sales-invoice .remote-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.remote-invoice-root.theme-remote-excel-sales-invoice .remote-grand-total {
+  color: #107c41 !important;
+  font-weight: 800;
+  font-size: 13pt;
+  border-top: 1px solid #107c41 !important;
+  border-bottom: 3px double #107c41 !important;
+  background: #f0fdf4;
+}

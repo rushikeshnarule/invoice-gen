@@ -1,0 +1,287 @@
+.invoiceContainer {
+  font-family: var(--font-family, system-ui, sans-serif);
+  font-size: var(--font-size-base, 11pt);
+  color: #1e293b;
+  background-color: #ffffff;
+  position: relative;
+  box-sizing: border-box;
+  margin: 0 auto;
+  line-height: 1.45;
+}
+
+.paperA4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 14mm 16mm;
+}
+
+.paperA5 {
+  width: 148mm;
+  min-height: 210mm;
+  padding: 8mm 10mm;
+  font-size: var(--font-size-sm, 9pt);
+}
+
+/* Corporate Top Bar */
+.topHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 2px solid var(--accent, #334155);
+  padding-bottom: 8px;
+  margin-bottom: 20px;
+}
+
+.brandArea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  max-height: 48px;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+.invoiceTitle {
+  font-size: 20pt;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--accent, #334155);
+}
+
+.invoiceMeta {
+  text-align: right;
+  font-size: 8.5pt;
+  color: #64748b;
+}
+
+/* Two-column FROM / BILL TO header */
+.partiesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 24px;
+}
+
+.partyCol {
+  border-left: 3px solid var(--accent, #94a3b8);
+  padding-left: 12px;
+}
+
+.partyLabel {
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.partyName {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.partyDetails {
+  font-size: 8.5pt;
+  color: #475569;
+  line-height: 1.4;
+}
+
+/* Corporate Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  page-break-inside: auto;
+}
+
+.table thead {
+  display: table-header-group;
+}
+
+.table th {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 2px solid #94a3b8;
+  padding: 8px 6px;
+  text-align: left;
+}
+
+.table th.numCol,
+.table td.numCol {
+  text-align: right;
+}
+
+.table th.centerCol,
+.table td.centerCol {
+  text-align: center;
+}
+
+.table tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 6px;
+  font-size: 9pt;
+  color: #334155;
+}
+
+.itemDesc {
+  font-weight: 600;
+  color: #0f172a;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Totals */
+.totalsSection {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.totalsTable {
+  width: 300px;
+  border-collapse: collapse;
+}
+
+.totalsTable td {
+  padding: 5px 8px;
+  font-size: 9pt;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.grandTotalRow td {
+  font-size: 12pt;
+  font-weight: 800;
+  color: var(--accent, #0f172a);
+  border-top: 2px solid #0f172a;
+  border-bottom: 2px solid #0f172a;
+  background-color: #f8fafc;
+}
+
+.words {
+  font-size: 8pt;
+  color: #475569;
+  background: #f8fafc;
+  padding: 6px 10px;
+  border-left: 3px solid #cbd5e1;
+  margin-bottom: 16px;
+  break-inside: avoid;
+}
+
+/* Tax Table */
+.taxTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  break-inside: avoid;
+}
+
+.taxTable th {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  padding: 4px 6px;
+  text-align: right;
+  color: #475569;
+}
+
+.taxTable th:first-child {
+  text-align: left;
+}
+
+.taxTable td {
+  border: 1px solid #e2e8f0;
+  font-size: 8pt;
+  padding: 4px 6px;
+  text-align: right;
+  color: #334155;
+}
+
+.taxTable td:first-child {
+  text-align: left;
+}
+
+/* Formal Bottom Section */
+.bottomSection {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  margin-bottom: 20px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.bankBox {
+  font-size: 8pt;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* Signature and Company Stamp side by side */
+.signStampGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.signBox,
+.stampBox {
+  border: 1px dashed #cbd5e1;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 6px;
+  font-size: 7.5pt;
+  color: #64748b;
+  text-align: center;
+}
+
+.signatureImg {
+  max-height: 38px;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
+.formalTerms {
+  border-top: 1px solid #cbd5e1;
+  padding-top: 10px;
+  margin-top: 16px;
+  font-size: 7.5pt;
+  color: #64748b;
+  line-height: 1.4;
+  white-space: pre-line;
+  break-inside: avoid;
+}
+
+.footer {
+  text-align: center;
+  font-size: 7.5pt;
+  color: #94a3b8;
+  margin-top: 16px;
+}
+
+@media print {
+  .invoiceContainer {
+    margin: 0 !important;
+    padding: 10mm 12mm !important;
+  }
+}

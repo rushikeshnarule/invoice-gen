@@ -1,0 +1,307 @@
+.invoiceContainer {
+  font-family: var(--font-family, system-ui, sans-serif);
+  font-size: var(--font-size-base, 11pt);
+  color: #1f2937;
+  background-color: #ffffff;
+  position: relative;
+  box-sizing: border-box;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.paperA4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 0 0 16mm 0;
+}
+
+.paperA5 {
+  width: 148mm;
+  min-height: 210mm;
+  padding: 0 0 10mm 0;
+  font-size: var(--font-size-sm, 9pt);
+}
+
+/* Coloured top band */
+.topBand {
+  background-color: var(--accent, #2563eb);
+  color: #ffffff;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bandLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.bandLogo {
+  max-height: 44px;
+  max-width: 130px;
+  object-fit: contain;
+  background-color: #ffffff;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.bandCompany {
+  font-size: 13pt;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.bandRight {
+  text-align: right;
+}
+
+.bandTitle {
+  font-size: 16pt;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.bandMeta {
+  font-size: 8.5pt;
+  opacity: 0.9;
+}
+
+/* Content wrapper with side padding */
+.contentArea {
+  padding: 20px 24px;
+}
+
+/* Two column parties block */
+.partiesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.partyCard {
+  background-color: #f9fafb;
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid #f3f4f6;
+}
+
+.partyHeader {
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent, #2563eb);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.partyName {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.partyDetails {
+  font-size: 8.5pt;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+/* Table with zebra rows */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 24px;
+  page-break-inside: auto;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.table thead {
+  display: table-header-group;
+}
+
+.table th {
+  background-color: #111827;
+  color: #ffffff;
+  font-size: 8pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.table th.numCol,
+.table td.numCol {
+  text-align: right;
+}
+
+.table th.centerCol,
+.table td.centerCol {
+  text-align: center;
+}
+
+.table tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.table tr:nth-child(even) td {
+  background-color: #f9fafb;
+}
+
+.table tr:nth-child(odd) td {
+  background-color: #ffffff;
+}
+
+.table td {
+  padding: 8px 10px;
+  font-size: 9pt;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.itemDesc {
+  font-weight: 600;
+  color: #111827;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Rounded Totals Card */
+.totalsCard {
+  width: 320px;
+  margin-left: auto;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.totalsRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 9pt;
+  color: #4b5563;
+}
+
+.grandTotalRow {
+  display: flex;
+  justify-content: space-between;
+  border-top: 2px solid var(--accent, #2563eb);
+  padding-top: 8px;
+  margin-top: 8px;
+  font-size: 13pt;
+  font-weight: 800;
+  color: var(--accent, #2563eb);
+}
+
+.words {
+  font-size: 8pt;
+  color: #6b7280;
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+  break-inside: avoid;
+}
+
+/* Tax summary */
+.taxTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 8pt;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+.taxTable th {
+  background-color: #f1f5f9;
+  padding: 5px 8px;
+  text-align: right;
+  font-weight: 600;
+  color: #334155;
+}
+
+.taxTable th:first-child {
+  text-align: left;
+}
+
+.taxTable td {
+  padding: 5px 8px;
+  text-align: right;
+  border-top: 1px solid #f1f5f9;
+  color: #475569;
+}
+
+.taxTable td:first-child {
+  text-align: left;
+}
+
+/* Bottom info */
+.bottomGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 20px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.bankBox {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 8pt;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.signBox {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.signatureImg {
+  max-height: 45px;
+  object-fit: contain;
+  margin-bottom: 6px;
+}
+
+.signLine {
+  border-top: 1px solid #cbd5e1;
+  padding-top: 4px;
+  width: 160px;
+  font-size: 8.5pt;
+  color: #475569;
+  font-weight: 600;
+}
+
+.footer {
+  text-align: center;
+  font-size: 8pt;
+  color: #94a3b8;
+  margin-top: 24px;
+}
+
+@media print {
+  .invoiceContainer {
+    margin: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}

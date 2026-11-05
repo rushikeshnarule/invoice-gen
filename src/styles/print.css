@@ -1,0 +1,105 @@
+/* ─── Global Print Stylesheets ────────────────────────────────────────── */
+
+@media print {
+  /* Prevent container clipping: reset fixed height & hidden overflow so multi-page documents paginate naturally */
+  html, body, #root {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    position: static !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  nav,
+  header,
+  aside,
+  button,
+  .app-sidebar,
+  .app-header,
+  .theme-controls,
+  .toast-container {
+    display: none !important;
+  }
+
+  /* Force table headers to repeat across printed pages */
+  thead {
+    display: table-header-group !important;
+  }
+
+  /* Avoid breaking inside table rows and blocks */
+  tr,
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Totals block stays together */
+  .totals-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Container fill page */
+  .print-page-container {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  /* Ensure paper templates fit within the print viewport without clipping right edges */
+  [class*="paperA4"] {
+    width: 210mm !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+  }
+
+  [class*="paperA5"] {
+    width: 148mm !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+  }
+
+  [class*="receiptContainer"] {
+    width: 76mm !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* Dynamic @page sizing helpers */
+@page {
+  margin: 0;
+  size: auto;
+}
+
+@page a4-page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+@page a5-page {
+  size: A5 portrait;
+  margin: 6mm;
+}
+
+@page thermal-page {
+  size: 80mm auto;
+  margin: 2mm;
+}

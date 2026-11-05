@@ -1,0 +1,311 @@
+.invoiceContainer {
+  font-family: var(--font-family, system-ui, sans-serif);
+  font-size: var(--font-size-base, 11pt);
+  color: #1f2937;
+  background-color: #ffffff;
+  position: relative;
+  box-sizing: border-box;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.paperA4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 16mm 18mm;
+}
+
+.paperA5 {
+  width: 148mm;
+  min-height: 210mm;
+  padding: 10mm 12mm;
+  font-size: var(--font-size-sm, 9pt);
+}
+
+.headerGrid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.logo {
+  max-height: 48px;
+  max-width: 160px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.businessName {
+  font-size: 13pt;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.businessMeta {
+  font-size: 8.5pt;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.titleBlock {
+  text-align: right;
+}
+
+.invoiceTitle {
+  font-size: 24pt;
+  font-weight: 300;
+  letter-spacing: -0.5px;
+  color: var(--accent, #111827);
+  margin-bottom: 4px;
+}
+
+.invoiceNum {
+  font-size: 10pt;
+  font-weight: 600;
+  color: #374151;
+}
+
+.dateRow {
+  font-size: 8.5pt;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.divider {
+  border-bottom: 0.5px solid #e5e7eb;
+  margin: 18px 0;
+}
+
+/* Client & details section */
+.twoCol {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.billToBlock {
+  flex: 1;
+}
+
+.billToLabel {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.clientName {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.clientDetails {
+  font-size: 8.5pt;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.invoiceMetaBlock {
+  min-width: 140px;
+  text-align: right;
+}
+
+.metaItem {
+  margin-bottom: 4px;
+}
+
+.metaItemLabel {
+  font-size: 7.5pt;
+  color: #9ca3af;
+  text-transform: uppercase;
+}
+
+.metaItemValue {
+  font-size: 9pt;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Minimal Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  page-break-inside: auto;
+}
+
+.table thead {
+  display: table-header-group;
+}
+
+.table th {
+  border-bottom: 1px solid #111827;
+  font-size: 7.5pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  padding: 8px 4px;
+  text-align: left;
+}
+
+.table th.numCol,
+.table td.numCol {
+  text-align: right;
+}
+
+.table th.centerCol,
+.table td.centerCol {
+  text-align: center;
+}
+
+.table tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.table td {
+  border-bottom: 0.5px solid #e5e7eb;
+  padding: 10px 4px;
+  font-size: 9pt;
+  color: #374151;
+}
+
+.itemDesc {
+  font-weight: 600;
+  color: #111827;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Totals */
+.totalsSection {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.totalsTable {
+  width: 280px;
+  border-collapse: collapse;
+}
+
+.totalsTable td {
+  padding: 4px 0;
+  font-size: 9pt;
+}
+
+.grandTotalRow td {
+  border-top: 1px solid #111827;
+  border-bottom: 1px solid #111827;
+  padding: 8px 0;
+  font-size: 13pt;
+  font-weight: 700;
+  color: var(--accent, #111827);
+}
+
+.words {
+  font-size: 8pt;
+  color: #6b7280;
+  font-style: italic;
+  margin-bottom: 20px;
+  break-inside: avoid;
+}
+
+/* Tax summary */
+.taxTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  break-inside: avoid;
+}
+
+.taxTable th {
+  border-bottom: 0.5px solid #d1d5db;
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  color: #9ca3af;
+  padding: 4px;
+  text-align: right;
+}
+
+.taxTable th:first-child {
+  text-align: left;
+}
+
+.taxTable td {
+  border-bottom: 0.5px solid #f3f4f6;
+  font-size: 8pt;
+  padding: 4px;
+  text-align: right;
+  color: #4b5563;
+}
+
+.taxTable td:first-child {
+  text-align: left;
+}
+
+/* Bottom elements */
+.footerGrid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 24px;
+  gap: 20px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.bankBox {
+  font-size: 8pt;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.bankBox strong {
+  color: #374151;
+}
+
+.signBox {
+  text-align: right;
+  font-size: 8pt;
+  color: #6b7280;
+}
+
+.signatureImg {
+  max-height: 40px;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
+.notesTerms {
+  margin-top: 18px;
+  font-size: 8pt;
+  color: #6b7280;
+  line-height: 1.4;
+  break-inside: avoid;
+}
+
+.thankYou {
+  text-align: center;
+  margin-top: 28px;
+  font-size: 8.5pt;
+  color: #9ca3af;
+  letter-spacing: 0.05em;
+}
+
+@media print {
+  .invoiceContainer {
+    margin: 0 !important;
+    padding: 12mm !important;
+  }
+}

@@ -1,0 +1,66 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Excel Simple Business Invoice
+   Inspired by Microsoft Excel Simple Business Invoice Template
+   Features: Minimalist cobalt styling, crisp ruled rows, high readability
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice {
+  border: 1px solid #e2e8f0;
+  border-top: 4px solid #2563eb;
+  background: #ffffff;
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice .remote-header {
+  border-bottom: 1.5px solid #e2e8f0;
+  padding-bottom: 14px;
+}
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice .remote-title {
+  color: #2563eb !important;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice .remote-party-box {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px;
+}
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice .remote-party-title {
+  color: #2563eb !important;
+  font-weight: 700;
+}
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice .remote-table {
+  border: 1px solid #e2e8f0;
+}
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice .remote-table th {
+  background: #f1f5f9 !important;
+  color: #1e293b !important;
+  font-weight: 700;
+  font-size: 8.5pt;
+  padding: 8px 10px;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice .remote-table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 7px 10px;
+}
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice .remote-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.remote-invoice-root.theme-remote-excel-simple-business-invoice .remote-grand-total {
+  color: #2563eb !important;
+  font-weight: 800;
+  font-size: 13pt;
+  border-top: 2px solid #2563eb !important;
+  border-bottom: 2px solid #2563eb !important;
+  background: #eff6ff;
+}

@@ -1,0 +1,26 @@
+/* Emerald Corporate */
+.remote-invoice-root.theme-remote-emerald-corporate {
+  border-top: 6px solid #047857;
+  border-left: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 4px;
+  background: #ffffff;
+}
+.remote-invoice-root.theme-remote-emerald-corporate .remote-title {
+  color: #047857 !important;
+  font-weight: 800;
+}
+.remote-invoice-root.theme-remote-emerald-corporate .remote-table th {
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-bottom: 2px solid #a7f3d0 !important;
+}
+.remote-invoice-root.theme-remote-emerald-corporate .remote-grand-total {
+  color: #047857 !important;
+  border-top: 2px solid #047857 !important;
+  border-bottom: 2px solid #047857 !important;
+}
+.remote-invoice-root.theme-remote-emerald-corporate .remote-party-title {
+  color: #047857 !important;
+}
