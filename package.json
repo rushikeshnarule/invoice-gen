@@ -1,7 +1,7 @@
 {
   "name": "invoice-gen",
   "private": true,
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Commercial Invoice & Billing Workstation",
   "author": "Invoice Gen",
   "type": "module",
@@ -15,32 +15,65 @@
     "electron:start": "electron .",
     "package:installer": "electron-builder --win nsis",
     "package:portable": "electron-builder --win portable",
+    "build:unlocked": "tsc -b && vite build --mode unlocked",
+    "package:unlocked:exe": "npm run build:unlocked && electron-builder --win nsis",
+    "package:unlocked:portable": "npm run build:unlocked && electron-builder --win portable",
+    "build:us": "tsc -b && vite build --mode us",
+    "package:us:exe": "npm run build:us && electron-builder --win nsis -c.nsis.artifactName=\"Invoice-Gen-US-Setup-${version}.${ext}\" -c.productName=\"Invoice Gen US Edition\" -c.win.icon=\"public/icon-us.ico\"",
+    "package:us:portable": "npm run build:us && electron-builder --win portable -c.productName=\"Invoice Gen US Edition\" -c.win.icon=\"public/icon-us.ico\"",
     "package:exe": "npm run build && electron-builder --win nsis",
-    "package:mac": "npm run build && electron-builder --mac",
+    "package:mac": "npm run build && electron-builder --mac pkg",
+    "package:mac:pkg": "npm run build && electron-builder --mac pkg",
     "package:mac:dmg": "npm run build && electron-builder --mac dmg",
-    "package:mac:zip": "npm run build && electron-builder --mac zip",
+    "package:mac:offline": "python scripts/build-mac.py",
     "package:all": "npm run build && electron-builder -mw"
   },
   "build": {
     "appId": "com.invoicegen.desktop",
     "productName": "Invoice Gen",
     "directories": {
-      "output": "dist-electron"
+      "output": "dist-electron",
+      "buildResources": "build"
     },
+    "fileAssociations": [
+      {
+        "ext": "inv",
+        "name": "Invoice Gen Document",
+        "description": "Invoice Gen Commercial Invoice Document",
+        "role": "Editor",
+        "icon": "build/icon.ico"
+      },
+      {
+        "ext": "invoice",
+        "name": "Invoice Gen Document",
+        "description": "Invoice Gen Commercial Invoice Document",
+        "role": "Editor",
+        "icon": "build/icon.ico"
+      }
+    ],
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "public/**/*"
+      "public/**/*",
+      "build/**/*"
     ],
     "asar": true,
     "nodeGypRebuild": false,
     "npmRebuild": false,
     "win": {
-      "icon": "public/icon.ico",
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -52,25 +85,47 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Invoice Gen",
       "uninstallDisplayName": "Invoice Gen",
+      "installerIcon": "build/installerIcon.ico",
+      "uninstallerIcon": "build/uninstallerIcon.ico",
+      "installerHeaderIcon": "build/installerHeaderIcon.ico",
       "artifactName": "Invoice-Gen-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": true,
       "runAfterFinish": true
     },
     "mac": {
       "icon": "public/icon.icns",
       "category": "public.app-category.business",
-      "identity": "-",
       "target": [
         {
+          "target": "pkg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
           "target": "dmg",
-          "arch": ["arm64", "x64"]
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["arm64", "x64"]
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         }
       ],
       "hardenedRuntime": false,
       "gatekeeperAssess": false
+    },
+    "pkg": {
+      "allowPackageDowngrade": false,
+      "hasStrictIdentifier": true,
+      "installLocation": "/Applications",
+      "artifactName": "Invoice-Gen-Setup-${version}-${arch}.${ext}"
     },
     "dmg": {
       "title": "Invoice Gen",
@@ -90,18 +145,30 @@
     }
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.47",
+    "@ai-sdk/google": "^4.0.61",
+    "@ai-sdk/openai": "^4.0.53",
+    "@ai-sdk/react": "^4.0.90",
     "@fontsource/inter": "^5.3.0",
     "@fontsource/noto-sans-devanagari": "^5.3.0",
     "@internationalized/date": "^3.12.1",
+    "@netlify/functions": "^6.1.1",
     "@remixicon/react": "^4.9.0",
+    "@tanstack/react-table": "^8.21.3",
     "@types/qrcode": "^1.5.6",
+    "ai": "^7.0.87",
+    "exceljs": "^4.4.0",
     "motion": "^12.42.2",
     "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "react-aria-components": "^1.17.0",
     "react-dom": "^19.3.1",
     "react-router-dom": "^6.30.6",
-    "tailwind-merge": "^3.6.0"
+    "recharts": "^3.9.2",
+    "tailwind-merge": "^3.6.0",
+    "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.4",
