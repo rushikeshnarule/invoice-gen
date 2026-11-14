@@ -1,0 +1,87 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Python for Icon Processing
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Initialize Native Android Platform
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Configure App Icons and Version
+        run: |
+          pip install Pillow
+          python3 -c "
+          from PIL import Image
+          import os
+          src = 'build/icon.png'
+          if os.path.exists(src):
+              im = Image.open(src).convert('RGBA')
+              sizes = {'mipmap-mdpi': 48, 'mipmap-hdpi': 72, 'mipmap-xhdpi': 96, 'mipmap-xxhdpi': 144, 'mipmap-xxxhdpi': 192}
+              res_dir = 'android/app/src/main/res'
+              for folder, size in sizes.items():
+                  d = os.path.join(res_dir, folder)
+                  if os.path.exists(d):
+                      resized = im.resize((size, size), Image.Resampling.LANCZOS)
+                      resized.save(os.path.join(d, 'ic_launcher.png'))
+                      resized.save(os.path.join(d, 'ic_launcher_round.png'))
+                      resized.save(os.path.join(d, 'ic_launcher_foreground.png'))
+          "
+          sed -i 's/versionName "1.0"/versionName "1.4.0"/g' android/app/build.gradle
+
+      - name: Make Gradlew Executable
+        run: chmod +x android/gradlew
+
+      - name: Build Android APK with Gradle
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Prepare APK for Release
+        run: |
+          mkdir -p release-apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk release-apk/Invoice-Gen-1.4.0.apk
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Invoice-Gen-Android-APK
+          path: release-apk/Invoice-Gen-1.4.0.apk
+          if-no-files-found: error
