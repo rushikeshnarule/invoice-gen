@@ -26,6 +26,7 @@
     "package:mac:pkg": "npm run build && electron-builder --mac pkg",
     "package:mac:dmg": "npm run build && electron-builder --mac dmg",
     "package:mac:offline": "python scripts/build-mac.py",
+    "package:android": "npm run build && npx cap sync android",
     "package:all": "npm run build && electron-builder -mw"
   },
   "build": {
@@ -148,6 +149,9 @@
     "@ai-sdk/google": "^4.0.61",
     "@ai-sdk/openai": "^4.0.53",
     "@ai-sdk/react": "^4.0.90",
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "@fontsource/inter": "^5.3.0",
     "@fontsource/noto-sans-devanagari": "^5.3.0",
     "@internationalized/date": "^3.12.1",
