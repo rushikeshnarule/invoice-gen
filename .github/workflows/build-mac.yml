@@ -1,4 +1,4 @@
-name: Build macOS DMG Installer
+name: Build macOS PKG Installer
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-macos:
-    name: Build macOS DMG
+    name: Build macOS PKG & DMG
     runs-on: macos-latest
 
     steps:
@@ -28,14 +28,22 @@ jobs:
       - name: Build Web Application
         run: npm run build
 
-      - name: Package macOS DMG
-        run: npx electron-builder --mac dmg --arm64 --x64 --publish never
+      - name: Package macOS PKG and DMG
+        run: npx electron-builder --mac pkg dmg --arm64 --x64 --publish never
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload macOS DMG Artifact
+      - name: Upload macOS Installers (PKG & DMG)
         uses: actions/upload-artifact@v4
         with:
-          name: Invoice-Gen-macOS-DMG
-          path: dist-electron/*.dmg
+          name: Invoice-Gen-macOS-Installers
+          path: |
+            dist-electron/*.pkg
+            dist-electron/*.dmg
+          if-no-files-found: error
