@@ -94,11 +94,11 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({
           </div>
         </div>
 
-        {/* Remote Netlify Badge */}
+        {/* Remote Cloud Badge */}
         {t.isRemote && (
           <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-xs text-blue-700 font-medium text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 z-10 border border-blue-200 shadow-2xs">
             <RiCloudLine className="size-3 text-blue-600" />
-            <span>Netlify Cloud</span>
+            <span>Cloud Template</span>
           </div>
         )}
 
@@ -212,7 +212,7 @@ export const ThemePicker: React.FC = () => {
   const handleSyncFromPicker = async () => {
     const url = getRemoteServerUrl();
     if (!url) {
-      toast.error('Configure your Netlify server URL in Settings > Netlify Templates first.');
+      toast.error('Configure your Cloud server URL in Settings > Cloud Templates first.');
       return;
     }
     setIsSyncing(true);
@@ -466,14 +466,15 @@ export const ThemePicker: React.FC = () => {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              <img src="/app-icon.png" alt="Invoice Gen" className="size-7 object-contain shrink-0" />
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight text-balance">
                 Invoice Templates
               </h1>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 tabular-nums">
                 {themes.length} {themes.length === 1 ? 'theme' : 'themes'}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
+            <p className="text-xs text-slate-500 mt-0.5 max-w-xl text-pretty">
               Commercial invoice themes with Indian GST tax tables, multi-page page breaks, and offline printing.
             </p>
           </div>
@@ -488,7 +489,7 @@ export const ThemePicker: React.FC = () => {
               disabled={isSyncing}
               className="text-xs font-medium"
             >
-              {isSyncing ? 'Syncing...' : 'Sync Netlify'}
+              {isSyncing ? 'Syncing...' : 'Sync Cloud'}
             </Button>
 
             <Button

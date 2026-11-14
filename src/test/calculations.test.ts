@@ -327,5 +327,50 @@ describe('Calculation Engine & Number in Words Suite', () => {
       expect(recSent.balanceDue).toBe(recSent.grandTotalRounded);
       expect(recSent.amountPaid).toBe(0);
     });
+
+    it('safely handles string-typed payment amounts without string concatenation or NaN', () => {
+      const raw = createSampleData(1);
+      raw.status = 'sent';
+      // Payments with string values (from JSON or user input)
+      raw.payments = [
+        { date: '2026-04-10', amount: '250.50' as any, method: 'UPI' },
+        { date: '2026-04-11', amount: '249.50' as any, method: 'Cash' },
+      ];
+      const rec = recalculate(raw);
+      expect(typeof rec.amountPaid).toBe('number');
+      expect(rec.amountPaid).toBe(500);
+      expect(rec.balanceDue).toBe(Math.max(0, rec.grandTotalRounded - 500));
+    });
+
+    it('preserves user chosen gstType when business has no gstin configured yet', () => {
+      const raw = createSampleData(1);
+      raw.business.gstin = '';
+      raw.gstType = 'cgst_sgst';
+      raw.items = [
+        {
+          id: 'item-1',
+          sno: 1,
+          description: 'Initial Item',
+          quantity: 1,
+          unit: 'Nos',
+          rate: 500,
+          discount: 0,
+          taxableAmount: 500,
+          gstRate: 0,
+          gstAmount: 0,
+          total: 500,
+        },
+      ];
+      const rec = recalculate(raw);
+      expect(rec.gstType).toBe('cgst_sgst');
+    });
+
+    it('formatDate formats YYYY-MM-DD consistently without UTC date-shift', () => {
+      const formatted = formatDate('2026-04-15');
+      // Must display 15 Apr 2026, never 14 Apr 2026
+      expect(formatted).toContain('15');
+      expect(formatted).toMatch(/Apr|04/);
+      expect(formatted).toContain('2026');
+    });
   });
 });

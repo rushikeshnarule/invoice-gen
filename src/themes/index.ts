@@ -1,6 +1,6 @@
 // ─── Theme Registry ─────────────────────────────────────────────────
 // Central registry of all available themes. Built-in themes are compiled into
-// the bundle, and remote cloud themes from Netlify are dynamically loaded.
+// the bundle, and remote cloud themes from Cloud are dynamically loaded.
 
 import React from 'react';
 import type { ThemeDefinition, ThemeOptions, RemoteTemplateDefinition } from '../types';
@@ -73,8 +73,8 @@ function remoteToThemeDef(remote: RemoteTemplateDefinition): ThemeDefinition & {
 
   const def: ThemeDefinition & { isRemote?: boolean } = {
     id: remote.id,
-    name: `${remote.name} (Netlify)`,
-    description: remote.description || 'Cloud-synchronized invoice template from Netlify.',
+    name: `${remote.name} (Cloud)`,
+    description: remote.description || 'Cloud-synchronized invoice template.',
     paper: remote.paper || ['A4', 'A5'],
     isRemote: true,
     component: getRemoteComponent(remote),
@@ -88,7 +88,7 @@ function remoteToThemeDef(remote: RemoteTemplateDefinition): ThemeDefinition & {
 }
 
 /**
- * Get a theme definition by ID, checking built-in themes first, then cached Netlify templates.
+ * Get a theme definition by ID, checking built-in themes first, then cached Cloud templates.
  */
 export function getTheme(id: string): ThemeDefinition {
   if (themeRegistry[id]) return themeRegistry[id];
@@ -117,7 +117,7 @@ let cachedAllThemes: ThemeDefinition[] | null = null;
 let lastRemoteHash = '';
 
 /**
- * Get all themes as an array (both built-in and cached Netlify cloud templates).
+ * Get all themes as an array (both built-in and cached Cloud templates).
  * Uses memoization to return the exact same array reference if the template list hasn't changed.
  */
 export function getAllThemes(): ThemeDefinition[] {

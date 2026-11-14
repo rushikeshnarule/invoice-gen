@@ -23,7 +23,8 @@
 }
 
 /* Corporate Top Bar */
-.topHeader {
+.topHeader,
+.headerBar {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -33,7 +34,8 @@
   margin-bottom: 20px;
 }
 
-.brandArea {
+.brandArea,
+.headerLeft {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -48,11 +50,42 @@
   flex-shrink: 0;
 }
 
+.corporateTitle {
+  font-size: 14pt;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.subTitle {
+  font-size: 8pt;
+  color: #64748b;
+  margin-top: 2px;
+}
+
 .invoiceTitle {
   font-size: 20pt;
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--accent, #334155);
+}
+
+.headerRight {
+  text-align: right;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.invoiceBadge {
+  font-size: 16pt;
+  font-weight: 800;
+  color: var(--accent, #334155);
+  letter-spacing: -0.5px;
+}
+
+.metaRow {
+  font-size: 8.5pt;
+  color: #64748b;
+  margin-top: 2px;
 }
 
 .invoiceMeta {
@@ -187,7 +220,8 @@
   background-color: #f8fafc;
 }
 
-.words {
+.words,
+.amountWords {
   font-size: 8pt;
   color: #475569;
   background: #f8fafc;
@@ -198,7 +232,8 @@
 }
 
 /* Tax Table */
-.taxTable {
+.taxTable,
+.taxSummaryTable {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 16px;

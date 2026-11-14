@@ -98,7 +98,7 @@ export interface ThemePreset {
   createdAt: string;
 }
 
-// ─── Remote / Netlify Cloud Template Types ─────────────────────────
+// ─── Remote / Cloud Template Types ─────────────────────────────────
 export interface RemoteTemplateDefinition {
   id: string;
   name: string;

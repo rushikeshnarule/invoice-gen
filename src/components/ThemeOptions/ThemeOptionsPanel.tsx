@@ -36,6 +36,7 @@ import {
   RiShieldCheckLine,
   RiImageLine,
   RiRefreshLine,
+  RiDeleteBinLine,
 } from '@remixicon/react';
 
 interface ThemeOptionsPanelProps {
@@ -543,11 +544,13 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
                         </Button>
                         <Button
                           size="xs"
-                          variant="danger"
+                          variant="secondary"
+                          leadingIcon={RiDeleteBinLine}
+                          aria-label={`Delete ${preset.name} preset`}
                           onClick={() => deletePreset(preset.id)}
-                          className="text-[11px]"
+                          className="text-[11px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
                         >
-                          ✕
+                          Delete
                         </Button>
                       </div>
                     </div>

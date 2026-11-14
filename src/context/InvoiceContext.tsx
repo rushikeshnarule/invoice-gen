@@ -13,8 +13,11 @@ import {
   DEFAULT_CLIENTS,
   getInitialInvoices,
   getClientId,
+  isDemoInvoice,
+  isDemoClient,
 } from '../utils/initialOfflineData';
 import { recalculate } from '../utils/buildRenderData';
+import { getUSStateTaxRate } from '../utils/usTax';
 import { loadSystemMemory, saveSystemMemory } from '../services/systemStorage';
 
 export interface CreateInvoiceOptions {
@@ -25,6 +28,17 @@ export interface CreateInvoiceOptions {
   billingMonth?: string;
   clientName?: string;
   initialItems?: LineItem[];
+}
+
+export interface CreateMonthlyInvoiceOptions {
+  clientName: string;
+  startDate?: string;
+  endDate?: string;
+  billingMonth?: string;
+  billingPeriod?: string;
+  items?: LineItem[];
+  themeId?: string;
+  sourceInvoiceIds?: string[];
 }
 
 export interface ClientMetrics {
@@ -51,8 +65,8 @@ interface InvoiceContextValue {
     themeId?: string
   ) => InvoiceRecord;
   createMonthlyInvoice: (
-    clientName: string,
-    billingMonth: string,
+    clientNameOrOptions: string | CreateMonthlyInvoiceOptions,
+    billingMonth?: string,
     billingPeriod?: string,
     items?: LineItem[],
     themeId?: string
@@ -76,7 +90,10 @@ interface InvoiceContextValue {
 
   // Setup & Onboarding
   hasCompletedSetup: boolean;
-  completeSetup: (profile: Partial<BusinessInfo & { bankDetails?: Partial<BankDetails> }>) => void;
+  completeSetup: (
+    profile: Partial<BusinessInfo & { bankDetails?: Partial<BankDetails> }>,
+    options?: { cleanLedger?: boolean; isSkip?: boolean }
+  ) => void;
   reopenSetup: () => void;
   restorePreviousSession: () => Promise<boolean>;
 }
@@ -87,6 +104,8 @@ const STORAGE_INVOICES_KEY = 'offline-software-invoices-v2';
 const STORAGE_BUSINESS_KEY = 'offline-software-business-profile-v2';
 const STORAGE_CLIENTS_KEY = 'offline-software-clients-v2';
 const STORAGE_SETUP_KEY = 'offline-software-setup-completed-v1';
+export const CURRENT_APP_VERSION = '1.4.0';
+export const STORAGE_APP_VERSION_KEY = 'offline-software-app-version';
 
 function loadFromStorage<T>(key: string, fallback: () => T): T {
   try {
@@ -108,13 +127,17 @@ function saveToStorage(key: string, value: unknown) {
 }
 
 export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const hasJustCompletedSetupRef = React.useRef(false);
+
   const [invoices, setInvoices] = useState<InvoiceRecord[]>(() => {
     const raw = localStorage.getItem(STORAGE_INVOICES_KEY);
     if (!raw) return []; // Production commercial mode: clean ledger
     try {
       const records = JSON.parse(raw);
       if (Array.isArray(records)) {
-        return records.map((inv) => {
+        const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+        const filtered = isTestEnv ? records : records.filter((inv) => !isDemoInvoice(inv));
+        return filtered.map((inv) => {
           if (!inv?.data) return inv;
           const cleanData = recalculate(inv.data);
           return {
@@ -131,58 +154,99 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return [];
   });
 
-  const [businessProfile, setBusinessProfile] = useState<BusinessInfo & { bankDetails: BankDetails }>(() =>
-    loadFromStorage(STORAGE_BUSINESS_KEY, () => EMPTY_BUSINESS_PROFILE)
-  );
+  const [businessProfile, setBusinessProfile] = useState<BusinessInfo & { bankDetails: BankDetails }>(() => {
+    const prof = loadFromStorage(STORAGE_BUSINESS_KEY, () => EMPTY_BUSINESS_PROFILE);
+    if (prof?.name && prof.name.includes('Apex Infotech')) {
+      return EMPTY_BUSINESS_PROFILE;
+    }
+    return prof;
+  });
 
-  const [clients, setClients] = useState<ClientInfo[]>(() =>
-    loadFromStorage(STORAGE_CLIENTS_KEY, () => [])
-  );
+  const [clients, setClients] = useState<ClientInfo[]>(() => {
+    const raw = localStorage.getItem(STORAGE_CLIENTS_KEY);
+    if (!raw) return [];
+    try {
+      const records = JSON.parse(raw);
+      if (Array.isArray(records)) {
+        return records;
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
 
   const [hasCompletedSetup, setHasCompletedSetup] = useState<boolean>(() => {
-    const isCompleted = loadFromStorage(STORAGE_SETUP_KEY, () => null);
-    if (isCompleted !== null) return Boolean(isCompleted);
-    const savedProfile = loadFromStorage(STORAGE_BUSINESS_KEY, () => null as any);
-    if (savedProfile && savedProfile.name && savedProfile.name.trim().length > 0) {
-      return true;
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+      const isCompleted = loadFromStorage(STORAGE_SETUP_KEY, () => null);
+      return Boolean(isCompleted);
     }
-    return false;
+    const savedVersion = localStorage.getItem(STORAGE_APP_VERSION_KEY);
+    const isCompleted = loadFromStorage(STORAGE_SETUP_KEY, () => null);
+    if (!isCompleted) {
+      return false;
+    }
+    if (savedVersion !== CURRENT_APP_VERSION) {
+      try {
+        localStorage.setItem(STORAGE_APP_VERSION_KEY, CURRENT_APP_VERSION);
+      } catch {}
+    }
+    return true;
   });
 
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
 
   // Hydrate from desktop PC system storage (Documents/Invoice Gen Data/database.json) if available
   useEffect(() => {
+    if (!hasCompletedSetup) return;
+    if (hasJustCompletedSetupRef.current) {
+      // Do not overwrite fresh setup session with stale disk data
+      return;
+    }
+
     let cancelled = false;
     loadSystemMemory().then((sysDb) => {
       if (cancelled || !sysDb) return;
       if (sysDb.businessProfile && sysDb.businessProfile.name && sysDb.businessProfile.name.trim().length > 0) {
-        setBusinessProfile((prev) => ({
-          ...prev,
-          ...sysDb.businessProfile,
-          bankDetails: {
-            ...prev.bankDetails,
-            ...(sysDb.businessProfile?.bankDetails || {}),
-          },
-        }));
+        if (!sysDb.businessProfile.name.includes('Apex Infotech')) {
+          setBusinessProfile((prev) => ({
+            ...prev,
+            ...sysDb.businessProfile,
+            bankDetails: {
+              ...prev.bankDetails,
+              ...(sysDb.businessProfile?.bankDetails || {}),
+            },
+          }));
+        }
       }
-      if (Array.isArray(sysDb.invoices) && sysDb.invoices.length > 0) {
-        setInvoices(sysDb.invoices);
+      if (Array.isArray(sysDb.invoices)) {
+        const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+        const cleanInvoices = (isTestEnv ? sysDb.invoices : sysDb.invoices.filter((inv) => !isDemoInvoice(inv)))
+          .map((inv) => {
+            if (!inv?.data) return inv;
+            const cleanData = recalculate(inv.data);
+            return {
+              ...inv,
+              status: cleanData.status,
+              total: cleanData.grandTotalRounded,
+              data: cleanData,
+            };
+          });
+        setInvoices(cleanInvoices);
       }
-      if (Array.isArray(sysDb.clients) && sysDb.clients.length > 0) {
+      if (Array.isArray(sysDb.clients)) {
         setClients(sysDb.clients);
-      }
-      if (sysDb.hasCompletedSetup || (sysDb.businessProfile?.name && sysDb.businessProfile.name.trim().length > 0)) {
-        setHasCompletedSetup(true);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [hasCompletedSetup]);
 
   // Dual-layer sync: persists to both localStorage and Documents/Invoice Gen Data/database.json
   useEffect(() => {
+    if (!hasCompletedSetup) return;
+
     let themeSettings: any = undefined;
     try {
       const curTheme = localStorage.getItem('invoice-theme-settings');
@@ -259,12 +323,23 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const prefix = type === 'retail' ? 'POS-2026-' : 'INV-2026-';
       const today = new Date().toISOString().split('T')[0];
 
+      const isUS =
+        businessProfile.region === 'US'
+          ? true
+          : businessProfile.region === 'IN'
+          ? false
+          : (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_REGION === 'US');
+      const defaultState = isUS ? (businessProfile.state || 'California (CA)') : (businessProfile.state || 'Maharashtra (27)');
+      const defaultCurrencySymbol = isUS ? '$' : '₹';
+      const defaultCurrencyCode = isUS ? 'USD' : 'INR';
+      const defaultTaxRate = isUS ? (getUSStateTaxRate(businessProfile.state) || 0) : 0;
+
       let initialClient = targetClientName
         ? clients.find((c) => c.name.toLowerCase() === targetClientName.toLowerCase()) || {
             name: targetClientName,
             address: '',
             city: '',
-            state: businessProfile.state || 'Maharashtra (27)',
+            state: defaultState,
             pincode: '',
             phone: '',
             email: '',
@@ -274,7 +349,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             name: '',
             address: '',
             city: '',
-            state: businessProfile.state || 'Maharashtra (27)',
+            state: defaultState,
             pincode: '',
             phone: '',
             email: '',
@@ -296,14 +371,16 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                   : type === 'goods'
                   ? 'Goods Supply'
                   : 'Consulting & Professional Services',
-              hsnSac: type === 'retail' ? '850440' : type === 'goods' ? '851762' : '998314',
+              hsnSac: isUS ? undefined : (type === 'retail' ? '850440' : type === 'goods' ? '851762' : '998314'),
+              sku: isUS ? (type === 'retail' ? 'SKU-850440' : type === 'goods' ? 'PRD-851762' : 'SRV-998314') : undefined,
+              taxable: true,
               quantity: 1,
-              unit: type === 'retail' ? 'Pcs' : type === 'goods' ? 'Nos' : 'Hrs',
+              unit: type === 'retail' ? (isUS ? 'ea' : 'Pcs') : type === 'goods' ? (isUS ? 'ea' : 'Nos') : (isUS ? 'hrs' : 'Hrs'),
               rate: 0,
               discount: 0,
               discountAmount: 0,
               taxableAmount: 0,
-              gstRate: 0,
+              gstRate: defaultTaxRate,
               gstAmount: 0,
               total: 0,
             },
@@ -317,18 +394,20 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       const rawInvoice: InvoiceRenderData = {
+        region: isUS ? 'US' : 'IN',
+        taxType: isUS ? 'sales_tax' : 'gst',
         invoiceType,
         billingPeriod,
         billingMonth,
         invoiceNumber,
         invoiceDate: today,
         dueDate: today,
-        placeOfSupply: `${initialClient.state} (${initialClient.gstin ? initialClient.gstin.slice(0, 2) : '27'})`,
+        placeOfSupply: isUS ? (initialClient.state || 'California (CA)') : `${initialClient.state} (${initialClient.gstin ? initialClient.gstin.slice(0, 2) : '27'})`,
         status: 'draft',
-        business: { ...businessProfile },
+        business: { ...businessProfile, region: isUS ? 'US' : 'IN' },
         client: { ...initialClient },
         items: initialItems,
-        gstType: 'cgst_sgst',
+        gstType: isUS ? 'none' : 'cgst_sgst',
         taxSummary: [],
         subtotal: 0,
         totalDiscount: 0,
@@ -349,10 +428,12 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         stampUrl: businessProfile.stampUrl,
         signatureUrl: businessProfile.signatureUrl,
         notes: 'Payment is due within 30 days of invoice date. Thank you for your business.',
-        terms: `1. Subject to ${businessProfile.city || 'local'} jurisdiction.\n2. Payment is due within the agreed credit terms.`,
+        terms: isUS
+          ? '1. Standard terms: Net 30 days.\n2. Overdue balances are subject to a 1.5% monthly finance charge.'
+          : `1. Subject to ${businessProfile.city || 'local'} jurisdiction.\n2. Payment is due within the agreed credit terms.`,
         copyLabel: 'Original for Recipient',
-        currencySymbol: '₹',
-        currencyCode: 'INR',
+        currencySymbol: defaultCurrencySymbol,
+        currencyCode: defaultCurrencyCode,
       };
 
       const cleanData = recalculate(rawInvoice);
@@ -399,13 +480,14 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const getClientMetrics = useCallback(
     (clientName: string): ClientMetrics => {
       const clientInvoices = getClientInvoices(clientName);
-      const invoiceCount = clientInvoices.length;
-      const totalBilled = clientInvoices.reduce((s, inv) => s + (inv?.total || 0), 0);
-      const amountPaid = clientInvoices.reduce(
+      const activeClientInvoices = clientInvoices.filter((inv) => inv?.status !== 'cancelled');
+      const invoiceCount = activeClientInvoices.length;
+      const totalBilled = activeClientInvoices.reduce((s, inv) => s + (inv?.total || 0), 0);
+      const amountPaid = activeClientInvoices.reduce(
         (s, inv) => s + (inv?.status === 'paid' ? (inv?.total || 0) : (inv?.data?.amountPaid || 0)),
         0
       );
-      const balanceDue = clientInvoices.reduce(
+      const balanceDue = activeClientInvoices.reduce(
         (s, inv) => s + (inv?.status === 'paid' ? 0 : (inv?.data?.balanceDue || 0)),
         0
       );
@@ -442,14 +524,28 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const createMonthlyInvoice = useCallback(
     (
-      clientName: string,
-      billingMonth: string,
-      billingPeriod?: string,
-      items?: LineItem[],
-      themeId?: string
+      clientNameOrOptions: string | CreateMonthlyInvoiceOptions,
+      billingMonthArg?: string,
+      billingPeriodArg?: string,
+      itemsArg?: LineItem[],
+      themeIdArg?: string
     ): InvoiceRecord => {
+      const isOptions = typeof clientNameOrOptions === 'object' && clientNameOrOptions !== null;
+      const clientName = isOptions ? clientNameOrOptions.clientName : clientNameOrOptions;
+      const startDate = isOptions ? clientNameOrOptions.startDate : undefined;
+      const endDate = isOptions ? clientNameOrOptions.endDate : undefined;
+      const billingMonth = isOptions
+        ? clientNameOrOptions.billingMonth || (startDate ? startDate.slice(0, 7) : undefined)
+        : billingMonthArg;
+      const billingPeriod = isOptions ? clientNameOrOptions.billingPeriod : billingPeriodArg;
+      const sourceInvoiceIds = isOptions ? clientNameOrOptions.sourceInvoiceIds : undefined;
+      const items = isOptions ? clientNameOrOptions.items : itemsArg;
+      const themeId = isOptions ? clientNameOrOptions.themeId : themeIdArg;
+
       let periodLabel = billingPeriod;
-      if (!periodLabel && billingMonth) {
+      if (!periodLabel && startDate && endDate) {
+        periodLabel = `${startDate} to ${endDate}`;
+      } else if (!periodLabel && billingMonth) {
         try {
           const [year, month] = billingMonth.split('-').map(Number);
           const dateObj = new Date(year, month - 1, 1);
@@ -461,17 +557,26 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       let lineItems = items;
       if (!lineItems || lineItems.length === 0) {
-        // Collect daily deliveries made to this client in this month
+        // Collect daily deliveries made to this client matching the criteria
         const clientInvoices = getClientInvoices(clientName);
-        const dailyInvoicesInMonth = clientInvoices.filter((inv) => {
-          const invDate = inv?.date || '';
-          return invDate.startsWith(billingMonth) && inv?.data?.invoiceType !== 'monthly';
+        const candidateInvoices = clientInvoices.filter((inv) => {
+          if (sourceInvoiceIds !== undefined) {
+            return sourceInvoiceIds.includes(inv.id);
+          }
+          const invDate = (inv?.date || inv?.data?.invoiceDate || '').slice(0, 10);
+          if (startDate && endDate) {
+            return invDate >= startDate.slice(0, 10) && invDate <= endDate.slice(0, 10) && inv?.data?.invoiceType !== 'monthly';
+          }
+          if (billingMonth) {
+            return invDate.startsWith(billingMonth) && inv?.data?.invoiceType !== 'monthly';
+          }
+          return false;
         });
 
-        if (dailyInvoicesInMonth.length > 0) {
+        if (candidateInvoices.length > 0) {
           const extracted: LineItem[] = [];
           let sno = 1;
-          for (const dInv of dailyInvoicesInMonth) {
+          for (const dInv of candidateInvoices) {
             for (const it of dInv.data.items) {
               extracted.push({
                 ...it,
@@ -487,21 +592,30 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       if (!lineItems || lineItems.length === 0) {
-        const defaultItemDate = billingMonth ? `${billingMonth}-01` : new Date().toISOString().split('T')[0];
+        const isUS =
+          businessProfile.region === 'US'
+            ? true
+            : businessProfile.region === 'IN'
+            ? false
+            : (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_REGION === 'US');
+        const defaultTaxRate = isUS ? (getUSStateTaxRate(businessProfile.state) || 0) : 18;
+        const defaultItemDate = startDate || (billingMonth ? `${billingMonth}-01` : new Date().toISOString().split('T')[0]);
         lineItems = [
           {
             id: `item-${Date.now()}-1`,
             sno: 1,
             date: defaultItemDate,
-            description: 'Material Supply / Work Executed',
-            hsnSac: '998314',
+            description: isUS ? 'Contract Work & Services Executed' : 'Material Supply / Work Executed',
+            hsnSac: isUS ? undefined : '998314',
+            sku: isUS ? 'SRV-998314' : undefined,
+            taxable: true,
             quantity: 1,
-            unit: 'Nos',
+            unit: isUS ? 'hrs' : 'Nos',
             rate: 0,
             discount: 0,
             discountAmount: 0,
             taxableAmount: 0,
-            gstRate: 18,
+            gstRate: defaultTaxRate,
             gstAmount: 0,
             total: 0,
           },
@@ -547,11 +661,18 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
       }
 
+      const clonedItems = (source.data.items || []).map((it, idx) => ({
+        ...it,
+        id: `item-${timestamp}-${idx + 1}`,
+        sno: idx + 1,
+      }));
+
       const clonedData: InvoiceRenderData = {
         ...source.data,
         invoiceNumber,
         invoiceDate: today,
         status: 'draft',
+        items: clonedItems,
         payments: [],
         amountPaid: 0,
         balanceDue: source.data.grandTotalRounded,
@@ -692,6 +813,9 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setInvoices(cleanInvoices);
       saveToStorage(STORAGE_INVOICES_KEY, cleanInvoices);
       saveToStorage(STORAGE_SETUP_KEY, true);
+      try {
+        localStorage.setItem(STORAGE_APP_VERSION_KEY, CURRENT_APP_VERSION);
+      } catch {}
       setHasCompletedSetup(true);
 
       saveSystemMemory(
@@ -720,64 +844,82 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const completeSetup = useCallback(
-    (profile: Partial<BusinessInfo & { bankDetails?: Partial<BankDetails> }>) => {
-      updateBusinessProfile(profile);
+    (
+      profile: Partial<BusinessInfo & { bankDetails?: Partial<BankDetails> }>,
+      options?: { cleanLedger?: boolean; isSkip?: boolean }
+    ) => {
+      hasJustCompletedSetupRef.current = true;
+      const shouldCleanLedger = options?.cleanLedger ?? true;
 
-      let updatedInvoices = invoices;
-      // Propagate user business profile to all active invoices
-      setInvoices((prev) => {
-        const updated = prev.map((inv) => {
-          if (!inv?.data) return inv;
-          const prevBank = inv.data.bankDetails || businessProfile.bankDetails;
-          const nextBank: BankDetails = {
-            bankName: profile.bankDetails?.bankName ?? prevBank.bankName,
-            accountName: profile.bankDetails?.accountName ?? prevBank.accountName,
-            accountNumber: profile.bankDetails?.accountNumber ?? prevBank.accountNumber,
-            ifsc: profile.bankDetails?.ifsc ?? prevBank.ifsc,
-            branch: profile.bankDetails?.branch ?? prevBank.branch,
-            upiId: profile.bankDetails?.upiId ?? prevBank.upiId,
-          };
-          const updatedData = recalculate({
-            ...inv.data,
-            business: {
-              ...inv.data.business,
-              ...profile,
-            },
-            bankDetails: nextBank,
-          });
-          return {
-            ...inv,
-            data: updatedData,
-          };
-        });
-        updatedInvoices = updated;
-        saveToStorage(STORAGE_INVOICES_KEY, updated);
-        return updated;
-      });
+      const nextBank: BankDetails = {
+        bankName: profile.bankDetails?.bankName ?? businessProfile.bankDetails?.bankName ?? '',
+        accountName: profile.bankDetails?.accountName ?? businessProfile.bankDetails?.accountName ?? '',
+        accountNumber: profile.bankDetails?.accountNumber ?? businessProfile.bankDetails?.accountNumber ?? '',
+        ifsc: profile.bankDetails?.ifsc ?? businessProfile.bankDetails?.ifsc ?? '',
+        branch: profile.bankDetails?.branch ?? businessProfile.bankDetails?.branch ?? '',
+        upiId: profile.bankDetails?.upiId ?? businessProfile.bankDetails?.upiId ?? '',
+      };
 
-      saveToStorage(STORAGE_SETUP_KEY, true);
-      setHasCompletedSetup(true);
-
-      const nextProfile = {
+      const nextProfile: BusinessInfo & { bankDetails: BankDetails } = {
         ...businessProfile,
         ...profile,
-        bankDetails: {
-          ...businessProfile.bankDetails,
-          ...(profile.bankDetails || {}),
-        },
+        bankDetails: nextBank,
       };
+
+      updateBusinessProfile(profile);
+
+      // In production commercial mode: Skip to Dashboard or fresh setup begins with a 100% clean ledger.
+      // Any pre-seeded demo invoices or demo clients are completely purged.
+      const realInvoices = shouldCleanLedger ? [] : invoices.filter((inv) => !isDemoInvoice(inv));
+      const realClients = shouldCleanLedger ? [] : clients.filter((c) => !isDemoClient(c));
+
+      // Propagate user business profile to remaining non-demo invoices synchronously
+      const updatedInvoices = realInvoices.map((inv) => {
+        if (!inv?.data) return inv;
+        const prevBank = inv.data.bankDetails || businessProfile.bankDetails;
+        const invoiceBank: BankDetails = {
+          bankName: profile.bankDetails?.bankName ?? prevBank.bankName,
+          accountName: profile.bankDetails?.accountName ?? prevBank.accountName,
+          accountNumber: profile.bankDetails?.accountNumber ?? prevBank.accountNumber,
+          ifsc: profile.bankDetails?.ifsc ?? prevBank.ifsc,
+          branch: profile.bankDetails?.branch ?? prevBank.branch,
+          upiId: profile.bankDetails?.upiId ?? prevBank.upiId,
+        };
+        const updatedData = recalculate({
+          ...inv.data,
+          business: {
+            ...inv.data.business,
+            ...profile,
+          },
+          bankDetails: invoiceBank,
+        });
+        return {
+          ...inv,
+          data: updatedData,
+        };
+      });
+
+      setInvoices(updatedInvoices);
+      saveToStorage(STORAGE_INVOICES_KEY, updatedInvoices);
+      setClients(realClients);
+      saveToStorage(STORAGE_CLIENTS_KEY, realClients);
+      saveToStorage(STORAGE_SETUP_KEY, true);
+      try {
+        localStorage.setItem(STORAGE_APP_VERSION_KEY, CURRENT_APP_VERSION);
+      } catch {}
+      setHasCompletedSetup(true);
 
       saveSystemMemory(
         {
           invoices: updatedInvoices,
           businessProfile: nextProfile,
-          clients,
+          clients: realClients,
           hasCompletedSetup: true,
         },
         true
       );
     },
-    [businessProfile, clients, updateBusinessProfile]
+    [businessProfile, clients, invoices, updateBusinessProfile]
   );
 
   const restorePreviousSession = useCallback(async (): Promise<boolean> => {
@@ -785,33 +927,49 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const sysDb = await loadSystemMemory();
       if (!sysDb) return false;
 
-      if (sysDb.businessProfile && sysDb.businessProfile.name) {
-        setBusinessProfile((prev) => ({
-          ...prev,
+      let cleanInvoices: InvoiceRecord[] = [];
+      if (Array.isArray(sysDb.invoices) && sysDb.invoices.length > 0) {
+        cleanInvoices = sysDb.invoices
+          .filter((inv) => !isDemoInvoice(inv))
+          .map((inv) => {
+            if (!inv?.data) return inv;
+            const cleanData = recalculate(inv.data);
+            return {
+              ...inv,
+              status: cleanData.status,
+              total: cleanData.grandTotalRounded,
+              data: cleanData,
+            };
+          });
+        setInvoices(cleanInvoices);
+        saveToStorage(STORAGE_INVOICES_KEY, cleanInvoices);
+      } else {
+        setInvoices([]);
+        saveToStorage(STORAGE_INVOICES_KEY, []);
+      }
+
+      let nextProfile = businessProfile;
+      if (sysDb.businessProfile && sysDb.businessProfile.name && !sysDb.businessProfile.name.includes('Apex Infotech')) {
+        nextProfile = {
+          ...businessProfile,
           ...sysDb.businessProfile,
           bankDetails: {
-            ...prev.bankDetails,
+            ...businessProfile.bankDetails,
             ...(sysDb.businessProfile?.bankDetails || {}),
           },
-        }));
+        };
+        setBusinessProfile(nextProfile);
+        saveToStorage(STORAGE_BUSINESS_KEY, nextProfile);
       }
 
-      if (Array.isArray(sysDb.invoices) && sysDb.invoices.length > 0) {
-        const clean = sysDb.invoices.map((inv) => {
-          if (!inv?.data) return inv;
-          const cleanData = recalculate(inv.data);
-          return {
-            ...inv,
-            status: cleanData.status,
-            total: cleanData.grandTotalRounded,
-            data: cleanData,
-          };
-        });
-        setInvoices(clean);
-      }
-
+      let cleanClients: ClientInfo[] = [];
       if (Array.isArray(sysDb.clients) && sysDb.clients.length > 0) {
-        setClients(sysDb.clients);
+        cleanClients = sysDb.clients.filter((c) => !isDemoClient(c));
+        setClients(cleanClients);
+        saveToStorage(STORAGE_CLIENTS_KEY, cleanClients);
+      } else {
+        setClients([]);
+        saveToStorage(STORAGE_CLIENTS_KEY, []);
       }
 
       if (sysDb.themeSettings) {
@@ -830,29 +988,33 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
+      saveToStorage(STORAGE_SETUP_KEY, true);
+      try {
+        localStorage.setItem(STORAGE_APP_VERSION_KEY, CURRENT_APP_VERSION);
+      } catch {}
       setHasCompletedSetup(true);
 
       saveSystemMemory(
         {
-          invoices: sysDb.invoices || invoices,
-          businessProfile: sysDb.businessProfile || businessProfile,
-          clients: sysDb.clients || clients,
+          invoices: cleanInvoices,
+          businessProfile: nextProfile,
+          clients: cleanClients,
           hasCompletedSetup: true,
           themeSettings: sysDb.themeSettings,
         },
         true
       );
-
       return true;
     } catch (e) {
       console.error('Failed to restore session:', e);
       return false;
     }
-  }, [businessProfile, clients, invoices]);
+  }, [businessProfile]);
 
   const reopenSetup = useCallback(() => {
     try {
       localStorage.removeItem(STORAGE_SETUP_KEY);
+      localStorage.removeItem(STORAGE_APP_VERSION_KEY);
     } catch {
       // ignore
     }

@@ -7,6 +7,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Environment files & secrets
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+!.env.example
+
 node_modules
 dist
 dist-ssr
@@ -16,9 +24,14 @@ dist-mac
 *.exe
 *.zip
 *.dmg
+*.pkg
+*.apk
+release-apk/
 *.blockmap
 scripts/package-mac.py
 test_symlink
+.cursor/
+.gemini/
 
 # Editor directories and files
 .vscode/*

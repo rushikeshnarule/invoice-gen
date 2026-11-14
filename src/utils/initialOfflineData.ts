@@ -35,6 +35,27 @@ export function getClientId(name: string): string {
   return `client-${Math.abs(hash)}`;
 }
 
+export const DEMO_INVOICE_IDS = new Set(['inv-089', 'inv-090', 'inv-091', 'inv-092', 'inv-093']);
+
+/**
+ * Checks whether an invoice record is a pre-seeded demo / sample invoice from Apex Infotech.
+ */
+export function isDemoInvoice(inv: any): boolean {
+  if (!inv) return false;
+  const id = String(inv.id || '').trim().toLowerCase();
+  const bizName = String(inv.data?.business?.name || '').trim().toLowerCase();
+
+  return (DEMO_INVOICE_IDS.has(id) || /^inv-0(89|90|91|92|93)$/i.test(id)) && bizName.includes('apex infotech');
+}
+
+/**
+ * Checks whether a client record is a pre-seeded demo client from initial seed data.
+ */
+export function isDemoClient(client: any): boolean {
+  if (!client || !client.name) return false;
+  return false;
+}
+
 export const EMPTY_BUSINESS_PROFILE: BusinessInfo & { bankDetails: BankDetails } = {
   name: '',
   address: '',
@@ -44,15 +65,46 @@ export const EMPTY_BUSINESS_PROFILE: BusinessInfo & { bankDetails: BankDetails }
   phone: '',
   email: '',
   website: '',
+  region: typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_REGION === 'US' ? 'US' : 'IN',
+  taxType: typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_REGION === 'US' ? 'sales_tax' : 'gst',
   gstin: '',
   pan: '',
+  ein: '',
+  stateTaxId: '',
   bankDetails: {
     bankName: '',
     accountName: '',
     accountNumber: '',
     ifsc: '',
+    routingNumber: '',
     branch: '',
     upiId: '',
+    zelleId: '',
+  },
+};
+
+export const DEFAULT_BUSINESS_PROFILE_US: BusinessInfo & { bankDetails: BankDetails } = {
+  name: 'Pacific Apex Technologies LLC',
+  address: '500 Howard Street, Suite 400',
+  city: 'San Francisco',
+  state: 'California (CA)',
+  pincode: '94105',
+  phone: '+1 (415) 890-1200',
+  email: 'invoicing@pacificapex.com',
+  website: 'www.pacificapex.com',
+  region: 'US',
+  taxType: 'sales_tax',
+  ein: '94-3829104',
+  stateTaxId: 'CA-9438291',
+  bankDetails: {
+    bankName: 'JPMorgan Chase Bank, N.A.',
+    accountName: 'Pacific Apex Technologies LLC',
+    accountNumber: '984029104820',
+    ifsc: '',
+    routingNumber: '121000248',
+    branch: 'Market & 2nd St, San Francisco',
+    upiId: '',
+    zelleId: 'payments@pacificapex.com',
   },
 };
 

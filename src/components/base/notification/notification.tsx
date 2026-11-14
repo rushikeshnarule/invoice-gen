@@ -230,7 +230,7 @@ export function Notification({
 
   useEffect(() => {
     const element = barRef.current;
-    if (!timed || !element) return;
+    if (!timed || !element || typeof element.animate !== "function") return;
     bar.current = element.animate(
       [{ transform: "scaleX(1)" }, { transform: "scaleX(0)" }],
       { duration: autoDismissDuration, delay: introDelayMs, easing: "linear", fill: "forwards" },

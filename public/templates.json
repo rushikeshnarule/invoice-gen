@@ -1,0 +1,189 @@
+{
+  "version": "1.2.0",
+  "updatedAt": "2026-11-04T23:18:00Z",
+  "templates": [
+    {
+      "id": "excel-sales-invoice",
+      "name": "Excel Sales Invoice (Simple Lines)",
+      "version": "1.0.0",
+      "description": "Microsoft Excel official sales invoice template with classic accounting green header, ruled lines, HSN/quantity breakdown, and double-underline total.",
+      "paper": ["A4", "A5"],
+      "layout": "default",
+      "cssUrl": "/assets/excel-sales-invoice.css",
+      "defaultOptions": {
+        "accentColor": "#107c41",
+        "fontFamily": "system",
+        "fontSize": "normal",
+        "showHsnSacColumn": true,
+        "showDiscountColumn": true,
+        "showTaxSummaryTable": true,
+        "showAmountInWords": true,
+        "showBankDetails": true,
+        "showSignature": true,
+        "showStamp": true
+      }
+    },
+    {
+      "id": "excel-small-business-invoice",
+      "name": "Excel Small Business Invoice",
+      "version": "1.0.0",
+      "description": "Microsoft Excel commercial small business sales invoice with dual billing/shipping addresses, purchase order terms, alternating rows, and GST balance due.",
+      "paper": ["A4", "A5"],
+      "layout": "default",
+      "cssUrl": "/assets/excel-small-business-invoice.css",
+      "defaultOptions": {
+        "accentColor": "#1e3a8a",
+        "fontFamily": "system",
+        "fontSize": "normal",
+        "showHsnSacColumn": true,
+        "showDiscountColumn": true,
+        "showTaxSummaryTable": true,
+        "showAmountInWords": true,
+        "showBankDetails": true,
+        "showSignature": true,
+        "showStamp": true
+      }
+    },
+    {
+      "id": "excel-service-invoice",
+      "name": "Excel Service & Consulting Invoice",
+      "version": "1.0.0",
+      "description": "Microsoft Excel service invoice (blocky design) with charcoal block headers, consulting hours/SAC schedules, bank transfer details, and UPI QR code.",
+      "paper": ["A4", "A5"],
+      "layout": "default",
+      "cssUrl": "/assets/excel-service-invoice.css",
+      "defaultOptions": {
+        "accentColor": "#1e293b",
+        "fontFamily": "system",
+        "fontSize": "normal",
+        "showHsnSacColumn": true,
+        "showDiscountColumn": false,
+        "showTaxSummaryTable": true,
+        "showAmountInWords": true,
+        "showBankDetails": true,
+        "showSignature": true,
+        "showStamp": true
+      }
+    },
+    {
+      "id": "excel-corporate-invoice",
+      "name": "Excel Corporate Standard Invoice",
+      "version": "1.0.0",
+      "description": "Microsoft Excel corporate purple & black standard commercial invoice with formal multi-tier GST breakdown, tax ID compliance, and executive seal.",
+      "paper": ["A4"],
+      "layout": "default",
+      "cssUrl": "/assets/excel-corporate-invoice.css",
+      "defaultOptions": {
+        "accentColor": "#4c1d95",
+        "fontFamily": "system",
+        "fontSize": "normal",
+        "showHsnSacColumn": true,
+        "showDiscountColumn": true,
+        "showTaxSummaryTable": true,
+        "showAmountInWords": true,
+        "showBankDetails": true,
+        "showSignature": true,
+        "showStamp": true
+      }
+    },
+    {
+      "id": "excel-simple-business-invoice",
+      "name": "Excel Simple Business Invoice",
+      "version": "1.0.0",
+      "description": "Microsoft Excel simple business invoice with clean cobalt styling, borderless item rows, payment terms, and instant settlement QR code.",
+      "paper": ["A4", "A5"],
+      "layout": "default",
+      "cssUrl": "/assets/excel-simple-business-invoice.css",
+      "defaultOptions": {
+        "accentColor": "#2563eb",
+        "fontFamily": "system",
+        "fontSize": "normal",
+        "showHsnSacColumn": true,
+        "showDiscountColumn": true,
+        "showTaxSummaryTable": true,
+        "showAmountInWords": true,
+        "showBankDetails": true,
+        "showSignature": true,
+        "showStamp": true
+      }
+    },
+    {
+      "id": "construction-contractor",
+      "name": "Construction Contractor Tax Invoice",
+      "version": "1.0.0",
+      "description": "Standard Indian construction & civil contractor template with HSN schedules, Brass/MT units, destination, tax in words & declaration",
+      "paper": ["A4"],
+      "layout": "contractor",
+      "cssUrl": "/assets/construction-contractor.css",
+      "defaultOptions": {
+        "accentColor": "#0f172a",
+        "fontFamily": "system",
+        "fontSize": "normal",
+        "showHsnSacColumn": true,
+        "showDiscountColumn": true,
+        "showTaxSummaryTable": true,
+        "showAmountInWords": true,
+        "showBankDetails": true,
+        "showSignature": true,
+        "showStamp": true
+      }
+    },
+    {
+      "id": "minimal-gold",
+      "name": "Minimalist Gold Edition",
+      "version": "1.0.0",
+      "description": "Warm amber & gold accents with clean serif headers and compact GST summary",
+      "paper": ["A4", "A5"],
+      "layout": "default",
+      "cssUrl": "/assets/minimal-gold.css",
+      "defaultOptions": {
+        "accentColor": "#b45309",
+        "fontFamily": "serif",
+        "fontSize": "normal"
+      }
+    },
+    {
+      "id": "express-pos-thermal",
+      "name": "Express POS Thermal (80mm)",
+      "version": "1.0.0",
+      "description": "High-density 80mm thermal receipt with instant UPI QR code & tax summary",
+      "paper": ["80mm"],
+      "layout": "default",
+      "cssUrl": "/assets/express-pos-thermal.css",
+      "defaultOptions": {
+        "accentColor": "#000000",
+        "fontFamily": "mono",
+        "fontSize": "small",
+        "paper": "80mm"
+      }
+    },
+    {
+      "id": "emerald-corporate",
+      "name": "Emerald Corporate",
+      "version": "1.0.0",
+      "description": "Executive emerald green theme with professional GST tax schedules",
+      "paper": ["A4", "A5"],
+      "layout": "default",
+      "cssUrl": "/assets/emerald-corporate.css",
+      "defaultOptions": {
+        "accentColor": "#047857",
+        "fontFamily": "sans",
+        "fontSize": "normal"
+      }
+    },
+    {
+      "id": "cyber-slate",
+      "name": "Cyber Slate Modern",
+      "version": "1.0.0",
+      "description": "Modern slate styling with crisp cobalt accents and bold totals",
+      "paper": ["A4"],
+      "layout": "default",
+      "cssUrl": "/assets/cyber-slate.css",
+      "defaultOptions": {
+        "accentColor": "#2563eb",
+        "fontFamily": "sans",
+        "fontSize": "normal"
+      }
+    }
+  ]
+}

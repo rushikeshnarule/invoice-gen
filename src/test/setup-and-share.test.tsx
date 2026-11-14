@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SetupScreen } from '../components/SetupScreen/SetupScreen';
 import { ShareInvoiceModal } from '../components/ShareInvoiceModal/ShareInvoiceModal';
 import { createSampleData } from '../utils/sampleData';
+import { InvoiceProvider, useInvoices } from '../context/InvoiceContext';
 
 describe('SetupScreen & Step-by-Step Initialization', () => {
   it('renders Step 1 with BoardUI inputs and validates that business name is required', () => {
@@ -111,6 +112,54 @@ describe('SetupScreen & Step-by-Step Initialization', () => {
     // Can switch back to wizard
     fireEvent.click(screen.getByText(/Or Start Setup Wizard Instead/i));
     expect(screen.getByPlaceholderText(/e\.g\. Knot8 Technologies/i)).toBeInTheDocument();
+  });
+
+  it('calls onComplete with cleanLedger: true and isSkip: true when Skip to Dashboard is clicked', () => {
+    const onComplete = vi.fn();
+    render(<SetupScreen onComplete={onComplete} />);
+
+    const skipBtn = screen.getByRole('button', { name: /Skip to Dashboard/i });
+    expect(skipBtn).toBeInTheDocument();
+    fireEvent.click(skipBtn);
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    const [profile, options] = onComplete.mock.calls[0];
+    expect(profile.name).toBe('My Business');
+    expect(options).toEqual({ cleanLedger: true, isSkip: true });
+  });
+
+  it('InvoiceProvider completeSetup with cleanLedger guarantees empty invoices and 0 demo items on dashboard', () => {
+    let capturedInvoices: any[] = [];
+    let capturedClients: any[] = [];
+
+    const Harness: React.FC = () => {
+      const { invoices, clients, completeSetup } = useInvoices();
+      capturedInvoices = invoices;
+      capturedClients = clients;
+
+      return (
+        <button
+          onClick={() =>
+            completeSetup({ name: 'My Business' }, { cleanLedger: true, isSkip: true })
+          }
+        >
+          Do Skip
+        </button>
+      );
+    };
+
+    render(
+      <InvoiceProvider>
+        <Harness />
+      </InvoiceProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Do Skip/i }));
+
+    expect(capturedInvoices).toEqual([]);
+    expect(capturedClients).toEqual([]);
+    expect(JSON.parse(localStorage.getItem('offline-software-invoices-v2') || '[]')).toEqual([]);
+    expect(JSON.parse(localStorage.getItem('offline-software-clients-v2') || '[]')).toEqual([]);
   });
 });
 

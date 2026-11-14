@@ -88,3 +88,75 @@ export function getUpiQrString(data: InvoiceRenderData): string {
   const note = encodeURIComponent(`Invoice ${data.invoiceNumber || ''}`.replace(/[^a-zA-Z0-9\s-]/g, '').trim().slice(0, 50));
   return `upi://pay?pa=${vpa}&pn=${payeeName}&am=${payAmount.toFixed(2)}&cu=INR&tr=${invNum}&tn=${note}`;
 }
+
+/**
+ * Detects if an invoice is configured for the United States regional edition.
+ */
+export function isUSInvoice(data: InvoiceRenderData): boolean {
+  if (data.region === 'US') return true;
+  if (data.region === 'IN') return false;
+  if (data.business?.region === 'US') return true;
+  if (data.business?.region === 'IN') return false;
+  return (
+    data.currencySymbol === '$' ||
+    data.currencyCode === 'USD' ||
+    data.taxType === 'sales_tax'
+  );
+}
+
+/**
+ * Returns the appropriate invoice title based on region and billing period.
+ */
+export function getInvoiceTitle(data: InvoiceRenderData): string {
+  const isUS = isUSInvoice(data);
+  if (data.invoiceType === 'monthly') {
+    return isUS
+      ? 'MONTHLY INVOICE'
+      : data.gstType !== 'none'
+      ? 'MONTHLY TAX INVOICE'
+      : 'MONTHLY INVOICE';
+  }
+  return isUS
+    ? 'INVOICE'
+    : data.gstType !== 'none'
+    ? 'TAX INVOICE'
+    : 'INVOICE';
+}
+
+/**
+ * Returns column header for item code (SKU for US, HSN/SAC for India).
+ */
+export function getCodeColumnHeader(data: InvoiceRenderData): string {
+  return isUSInvoice(data) ? 'SKU' : 'HSN/SAC';
+}
+
+/**
+ * Returns column header for tax percentage.
+ */
+export function getTaxColumnHeader(data: InvoiceRenderData): string {
+  return isUSInvoice(data) ? 'Tax' : 'GST%';
+}
+
+/**
+ * Returns active currency symbol ($ for US, ₹ or data currency for India).
+ */
+export function getCurrencySymbol(data: InvoiceRenderData, options?: ThemeOptions): string {
+  const isUS = isUSInvoice(data);
+  if (isUS) return '$';
+  return data.currencySymbol && data.currencySymbol !== '$'
+    ? data.currencySymbol
+    : options?.currencySymbol && options.currencySymbol !== '$'
+    ? options.currencySymbol
+    : '₹';
+}
+
+/**
+ * Returns appropriate number locale (en-US for US, en-IN for India).
+ */
+export function getNumberFormat(data: InvoiceRenderData, options?: ThemeOptions): string {
+  const isUS = isUSInvoice(data);
+  if (isUS) return 'en-US';
+  return options?.numberFormat && options.numberFormat !== 'en-US'
+    ? options.numberFormat
+    : 'en-IN';
+}

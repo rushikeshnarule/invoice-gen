@@ -1,16 +1,19 @@
-// ─── Number formatting for Indian currency ─────────────────────────
+// ─── Number & Date formatting for Regional currencies (India & US) ──────
 
 /**
- * Format a number as Indian currency.
- * e.g. 1234567.89 → "₹12,34,567.89"
+ * Format a number as currency.
+ * Automatically defaults to en-US for '$' and en-IN for '₹'.
+ * e.g. 1234567.89 (₹) → "₹12,34,567.89"
+ * e.g. 1234567.89 ($) → "$1,234,567.89"
  */
 export function formatCurrency(
   amount: number,
   symbol = '₹',
-  locale = 'en-IN'
+  locale?: string
 ): string {
   const safeAmount = isNaN(amount) || !isFinite(amount) ? 0 : amount;
-  const formatted = new Intl.NumberFormat(locale, {
+  const effectiveLocale = locale || (symbol === '$' ? 'en-US' : 'en-IN');
+  const formatted = new Intl.NumberFormat(effectiveLocale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Math.abs(safeAmount));
@@ -46,7 +49,15 @@ export function formatPercent(value: number): string {
  */
 export function formatDate(dateStr?: string | null, locale = 'en-IN'): string {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
+  const trimmed = String(dateStr).trim();
+  // If YYYY-MM-DD format, construct local date to avoid UTC midnight timezone rollback
+  let date: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [y, m, d] = trimmed.split('-').map(Number);
+    date = new Date(y, m - 1, d);
+  } else {
+    date = new Date(trimmed);
+  }
   if (isNaN(date.getTime())) return dateStr;
   try {
     return new Intl.DateTimeFormat(locale, {
@@ -55,6 +66,9 @@ export function formatDate(dateStr?: string | null, locale = 'en-IN'): string {
       year: 'numeric',
     }).format(date);
   } catch {
-    return date.toISOString().split('T')[0];
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 }

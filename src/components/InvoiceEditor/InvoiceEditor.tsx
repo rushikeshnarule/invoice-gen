@@ -11,6 +11,7 @@ import type {
   ThemeFontSize,
   PaperSize,
   WatermarkType,
+  AppRegion,
 } from '../../types';
 import { useInvoices } from '../../context/InvoiceContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -19,10 +20,18 @@ import { ThemePreview } from '../ThemePreview/ThemePreview';
 import { ShareInvoiceModal } from '../ShareInvoiceModal/ShareInvoiceModal';
 import { ColorPickerField } from '../ThemeOptions/ColorPickerField';
 import { recalculate } from '../../utils/buildRenderData';
-import { formatCurrency, formatNumber } from '../../utils';
+import { formatCurrency, formatNumber, exportInvoiceToExcel } from '../../utils';
+import {
+  US_TAX_PRESETS,
+  US_STATES_LIST,
+  formatEIN,
+  formatUSZip,
+  getUSStateTaxRate,
+} from '../../utils/usTax';
 
 // BoardUI Components
 import { Button } from '@/components/base/buttons/button';
+import { IconButton } from '@/components/base/buttons/icon-button';
 import { toast } from '@/components/base/toast/toast';
 import { SwitchCard } from '@/components/base/switch/switch-card';
 import {
@@ -49,6 +58,7 @@ import {
   RiCheckboxCircleLine,
   RiPaletteLine,
   RiDownload2Line,
+  RiFileExcel2Line,
   RiRefreshLine,
   RiTableLine,
   RiBankCardLine,
@@ -87,6 +97,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
   const record = getInvoice(invoiceId);
   const [activeTab, setActiveTab] = useState<'items' | 'parties' | 'branding' | 'payment' | 'styling'>('items');
+  const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
   const [themeId, setThemeId] = useState<string>(() => record?.themeId || currentThemeId);
   const [zoomLevel, setZoomLevel] = useState<number>(() =>
     themeId === 'thermal' ? 1.0 : 0.82
@@ -131,12 +142,15 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   // Local draft state for real-time live typing
   const [invoiceData, setInvoiceData] = useState<InvoiceRenderData>(() => {
     if (record) return record.data;
+    const isAppUS = businessProfile.region === 'US' || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_REGION === 'US');
     // Fallback if not found: clean real-time invoice based on active business profile
     return recalculate({
+      region: isAppUS ? 'US' : 'IN',
+      taxType: isAppUS ? 'sales_tax' : 'gst',
       invoiceNumber: 'INV-2026-001',
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: new Date().toISOString().split('T')[0],
-      placeOfSupply: businessProfile.state || 'Maharashtra (27)',
+      placeOfSupply: isAppUS ? (businessProfile.state || 'California (CA)') : (businessProfile.state || 'Maharashtra (27)'),
       status: 'draft',
       business: {
         name: businessProfile.name || '',
@@ -147,21 +161,26 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
         phone: businessProfile.phone || '',
         email: businessProfile.email || '',
         website: businessProfile.website || '',
+        region: isAppUS ? 'US' : 'IN',
+        taxType: isAppUS ? 'sales_tax' : 'gst',
         gstin: businessProfile.gstin || '',
         pan: businessProfile.pan || '',
+        ein: businessProfile.ein || '',
+        stateTaxId: businessProfile.stateTaxId || '',
       },
       client: clients[0] ? { ...clients[0] } : {
         name: '',
         address: '',
         city: '',
-        state: businessProfile.state || 'Maharashtra (27)',
+        state: isAppUS ? 'California (CA)' : (businessProfile.state || 'Maharashtra (27)'),
         pincode: '',
         phone: '',
         email: '',
         gstin: '',
+        ein: '',
       },
       items: [],
-      gstType: 'cgst_sgst',
+      gstType: isAppUS ? 'none' : 'cgst_sgst',
       taxSummary: [],
       subtotal: 0,
       totalDiscount: 0,
@@ -177,10 +196,21 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
       payments: [],
       amountPaid: 0,
       balanceDue: 0,
-      currencySymbol: '₹',
-      currencyCode: 'INR',
+      currencySymbol: isAppUS ? '$' : '₹',
+      currencyCode: isAppUS ? 'USD' : 'INR',
     });
   });
+
+  // Regional settings detection
+  const isUS = useMemo(() => {
+    if (invoiceData.region === 'US') return true;
+    if (invoiceData.region === 'IN') return false;
+    if (businessProfile.region === 'US') return true;
+    if (businessProfile.region === 'IN') return false;
+    return (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_REGION === 'US');
+  }, [invoiceData.region, businessProfile.region]);
+
+  const currencySymbol = invoiceData.currencySymbol || (isUS ? '$' : '₹');
 
   // Calculate live preview data on every keystroke
   const calculatedData = useMemo(() => {
@@ -211,6 +241,72 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
     toast.success(`Invoice ${calculatedData.invoiceNumber} saved offline`);
   };
 
+  // Instant Region Switcher: 🇮🇳 India (GST) vs 🇺🇸 United States (Sales Tax)
+  const handleToggleRegion = (newRegion: AppRegion) => {
+    if (newRegion === 'US') {
+      const defaultState = businessProfile.region === 'US' ? (businessProfile.state || 'California (CA)') : 'California (CA)';
+      const defaultTaxRate = getUSStateTaxRate(defaultState) || 7.25;
+      setInvoiceData((prev) => {
+        const nextItems = prev.items.map((it) => ({
+          ...it,
+          sku: it.sku || (it.hsnSac ? `SKU-${it.hsnSac}` : 'SRV-101'),
+          hsnSac: undefined,
+          taxable: it.taxable !== false,
+          gstRate: it.gstRate === 18 ? defaultTaxRate : it.gstRate,
+        }));
+        return recalculate({
+          ...prev,
+          region: 'US',
+          taxType: 'sales_tax',
+          currencySymbol: '$',
+          currencyCode: 'USD',
+          gstType: 'none',
+          placeOfSupply: prev.placeOfSupply?.includes('(') && !prev.placeOfSupply.includes('27') ? prev.placeOfSupply : defaultState,
+          items: nextItems,
+          business: {
+            ...prev.business,
+            region: 'US',
+            taxType: 'sales_tax',
+          },
+          client: {
+            ...prev.client,
+            state: prev.client.state && US_STATES_LIST.includes(prev.client.state) ? prev.client.state : defaultState,
+          },
+        });
+      });
+      toast.success('Switched invoice to 🇺🇸 United States (Sales Tax & USD)');
+    } else {
+      const defaultState = businessProfile.region === 'IN' ? (businessProfile.state || 'Maharashtra (27)') : 'Maharashtra (27)';
+      setInvoiceData((prev) => {
+        const nextItems = prev.items.map((it) => ({
+          ...it,
+          hsnSac: it.hsnSac || (it.sku ? it.sku.replace(/\D/g, '') || '998314' : '998314'),
+          gstRate: it.gstRate === 0 && it.taxable ? 18 : it.gstRate,
+        }));
+        return recalculate({
+          ...prev,
+          region: 'IN',
+          taxType: 'gst',
+          currencySymbol: '₹',
+          currencyCode: 'INR',
+          gstType: prev.gstType === 'none' ? 'cgst_sgst' : prev.gstType,
+          placeOfSupply: defaultState,
+          items: nextItems,
+          business: {
+            ...prev.business,
+            region: 'IN',
+            taxType: 'gst',
+          },
+          client: {
+            ...prev.client,
+            state: defaultState,
+          },
+        });
+      });
+      toast.success('Switched invoice to 🇮🇳 India (GST & INR)');
+    }
+  };
+
   // Direct print
   const handlePrint = () => {
     updateInvoice(invoiceId, calculatedData, themeId);
@@ -233,7 +329,19 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
     }
   };
 
+  // Direct Export to Excel (.xlsx)
+  const handleExportExcel = async () => {
+    updateInvoice(invoiceId, calculatedData, themeId);
+    try {
+      await exportInvoiceToExcel(calculatedData);
+    } catch (err: any) {
+      toast.error(`Failed to export Excel: ${err?.message || err}`);
+    }
+  };
+
   // ── Line Items Handlers ───────────────────────────────────────────────────
+
+  const round2 = (val: number) => Math.round((val + Number.EPSILON) * 100) / 100;
 
   const handleUpdateItem = (index: number, partial: Partial<LineItem>) => {
     setInvoiceData((prev) => {
@@ -247,11 +355,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
       const discount = Number(updated.discount) || 0;
       const gstRate = Number(updated.gstRate) || 0;
 
-      const baseAmount = qty * rate;
-      const discountAmount = discount > 0 ? Math.round(((baseAmount * discount) / 100) * 100) / 100 : 0;
-      const taxableAmount = Math.round((baseAmount - discountAmount) * 100) / 100;
-      const gstAmount = Math.round(((taxableAmount * gstRate) / 100) * 100) / 100;
-      const total = Math.round((taxableAmount + gstAmount) * 100) / 100;
+      const baseAmount = round2(qty * rate);
+      const discountAmount = discount > 0 ? round2((baseAmount * discount) / 100) : 0;
+      const taxableAmount = round2(baseAmount - discountAmount);
+      const gstAmount = round2((taxableAmount * gstRate) / 100);
+      const total = round2(taxableAmount + gstAmount);
 
       items[index] = {
         ...updated,
@@ -263,40 +371,46 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
       };
 
       let nextGstType = prev.gstType;
-      if (nextGstType === 'none' && gstRate > 0) {
+      if (!isUS && nextGstType === 'none' && gstRate > 0) {
         nextGstType = 'cgst_sgst';
       }
 
-      return { ...prev, items, gstType: nextGstType };
+      return { ...prev, items, gstType: isUS ? 'none' : nextGstType };
     });
   };
 
   const handleAddItem = (preset?: Partial<LineItem>) => {
     setInvoiceData((prev) => {
+      const defaultTaxRate = isUS ? 7.25 : 18;
+      const defaultUnit = isUS ? 'ea' : 'Nos';
+      const defaultCode = isUS ? 'SRV-101' : '998314';
+
       const qty = preset?.quantity || 1;
-      const rate = preset?.rate !== undefined ? preset.rate : 1000;
+      const rate = preset?.rate !== undefined ? preset.rate : (isUS ? 100 : 1000);
       const discount = preset?.discount || 0;
-      const gstRate = preset?.gstRate !== undefined ? preset.gstRate : 18;
+      const gstRate = preset?.gstRate !== undefined ? preset.gstRate : defaultTaxRate;
       const defaultDate =
         preset?.date ||
         (prev.invoiceType === 'monthly'
           ? (prev.billingMonth ? `${prev.billingMonth}-01` : prev.invoiceDate)
           : prev.invoiceDate);
 
-      const baseAmount = qty * rate;
-      const discountAmount = discount > 0 ? Math.round(((baseAmount * discount) / 100) * 100) / 100 : 0;
-      const taxableAmount = Math.round((baseAmount - discountAmount) * 100) / 100;
-      const gstAmount = Math.round(((taxableAmount * gstRate) / 100) * 100) / 100;
-      const total = Math.round((taxableAmount + gstAmount) * 100) / 100;
+      const baseAmount = round2(qty * rate);
+      const discountAmount = discount > 0 ? round2((baseAmount * discount) / 100) : 0;
+      const taxableAmount = round2(baseAmount - discountAmount);
+      const gstAmount = round2((taxableAmount * gstRate) / 100);
+      const total = round2(taxableAmount + gstAmount);
 
       const newItem: LineItem = {
         id: `item-${Date.now()}-${prev.items.length + 1}`,
         sno: prev.items.length + 1,
         date: defaultDate,
-        description: preset?.description || 'New Service / Product Description',
-        hsnSac: preset?.hsnSac || '998314',
+        description: preset?.description || (isUS ? 'Consulting & Professional Services' : 'New Service / Product Description'),
+        hsnSac: isUS ? undefined : (preset?.hsnSac || defaultCode),
+        sku: isUS ? (preset?.sku || defaultCode) : undefined,
+        taxable: gstRate > 0,
         quantity: qty,
-        unit: preset?.unit || 'Nos',
+        unit: preset?.unit || defaultUnit,
         rate,
         discount: discount > 0 ? discount : undefined,
         discountAmount: discountAmount > 0 ? discountAmount : undefined,
@@ -307,11 +421,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
       };
 
       let nextGstType = prev.gstType;
-      if (nextGstType === 'none' && gstRate > 0) {
+      if (!isUS && nextGstType === 'none' && gstRate > 0) {
         nextGstType = 'cgst_sgst';
       }
 
-      return { ...prev, items: [...prev.items, newItem], gstType: nextGstType };
+      return { ...prev, items: [...prev.items, newItem], gstType: isUS ? 'none' : nextGstType };
     });
   };
 
@@ -389,11 +503,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
     if (calculatedData.balanceDue > 0 && roundedAmount > calculatedData.balanceDue) {
       const excess = Math.round((roundedAmount - calculatedData.balanceDue) * 100) / 100;
-      toast.info(`Payment of ${formatCurrency(roundedAmount, '₹')} recorded (Excess: ${formatCurrency(excess, '₹')})`);
+      toast.info(`Payment of ${formatCurrency(roundedAmount, currencySymbol)} recorded (Excess: ${formatCurrency(excess, currencySymbol)})`);
     } else if (calculatedData.balanceDue <= 0) {
-      toast.info(`Advance payment of ${formatCurrency(roundedAmount, '₹')} recorded`);
+      toast.info(`Advance payment of ${formatCurrency(roundedAmount, currencySymbol)} recorded`);
     } else {
-      toast.success(`Recorded payment of ${formatCurrency(roundedAmount, '₹')}`);
+      toast.success(`Recorded payment of ${formatCurrency(roundedAmount, currencySymbol)}`);
     }
   };
 
@@ -414,15 +528,16 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   // Synchronized Status Transition Handler
   const handleStatusChange = (newStatus: 'draft' | 'sent' | 'paid' | 'overdue') => {
     setInvoiceData((prev) => {
+      const freshCalculated = recalculate(prev);
       if (newStatus === 'paid') {
         const currentPaid = (prev.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
-        const remaining = Math.max(0, calculatedData.grandTotalRounded - currentPaid);
+        const remaining = Math.max(0, Math.round((freshCalculated.grandTotalRounded - currentPaid + Number.EPSILON) * 100) / 100);
         const nextPayments = [...(prev.payments || [])];
         if (remaining > 0) {
           nextPayments.push({
             date: new Date().toISOString().split('T')[0],
             amount: remaining,
-            method: 'UPI',
+            method: isUS ? 'ACH' : 'UPI',
             reference: 'Settled in Full',
           });
         }
@@ -518,6 +633,24 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             <option value="paid">Paid</option>
             <option value="overdue">Overdue</option>
           </select>
+
+          {/* Regional Edition Switcher: 🇮🇳 India (GST) vs 🇺🇸 US (Sales Tax) */}
+          <SegmentedControl
+            aria-label="Select invoice region"
+            selectedKeys={new Set([isUS ? 'US' : 'IN'])}
+            onSelectionChange={(keys) => {
+              const val = Array.from(keys)[0];
+              if (val === 'IN' || val === 'US') handleToggleRegion(val);
+            }}
+            className="bg-slate-100 p-0.5 shrink-0"
+          >
+            <SegmentedControlItem id="IN" className="text-[11px] px-2 py-0.5 font-bold">
+              <span>🇮🇳 India (GST)</span>
+            </SegmentedControlItem>
+            <SegmentedControlItem id="US" className="text-[11px] px-2 py-0.5 font-bold">
+              <span>🇺🇸 US (Sales Tax)</span>
+            </SegmentedControlItem>
+          </SegmentedControl>
         </div>
 
         {/* Center / Right: Template & Actions */}
@@ -540,45 +673,45 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                 </option>
               ))}
             </select>
-            <button
-              type="button"
+            <Button
+              size="xs"
+              variant="ghost"
+              leadingIcon={RiPaletteLine}
               onClick={() => setActiveTab('styling')}
               title="Customize Theme Colors, Fonts & Layout"
-              className="p-1 rounded-lg hover:bg-blue-100 text-blue-600 transition-colors flex items-center gap-1 font-semibold text-[11px] cursor-pointer"
+              className="text-[11px] font-semibold text-blue-600"
             >
-              <RiPaletteLine className="size-3.5" />
-              <span className="hidden md:inline">Customize</span>
-            </button>
+              Customize
+            </Button>
           </div>
 
-          {/* Zoom Controls (hidden on narrow screens to protect CTA visibility) */}
-          <div className="hidden lg:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 shrink-0">
-            <button
-              type="button"
-              onClick={() => setZoomLevel((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
-              className="p-0.5 hover:text-slate-900 text-slate-500 rounded"
+          {/* Zoom Controls */}
+          <div className="hidden lg:flex items-center gap-1 bg-slate-100 px-1.5 py-1 rounded-lg border border-slate-200 shrink-0">
+            <IconButton
+              size="small"
+              icon={RiZoomOutLine}
+              aria-label="Zoom Out"
               title="Zoom Out"
-            >
-              <RiZoomOutLine className="size-3.5" />
-            </button>
-            <span className="text-xs font-mono font-medium min-w-9 text-center text-slate-700">
+              onClick={() => setZoomLevel((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
+            />
+            <span className="text-xs font-mono font-medium min-w-9 text-center text-slate-700 tabular-nums">
               {Math.round(zoomLevel * 100)}%
             </span>
-            <button
-              type="button"
-              onClick={() => setZoomLevel((z) => Math.min(1.5, Number((z + 0.1).toFixed(2))))}
-              className="p-0.5 hover:text-slate-900 text-slate-500 rounded"
+            <IconButton
+              size="small"
+              icon={RiZoomInLine}
+              aria-label="Zoom In"
               title="Zoom In"
-            >
-              <RiZoomInLine className="size-3.5" />
-            </button>
-            <button
-              type="button"
+              onClick={() => setZoomLevel((z) => Math.min(1.5, Number((z + 0.1).toFixed(2))))}
+            />
+            <Button
+              size="xs"
+              variant="ghost"
               onClick={() => setZoomLevel(themeId === 'thermal' ? 1.0 : 0.82)}
-              className="text-xs text-slate-500 hover:text-slate-900 px-1 font-semibold"
+              className="text-xs text-slate-600 font-semibold"
             >
               Fit
-            </button>
+            </Button>
           </div>
 
           {/* Action CTAs: always pinned and visible */}
@@ -590,6 +723,16 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             className="text-xs font-medium shrink-0"
           >
             Save Draft
+          </Button>
+
+          <Button
+            size="small"
+            variant="secondary"
+            leadingIcon={RiFileExcel2Line}
+            onClick={handleExportExcel}
+            className="text-xs font-semibold shrink-0 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200"
+          >
+            Export Excel
           </Button>
 
           <Button
@@ -627,10 +770,34 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
         </div>
       </div>
 
-      {/* ─── 2-PANE DESKTOP WORKSPACE ─── */}
-      <div className="flex-1 overflow-hidden flex">
+      {/* ─── 2-PANE DESKTOP / 1-PANE MOBILE ADAPTIVE WORKSPACE ─── */}
+      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+        {/* MOBILE VIEW TOGGLE: EDIT FORM vs LIVE PREVIEW */}
+        <div className="lg:hidden px-3 py-2 bg-slate-100 border-b border-slate-200 flex items-center justify-center shrink-0">
+          <div className="inline-flex rounded-xl bg-slate-200/80 p-1 w-full max-w-sm shadow-inner">
+            <button
+              type="button"
+              onClick={() => setMobileTab('editor')}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                mobileTab === 'editor' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              ✍️ Edit Invoice
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('preview')}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                mobileTab === 'preview' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              👁️ Live Preview
+            </button>
+          </div>
+        </div>
+
         {/* LEFT PANE: HIGH-DENSITY EDITING FORM */}
-        <div className="w-[520px] bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-hidden">
+        <div className={`w-full lg:w-[520px] bg-white border-r border-slate-200 flex-col shrink-0 overflow-hidden ${mobileTab === 'editor' ? 'flex flex-1 lg:flex-initial' : 'hidden lg:flex'}`}>
           {/* Form Tabs */}
           <div className="px-4 pt-3 pb-2.5 border-b border-slate-200 bg-slate-50/70">
             <SegmentedControl
@@ -670,8 +837,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className="text-[11px] font-bold text-slate-800">Invoice Classification:</span>
                     <div className="inline-flex rounded-lg bg-slate-200/70 p-0.5 text-xs font-semibold">
-                      <button
-                        type="button"
+                      <Button
+                        size="xs"
+                        variant="ghost"
                         onClick={() => setInvoiceData((prev) => ({ ...prev, invoiceType: 'daily' }))}
                         className={`px-2.5 py-1 rounded-md transition-colors duration-150 ${
                           invoiceData.invoiceType !== 'monthly'
@@ -680,9 +848,10 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                         }`}
                       >
                         Daily Invoice (Regular)
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="ghost"
                         onClick={() => {
                           const ym = invoiceData.billingMonth || invoiceData.invoiceDate.slice(0, 7);
                           setInvoiceData((prev) => ({
@@ -699,7 +868,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                         }`}
                       >
                         Monthly Invoice (Consolidated)
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
@@ -740,14 +909,15 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                     Line items ({invoiceData.items.length})
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
+                    <Button
+                      size="small"
+                      variant="secondary"
+                      leadingIcon={RiAddLine}
                       onClick={() => handleAddItem()}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                      className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/70"
                     >
-                      <RiAddLine className="size-3.5" />
                       Add Item
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -772,22 +942,21 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                         />
 
                         <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleDuplicateItem(index)}
+                          <IconButton
+                            size="small"
+                            icon={RiFileCopyLine}
+                            aria-label="Duplicate Line Item"
                             title="Duplicate Line Item"
-                            className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200 transition-colors"
-                          >
-                            <RiFileCopyLine className="size-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteItem(index)}
+                            onClick={() => handleDuplicateItem(index)}
+                          />
+                          <IconButton
+                            size="small"
+                            icon={RiDeleteBinLine}
+                            aria-label="Delete Line Item"
                             title="Delete Line Item"
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 transition-colors"
-                          >
-                            <RiDeleteBinLine className="size-3.5" />
-                          </button>
+                            onClick={() => handleDeleteItem(index)}
+                            className="text-slate-400 hover:text-rose-600 hover:border-rose-200"
+                          />
                         </div>
                       </div>
 
@@ -808,16 +977,18 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                         <div className="flex items-center gap-2">
                           {!item.date ? (
-                            <button
-                              type="button"
+                            <Button
+                              size="xs"
+                              variant="ghost"
                               onClick={() => handleUpdateItem(index, { date: invoiceData.invoiceDate })}
-                              className="text-[10px] text-blue-600 hover:underline cursor-pointer"
+                              className="text-[10px] text-blue-600 hover:underline"
                             >
                               Set to bill date ({invoiceData.invoiceDate})
-                            </button>
+                            </Button>
                           ) : (
-                            <button
-                              type="button"
+                            <Button
+                              size="xs"
+                              variant="ghost"
                               onClick={() => {
                                 const targetDate = item.date;
                                 if (!targetDate) return;
@@ -827,25 +998,30 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                                 }));
                                 toast.success(`Applied date ${targetDate} to all items`);
                               }}
-                              className="text-[10px] text-slate-500 hover:text-slate-800 hover:underline cursor-pointer"
+                              className="text-[10px] text-slate-500 hover:text-slate-800"
                               title="Apply this date to all items"
                             >
                               Copy date to all items
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </div>
 
                       {/* Line Item Numeric Attributes - 2 Spacious 3-Column Rows */}
                       <div className="grid grid-cols-3 gap-2.5">
-                        {/* HSN/SAC */}
+                        {/* HSN/SAC or SKU */}
                         <div>
-                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">HSN/SAC</label>
+                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">
+                            {isUS ? 'SKU / Code' : 'HSN/SAC'}
+                          </label>
                           <input
                             type="text"
-                            value={item.hsnSac || ''}
-                            onChange={(e) => handleUpdateItem(index, { hsnSac: e.target.value })}
-                            placeholder="998314"
+                            value={isUS ? (item.sku || item.hsnSac || '') : (item.hsnSac || '')}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleUpdateItem(index, isUS ? { sku: val, hsnSac: val } : { hsnSac: val });
+                            }}
+                            placeholder={isUS ? 'SRV-101' : '998314'}
                             className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs font-mono outline-none focus:border-blue-600 focus:bg-white"
                           />
                         </div>
@@ -871,26 +1047,44 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             onChange={(e) => handleUpdateItem(index, { unit: e.target.value })}
                             className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
                           >
-                            <option value="Nos">Nos</option>
-                            <option value="Pcs">Pcs</option>
-                            <option value="Brass">Brass</option>
-                            <option value="Sqft">Sqft</option>
-                            <option value="Sqm">Sqm</option>
-                            <option value="Mtr">Mtr</option>
-                            <option value="Feet">Feet</option>
-                            <option value="Ton">Ton</option>
-                            <option value="Bags">Bags</option>
-                            <option value="Boxes">Boxes</option>
-                            <option value="Kg">Kg</option>
-                            <option value="Ltr">Ltr</option>
-                            <option value="Hrs">Hrs</option>
-                            <option value="Days">Days</option>
-                            <option value="Job">Job</option>
-                            <option value="Lic">Lic</option>
-                            <option value="Roll">Roll</option>
-                            <option value="Packet">Packet</option>
-                            <option value="Set">Set</option>
-                            {item.unit && !['Nos','Pcs','Brass','Sqft','Sqm','Mtr','Feet','Ton','Bags','Boxes','Kg','Ltr','Hrs','Days','Job','Lic','Roll','Packet','Set'].includes(item.unit) && (
+                            {isUS ? (
+                              <>
+                                <option value="ea">ea (each)</option>
+                                <option value="hrs">hrs (hours)</option>
+                                <option value="days">days</option>
+                                <option value="units">units</option>
+                                <option value="box">box</option>
+                                <option value="pk">pk (pack)</option>
+                                <option value="lbs">lbs</option>
+                                <option value="sq ft">sq ft</option>
+                                <option value="ft">ft</option>
+                                <option value="Nos">Nos</option>
+                                <option value="Pcs">Pcs</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="Nos">Nos</option>
+                                <option value="Pcs">Pcs</option>
+                                <option value="Brass">Brass</option>
+                                <option value="Sqft">Sqft</option>
+                                <option value="Sqm">Sqm</option>
+                                <option value="Mtr">Mtr</option>
+                                <option value="Feet">Feet</option>
+                                <option value="Ton">Ton</option>
+                                <option value="Bags">Bags</option>
+                                <option value="Boxes">Boxes</option>
+                                <option value="Kg">Kg</option>
+                                <option value="Ltr">Ltr</option>
+                                <option value="Hrs">Hrs</option>
+                                <option value="Days">Days</option>
+                                <option value="Job">Job</option>
+                                <option value="Lic">Lic</option>
+                                <option value="Roll">Roll</option>
+                                <option value="Packet">Packet</option>
+                                <option value="Set">Set</option>
+                              </>
+                            )}
+                            {item.unit && !['ea','hrs','days','units','box','pk','lbs','sq ft','ft','Nos','Pcs','Brass','Sqft','Sqm','Mtr','Feet','Ton','Bags','Boxes','Kg','Ltr','Hrs','Days','Job','Lic','Roll','Packet','Set'].includes(item.unit) && (
                               <option value={item.unit}>{item.unit}</option>
                             )}
                           </select>
@@ -898,7 +1092,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                         {/* Rate */}
                         <div>
-                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Rate (₹)</label>
+                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">Rate ({currencySymbol})</label>
                           <input
                             type="number"
                             min="0"
@@ -923,19 +1117,31 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                           />
                         </div>
 
-                        {/* GST Rate */}
+                        {/* Tax / GST Rate */}
                         <div>
-                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">GST Rate</label>
+                          <label className="block text-[10px] text-slate-500 font-semibold mb-0.5">
+                            {isUS ? 'Sales Tax' : 'GST Rate'}
+                          </label>
                           <select
                             value={item.gstRate}
-                            onChange={(e) => handleUpdateItem(index, { gstRate: Number(e.target.value) })}
+                            onChange={(e) => handleUpdateItem(index, { gstRate: Number(e.target.value), taxable: Number(e.target.value) > 0 })}
                             className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs font-semibold text-blue-700 outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
                           >
-                            <option value="0">0% (Nil)</option>
-                            <option value="5">5%</option>
-                            <option value="12">12%</option>
-                            <option value="18">18%</option>
-                            <option value="28">28%</option>
+                            {isUS ? (
+                              US_TAX_PRESETS.map((p) => (
+                                <option key={p.rate} value={p.rate}>
+                                  {p.label}
+                                </option>
+                              ))
+                            ) : (
+                              <>
+                                <option value="0">0% (Nil)</option>
+                                <option value="5">5%</option>
+                                <option value="12">12%</option>
+                                <option value="18">18%</option>
+                                <option value="28">28%</option>
+                              </>
+                            )}
                           </select>
                         </div>
                       </div>
@@ -943,13 +1149,13 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                       {/* Line Subtotal Banner */}
                       <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-200/70 text-slate-500 flex-wrap gap-2">
                         <span>
-                          Taxable: <strong className="text-slate-800">{formatCurrency(item.taxableAmount, '₹')}</strong>
+                          Taxable: <strong className="text-slate-800">{formatCurrency(item.taxableAmount, currencySymbol)}</strong>
                         </span>
                         <span>
-                          GST ({item.gstRate}%): <strong className="text-slate-800">{formatCurrency(item.gstAmount, '₹')}</strong>
+                          {isUS ? 'Sales Tax' : 'GST'} ({item.gstRate}%): <strong className="text-slate-800">{formatCurrency(item.gstAmount, currencySymbol)}</strong>
                         </span>
                         <span>
-                          Row Total: <strong className="text-blue-700 font-bold">{formatCurrency(item.total, '₹')}</strong>
+                          Row Total: <strong className="text-blue-700 font-bold">{formatCurrency(item.total, currencySymbol)}</strong>
                         </span>
                       </div>
                     </div>
@@ -958,116 +1164,133 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                 {/* Calculation Summary Strip */}
                 <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 font-medium text-slate-600">
-                  {/* GST Tax Treatment Selector */}
+                  {/* Tax Treatment Selector */}
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 text-xs">
                     <span className="font-semibold text-slate-700">Tax Type:</span>
-                    <select
-                      value={calculatedData.gstType || 'cgst_sgst'}
-                      onChange={(e) => {
-                        const val = e.target.value as GSTType;
-                        setInvoiceData((prev) => {
-                          let nextItems = prev.items;
-                          if (val === 'none') {
-                            nextItems = prev.items.map((it) => ({
-                              ...it,
-                              gstRate: 0,
-                              gstAmount: 0,
-                              total: it.taxableAmount,
-                            }));
-                          }
-                          return {
-                            ...prev,
-                            gstType: val,
-                            items: nextItems,
-                          };
-                        });
-                      }}
-                      className="bg-white border border-slate-300 rounded px-2 py-0.5 text-xs font-semibold text-blue-700 outline-none cursor-pointer focus:border-blue-600"
-                    >
-                      <option value="cgst_sgst">CGST + SGST (Intra-State)</option>
-                      <option value="igst">IGST (Inter-State)</option>
-                      <option value="none">Non-GST / Exempt (0%)</option>
-                    </select>
+                    {isUS ? (
+                      <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                        US Sales Tax (Destination / Local)
+                      </span>
+                    ) : (
+                      <select
+                        value={calculatedData.gstType || 'cgst_sgst'}
+                        onChange={(e) => {
+                          const val = e.target.value as GSTType;
+                          setInvoiceData((prev) => {
+                            let nextItems = prev.items;
+                            if (val === 'none') {
+                              nextItems = prev.items.map((it) => ({
+                                ...it,
+                                gstRate: 0,
+                                gstAmount: 0,
+                                total: it.taxableAmount,
+                              }));
+                            }
+                            return {
+                              ...prev,
+                              gstType: val,
+                              items: nextItems,
+                            };
+                          });
+                        }}
+                        className="bg-white border border-slate-300 rounded px-2 py-0.5 text-xs font-semibold text-blue-700 outline-none cursor-pointer focus:border-blue-600"
+                      >
+                        <option value="cgst_sgst">CGST + SGST (Intra-State)</option>
+                        <option value="igst">IGST (Inter-State)</option>
+                        <option value="none">Non-GST / Exempt (0%)</option>
+                      </select>
+                    )}
                   </div>
 
                   {calculatedData.totalDiscount > 0 ? (
                     <>
                       <div className="flex justify-between">
                         <span>Gross Subtotal:</span>
-                        <span className="font-semibold text-slate-800 font-mono">
-                          {formatCurrency(calculatedData.subtotal, '₹')}
+                        <span className="font-semibold text-slate-800 font-mono tabular-nums">
+                          {formatCurrency(calculatedData.subtotal, currencySymbol)}
                         </span>
                       </div>
                       <div className="flex justify-between text-rose-600">
                         <span>Total Discount:</span>
-                        <span className="font-semibold font-mono">
-                          -{formatCurrency(calculatedData.totalDiscount, '₹')}
+                        <span className="font-semibold font-mono tabular-nums">
+                          -{formatCurrency(calculatedData.totalDiscount, currencySymbol)}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Taxable Subtotal:</span>
-                        <span className="font-semibold text-slate-800 font-mono">
-                          {formatCurrency(calculatedData.totalTaxableAmount, '₹')}
+                        <span className="font-semibold text-slate-800 font-mono tabular-nums">
+                          {formatCurrency(calculatedData.totalTaxableAmount, currencySymbol)}
                         </span>
                       </div>
                     </>
                   ) : (
                     <div className="flex justify-between">
                       <span>Taxable Subtotal:</span>
-                      <span className="font-semibold text-slate-800 font-mono">
-                        {formatCurrency(calculatedData.totalTaxableAmount, '₹')}
+                      <span className="font-semibold text-slate-800 font-mono tabular-nums">
+                        {formatCurrency(calculatedData.totalTaxableAmount, currencySymbol)}
                       </span>
                     </div>
                   )}
 
-                  {/* Statutory GST Line Breakdown */}
-                  {calculatedData.gstType === 'cgst_sgst' && (
-                    <>
-                      <div className="flex justify-between">
-                        <span>Central GST (CGST):</span>
-                        <span className="font-semibold text-slate-800 font-mono">
-                          {formatCurrency(calculatedData.totalCgst, '₹')}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>State GST (SGST):</span>
-                        <span className="font-semibold text-slate-800 font-mono">
-                          {formatCurrency(calculatedData.totalSgst, '₹')}
-                        </span>
-                      </div>
-                    </>
-                  )}
-
-                  {calculatedData.gstType === 'igst' && (
+                  {/* Statutory Tax Breakdown */}
+                  {isUS ? (
                     <div className="flex justify-between">
-                      <span>Integrated GST (IGST):</span>
-                      <span className="font-semibold text-slate-800 font-mono">
-                        {formatCurrency(calculatedData.totalIgst, '₹')}
+                      <span>Combined Sales Tax:</span>
+                      <span className="font-semibold text-slate-800 font-mono tabular-nums">
+                        {formatCurrency(calculatedData.totalSalesTax || calculatedData.totalTax, currencySymbol)}
                       </span>
                     </div>
-                  )}
+                  ) : (
+                    <>
+                      {calculatedData.gstType === 'cgst_sgst' && (
+                        <>
+                          <div className="flex justify-between">
+                            <span>Central GST (CGST):</span>
+                            <span className="font-semibold text-slate-800 font-mono tabular-nums">
+                              {formatCurrency(calculatedData.totalCgst, currencySymbol)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>State GST (SGST):</span>
+                            <span className="font-semibold text-slate-800 font-mono tabular-nums">
+                              {formatCurrency(calculatedData.totalSgst, currencySymbol)}
+                            </span>
+                          </div>
+                        </>
+                      )}
 
-                  {calculatedData.gstType === 'none' && (
-                    <div className="flex justify-between text-slate-500 text-xs">
-                      <span>GST (Non-GST / Exempt):</span>
-                      <span className="font-mono">₹0.00</span>
-                    </div>
+                      {calculatedData.gstType === 'igst' && (
+                        <div className="flex justify-between">
+                          <span>Integrated GST (IGST):</span>
+                          <span className="font-semibold text-slate-800 font-mono tabular-nums">
+                            {formatCurrency(calculatedData.totalIgst, currencySymbol)}
+                          </span>
+                        </div>
+                      )}
+
+                      {calculatedData.gstType === 'none' && (
+                        <div className="flex justify-between text-slate-500 text-xs">
+                          <span>GST (Non-GST / Exempt):</span>
+                          <span className="font-mono tabular-nums">{currencySymbol}0.00</span>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {calculatedData.roundOff !== 0 && (
                     <div className="flex justify-between text-slate-500 text-[11px]">
                       <span>Round Off:</span>
-                      <span className="font-mono">
+                      <span className="font-mono tabular-nums">
                         {calculatedData.roundOff > 0 ? '+' : ''}
-                        {formatNumber(calculatedData.roundOff)}
+                        {formatNumber(calculatedData.roundOff, isUS ? 'en-US' : 'en-IN')}
                       </span>
                     </div>
                   )}
 
                   <div className="flex justify-between pt-1.5 border-t border-slate-200 text-sm font-bold text-slate-900">
                     <span>Grand Total:</span>
-                    <span className="text-blue-700 font-mono text-base">
-                      {formatCurrency(calculatedData.grandTotalRounded, '₹')}
+                    <span className="text-blue-700 font-mono text-base tabular-nums">
+                      {formatCurrency(calculatedData.grandTotalRounded, currencySymbol)}
                     </span>
                   </div>
 
@@ -1075,21 +1298,21 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                     <div className="pt-1.5 border-t border-slate-200/80 space-y-1 text-xs">
                       <div className="flex justify-between text-emerald-700 font-medium">
                         <span>Amount Paid:</span>
-                        <span className="font-mono font-semibold">
-                          {formatCurrency(calculatedData.amountPaid, '₹')}
+                        <span className="font-mono font-semibold tabular-nums">
+                          {formatCurrency(calculatedData.amountPaid, currencySymbol)}
                         </span>
                       </div>
                       <div className="flex justify-between text-slate-800 font-bold">
                         <span>Balance Due:</span>
-                        <span className={`font-mono ${calculatedData.balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
-                          {formatCurrency(Math.max(0, calculatedData.balanceDue), '₹')}
+                        <span className={`font-mono tabular-nums ${calculatedData.balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                          {formatCurrency(Math.max(0, calculatedData.balanceDue), currencySymbol)}
                         </span>
                       </div>
                       {calculatedData.amountPaid > calculatedData.grandTotalRounded && (
                         <div className="flex justify-between text-amber-700 font-medium text-[11px]">
                           <span>Excess / Advance:</span>
                           <span className="font-mono font-semibold">
-                            +{formatCurrency(calculatedData.amountPaid - calculatedData.grandTotalRounded, '₹')}
+                            +{formatCurrency(calculatedData.amountPaid - calculatedData.grandTotalRounded, currencySymbol)}
                           </span>
                         </div>
                       )}
@@ -1102,6 +1325,36 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             {/* ══════════ TAB 2: CLIENT & SUPPLIER ══════════ */}
             {activeTab === 'parties' && (
               <div className="space-y-4">
+                {/* Regional Tax Structure Switcher Card */}
+                <div className="p-3 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-xl border border-slate-200 flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">
+                      Invoice Taxation &amp; Currency System
+                    </span>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      {isUS
+                        ? '🇺🇸 United States Mode: Destination Sales Tax, Federal EIN, State ID, SKU, USD ($)'
+                        : '🇮🇳 India Mode: Statutory GST (CGST/SGST/IGST), GSTIN, PAN, HSN/SAC, INR (₹)'}
+                    </p>
+                  </div>
+                  <SegmentedControl
+                    aria-label="Select region"
+                    selectedKeys={new Set([isUS ? 'US' : 'IN'])}
+                    onSelectionChange={(keys) => {
+                      const val = Array.from(keys)[0];
+                      if (val === 'IN' || val === 'US') handleToggleRegion(val);
+                    }}
+                    className="bg-white p-0.5 border border-slate-200 shrink-0"
+                  >
+                    <SegmentedControlItem id="IN" className="text-xs px-2.5 py-1 font-bold">
+                      <span>🇮🇳 India (GST)</span>
+                    </SegmentedControlItem>
+                    <SegmentedControlItem id="US" className="text-xs px-2.5 py-1 font-bold">
+                      <span>🇺🇸 US (Sales Tax)</span>
+                    </SegmentedControlItem>
+                  </SegmentedControl>
+                </div>
+
                 {/* Client / Buyer Section */}
                 <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200 space-y-3">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1124,20 +1377,22 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                         ))}
                       </select>
 
-                      <button
-                        type="button"
+                      <Button
+                        size="small"
+                        variant="secondary"
+                        leadingIcon={RiSave3Line}
                         onClick={handleSaveClientToDirectory}
                         title="Save or update this client profile in your offline directory"
-                        className="text-xs text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded px-2 py-1 font-semibold transition-colors cursor-pointer flex items-center gap-1"
+                        className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/70"
                       >
-                        <RiSave3Line className="size-3" />
                         {clients.some((c) => c.name.toLowerCase() === invoiceData.client.name.trim().toLowerCase())
                           ? 'Update Directory'
                           : 'Save to Directory'}
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
+                  {/* Client Legal Name */}
                   <div>
                     <label className="block text-[11px] text-slate-500 font-medium mb-1">Client Legal Name</label>
                     <input
@@ -1153,159 +1408,330 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                     />
                   </div>
 
-                  {/* GSTIN and Phone in 2 clean, spacious columns */}
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">GSTIN</label>
-                      <input
-                        type="text"
-                        value={invoiceData.client.gstin || ''}
-                        onChange={(e) =>
-                          setInvoiceData({
-                            ...invoiceData,
-                            client: { ...invoiceData.client, gstin: e.target.value.toUpperCase() },
-                          })
-                        }
-                        placeholder="27AADCS5678G1Z9"
-                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 font-mono text-xs outline-none uppercase focus:border-blue-600 focus:bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Phone Number</label>
-                      <input
-                        type="text"
-                        value={invoiceData.client.phone || ''}
-                        onChange={(e) =>
-                          setInvoiceData({
-                            ...invoiceData,
-                            client: { ...invoiceData.client, phone: e.target.value },
-                          })
-                        }
-                        placeholder="+91 98200 12345"
-                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
-                      />
-                    </div>
-                  </div>
+                  {isUS ? (
+                    <>
+                      {/* US Identifiers: EIN & Phone */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Federal EIN / Tax ID</label>
+                          <input
+                            type="text"
+                            value={invoiceData.client.ein || ''}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, ein: formatEIN(e.target.value) },
+                              })
+                            }
+                            placeholder="12-3456789"
+                            maxLength={10}
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 font-mono text-xs outline-none focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Phone Number</label>
+                          <input
+                            type="text"
+                            value={invoiceData.client.phone || ''}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, phone: e.target.value },
+                              })
+                            }
+                            placeholder="+1 (555) 012-3456"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                      </div>
 
-                  {/* Billing Email - Full width for zero clipping of lengthy corporate emails */}
-                  <div>
-                    <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Billing Email</label>
-                    <input
-                      type="email"
-                      value={invoiceData.client.email || ''}
-                      onChange={(e) =>
-                        setInvoiceData({
-                          ...invoiceData,
-                          client: { ...invoiceData.client, email: e.target.value },
-                        })
-                      }
-                      placeholder="billing@client.com"
-                      className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
-                    />
-                  </div>
+                      {/* Tax-Exempt Customer Toggle */}
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <input
+                          type="checkbox"
+                          id="client-tax-exempt-toggle"
+                          checked={Boolean(invoiceData.client.taxExempt)}
+                          onChange={(e) => {
+                            const isExempt = e.target.checked;
+                            setInvoiceData((prev) => ({
+                              ...prev,
+                              client: { ...prev.client, taxExempt: isExempt },
+                              items: isExempt
+                                ? prev.items.map((it) => ({ ...it, gstRate: 0, taxable: false }))
+                                : prev.items,
+                            }));
+                          }}
+                          className="size-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                        />
+                        <label htmlFor="client-tax-exempt-toggle" className="text-xs text-slate-700 font-medium cursor-pointer">
+                          Tax-Exempt Entity / Resale Certificate Holder
+                        </label>
+                      </div>
 
-                  <div>
-                    <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Billing Address</label>
-                    <input
-                      type="text"
-                      value={invoiceData.client.address}
-                      onChange={(e) =>
-                        setInvoiceData({
-                          ...invoiceData,
-                          client: { ...invoiceData.client, address: e.target.value },
-                        })
-                      }
-                      placeholder="Street, Building, Area"
-                      className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
-                    />
-                  </div>
+                      {invoiceData.client.taxExempt && (
+                        <div>
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Resale Certificate # / Exemption ID</label>
+                          <input
+                            type="text"
+                            value={invoiceData.client.resaleCertificate || ''}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, resaleCertificate: e.target.value.toUpperCase() },
+                              })
+                            }
+                            placeholder="e.g. EX-9876543-CA"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs font-mono outline-none focus:border-blue-600"
+                          />
+                        </div>
+                      )}
 
-                  {/* 5-Column Grid: City (2), State (2), Pincode (1) prevents state name truncation */}
-                  <div className="grid grid-cols-5 gap-2.5">
-                    <div className="col-span-2">
-                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">City</label>
-                      <input
-                        type="text"
-                        value={invoiceData.client.city}
-                        onChange={(e) =>
-                          setInvoiceData({
-                            ...invoiceData,
-                            client: { ...invoiceData.client, city: e.target.value },
-                          })
-                        }
-                        placeholder="Pune"
-                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">State</label>
-                      <input
-                        type="text"
-                        list="indian-states-list"
-                        value={invoiceData.client.state}
-                        onChange={(e) =>
-                          setInvoiceData({
-                            ...invoiceData,
-                            client: { ...invoiceData.client, state: e.target.value },
-                            placeOfSupply: `${e.target.value} (${invoiceData.client.gstin ? invoiceData.client.gstin.slice(0, 2) : '27'})`,
-                          })
-                        }
-                        placeholder="Maharashtra"
-                        className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
-                      />
-                    </div>
-                    <div className="col-span-1">
-                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Pincode</label>
-                      <input
-                        type="text"
-                        value={invoiceData.client.pincode}
-                        onChange={(e) =>
-                          setInvoiceData({
-                            ...invoiceData,
-                            client: { ...invoiceData.client, pincode: e.target.value },
-                          })
-                        }
-                        placeholder="411001"
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
-                      />
-                    </div>
-                  </div>
+                      {/* Billing Email */}
+                      <div>
+                        <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Billing Email</label>
+                        <input
+                          type="email"
+                          value={invoiceData.client.email || ''}
+                          onChange={(e) =>
+                            setInvoiceData({
+                              ...invoiceData,
+                              client: { ...invoiceData.client, email: e.target.value },
+                            })
+                          }
+                          placeholder="accounts.payable@client.com"
+                          className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                        />
+                      </div>
 
-                  <datalist id="indian-states-list">
-                    <option value="Andhra Pradesh" />
-                    <option value="Arunachal Pradesh" />
-                    <option value="Assam" />
-                    <option value="Bihar" />
-                    <option value="Chhattisgarh" />
-                    <option value="Goa" />
-                    <option value="Gujarat" />
-                    <option value="Haryana" />
-                    <option value="Himachal Pradesh" />
-                    <option value="Jharkhand" />
-                    <option value="Karnataka" />
-                    <option value="Kerala" />
-                    <option value="Madhya Pradesh" />
-                    <option value="Maharashtra" />
-                    <option value="Manipur" />
-                    <option value="Meghalaya" />
-                    <option value="Mizoram" />
-                    <option value="Nagaland" />
-                    <option value="Odisha" />
-                    <option value="Punjab" />
-                    <option value="Rajasthan" />
-                    <option value="Sikkim" />
-                    <option value="Tamil Nadu" />
-                    <option value="Telangana" />
-                    <option value="Tripura" />
-                    <option value="Uttar Pradesh" />
-                    <option value="Uttarakhand" />
-                    <option value="West Bengal" />
-                    <option value="Delhi" />
-                    <option value="Chandigarh" />
-                    <option value="Jammu and Kashmir" />
-                    <option value="Ladakh" />
-                    <option value="Puducherry" />
-                  </datalist>
+                      <div>
+                        <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Billing Address</label>
+                        <input
+                          type="text"
+                          value={invoiceData.client.address}
+                          onChange={(e) =>
+                            setInvoiceData({
+                              ...invoiceData,
+                              client: { ...invoiceData.client, address: e.target.value },
+                            })
+                          }
+                          placeholder="Street Address, Suite or Building"
+                          className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-5 gap-2.5">
+                        <div className="col-span-2">
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">City</label>
+                          <input
+                            type="text"
+                            value={invoiceData.client.city}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, city: e.target.value },
+                              })
+                            }
+                            placeholder="San Francisco"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">State</label>
+                          <input
+                            type="text"
+                            list="us-states-editor-list"
+                            value={invoiceData.client.state}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, state: e.target.value },
+                                placeOfSupply: e.target.value,
+                              })
+                            }
+                            placeholder="California (CA)"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">ZIP</label>
+                          <input
+                            type="text"
+                            value={invoiceData.client.pincode}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, pincode: formatUSZip(e.target.value) },
+                              })
+                            }
+                            placeholder="94105"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <datalist id="us-states-editor-list">
+                        {US_STATES_LIST.map((s, idx) => (
+                          <option key={idx} value={s} />
+                        ))}
+                      </datalist>
+                    </>
+                  ) : (
+                    <>
+                      {/* GSTIN and Phone in 2 clean, spacious columns */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">GSTIN</label>
+                          <input
+                            type="text"
+                            value={invoiceData.client.gstin || ''}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, gstin: e.target.value.toUpperCase() },
+                              })
+                            }
+                            placeholder="27AADCS5678G1Z9"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 font-mono text-xs outline-none uppercase focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Phone Number</label>
+                          <input
+                            type="text"
+                            value={invoiceData.client.phone || ''}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, phone: e.target.value },
+                              })
+                            }
+                            placeholder="+91 98200 12345"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Billing Email - Full width for zero clipping of lengthy corporate emails */}
+                      <div>
+                        <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Billing Email</label>
+                        <input
+                          type="email"
+                          value={invoiceData.client.email || ''}
+                          onChange={(e) =>
+                            setInvoiceData({
+                              ...invoiceData,
+                              client: { ...invoiceData.client, email: e.target.value },
+                            })
+                          }
+                          placeholder="billing@client.com"
+                          className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Billing Address</label>
+                        <input
+                          type="text"
+                          value={invoiceData.client.address}
+                          onChange={(e) =>
+                            setInvoiceData({
+                              ...invoiceData,
+                              client: { ...invoiceData.client, address: e.target.value },
+                            })
+                          }
+                          placeholder="Street, Building, Area"
+                          className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                        />
+                      </div>
+
+                      {/* 5-Column Grid: City (2), State (2), Pincode (1) prevents state name truncation */}
+                      <div className="grid grid-cols-5 gap-2.5">
+                        <div className="col-span-2">
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">City</label>
+                          <input
+                            type="text"
+                            value={invoiceData.client.city}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, city: e.target.value },
+                              })
+                            }
+                            placeholder="Pune"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">State</label>
+                          <input
+                            type="text"
+                            list="indian-states-list"
+                            value={invoiceData.client.state}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, state: e.target.value },
+                                placeOfSupply: `${e.target.value} (${invoiceData.client.gstin ? invoiceData.client.gstin.slice(0, 2) : '27'})`,
+                              })
+                            }
+                            placeholder="Maharashtra"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Pincode</label>
+                          <input
+                            type="text"
+                            value={invoiceData.client.pincode}
+                            onChange={(e) =>
+                              setInvoiceData({
+                                ...invoiceData,
+                                client: { ...invoiceData.client, pincode: e.target.value },
+                              })
+                            }
+                            placeholder="411001"
+                            className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <datalist id="indian-states-list">
+                        <option value="Andhra Pradesh" />
+                        <option value="Arunachal Pradesh" />
+                        <option value="Assam" />
+                        <option value="Bihar" />
+                        <option value="Chhattisgarh" />
+                        <option value="Goa" />
+                        <option value="Gujarat" />
+                        <option value="Haryana" />
+                        <option value="Himachal Pradesh" />
+                        <option value="Jharkhand" />
+                        <option value="Karnataka" />
+                        <option value="Kerala" />
+                        <option value="Madhya Pradesh" />
+                        <option value="Maharashtra" />
+                        <option value="Manipur" />
+                        <option value="Meghalaya" />
+                        <option value="Mizoram" />
+                        <option value="Nagaland" />
+                        <option value="Odisha" />
+                        <option value="Punjab" />
+                        <option value="Rajasthan" />
+                        <option value="Sikkim" />
+                        <option value="Tamil Nadu" />
+                        <option value="Telangana" />
+                        <option value="Tripura" />
+                        <option value="Uttar Pradesh" />
+                        <option value="Uttarakhand" />
+                        <option value="West Bengal" />
+                        <option value="Delhi" />
+                        <option value="Chandigarh" />
+                        <option value="Jammu and Kashmir" />
+                        <option value="Ladakh" />
+                        <option value="Puducherry" />
+                      </datalist>
+                    </>
+                  )}
                 </div>
 
                 {/* Dates & Supply Section */}
@@ -1369,44 +1795,52 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Place of Supply</label>
+                      <label className="block text-[10px] text-slate-500 font-medium mb-0.5">
+                        {isUS ? 'State / Tax Jurisdiction' : 'Place of Supply'}
+                      </label>
                       <input
                         type="text"
                         value={invoiceData.placeOfSupply || ''}
                         onChange={(e) => setInvoiceData({ ...invoiceData, placeOfSupply: e.target.value })}
-                        placeholder="Maharashtra (27)"
+                        placeholder={isUS ? 'California (CA)' : 'Maharashtra (27)'}
                         className="w-full bg-white border border-slate-200 rounded-md px-2.5 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white"
                       />
                     </div>
                     <div>
                       <label className="block text-[10px] text-slate-500 font-medium mb-0.5">Tax Treatment</label>
-                      <select
-                        value={calculatedData.gstType || 'cgst_sgst'}
-                        onChange={(e) => {
-                          const val = e.target.value as GSTType;
-                          setInvoiceData((prev) => {
-                            let nextItems = prev.items;
-                            if (val === 'none') {
-                              nextItems = prev.items.map((it) => ({
-                                ...it,
-                                gstRate: 0,
-                                gstAmount: 0,
-                                total: it.taxableAmount,
-                              }));
-                            }
-                            return {
-                              ...prev,
-                              gstType: val,
-                              items: nextItems,
-                            };
-                          });
-                        }}
-                        className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs font-semibold text-blue-700 outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
-                      >
-                        <option value="cgst_sgst">CGST + SGST (Intra-State)</option>
-                        <option value="igst">IGST (Inter-State)</option>
-                        <option value="none">Non-GST / Exempt</option>
-                      </select>
+                      {isUS ? (
+                        <div className="w-full bg-slate-100 border border-slate-200 rounded-md px-2.5 py-1.5 text-xs font-semibold text-slate-700">
+                          US State &amp; Local Sales Tax
+                        </div>
+                      ) : (
+                        <select
+                          value={calculatedData.gstType || 'cgst_sgst'}
+                          onChange={(e) => {
+                            const val = e.target.value as GSTType;
+                            setInvoiceData((prev) => {
+                              let nextItems = prev.items;
+                              if (val === 'none') {
+                                nextItems = prev.items.map((it) => ({
+                                  ...it,
+                                  gstRate: 0,
+                                  gstAmount: 0,
+                                  total: it.taxableAmount,
+                                }));
+                              }
+                              return {
+                                ...prev,
+                                gstType: val,
+                                items: nextItems,
+                              };
+                            });
+                          }}
+                          className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs font-semibold text-blue-700 outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
+                        >
+                          <option value="cgst_sgst">CGST + SGST (Intra-State)</option>
+                          <option value="igst">IGST (Inter-State)</option>
+                          <option value="none">Non-GST / Exempt</option>
+                        </select>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1508,13 +1942,13 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                       <span className="font-bold text-slate-900 block">Payments Received</span>
                       <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-[11px] text-slate-500 mt-0.5">
                         <span>
-                          Paid: <strong className="text-slate-800">{formatCurrency(calculatedData.amountPaid, '₹')}</strong>
+                          Paid: <strong className="text-slate-800">{formatCurrency(calculatedData.amountPaid, currencySymbol)}</strong>
                         </span>
                         <span>•</span>
                         <span>
                           Due:{' '}
                           <strong className={calculatedData.balanceDue > 0 ? 'text-rose-600' : 'text-emerald-600'}>
-                            {formatCurrency(Math.max(0, calculatedData.balanceDue), '₹')}
+                            {formatCurrency(Math.max(0, calculatedData.balanceDue), currencySymbol)}
                           </strong>
                         </span>
                         {calculatedData.balanceDue === 0 && calculatedData.amountPaid >= calculatedData.grandTotalRounded && (
@@ -1525,7 +1959,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                         )}
                         {calculatedData.amountPaid > calculatedData.grandTotalRounded && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-100/80 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                            Overpaid by {formatCurrency(calculatedData.amountPaid - calculatedData.grandTotalRounded, '₹')}
+                            Overpaid by {formatCurrency(calculatedData.amountPaid - calculatedData.grandTotalRounded, currencySymbol)}
                           </span>
                         )}
                       </div>
@@ -1533,24 +1967,26 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                     {!showPaymentForm && (
                       calculatedData.balanceDue > 0 ? (
-                        <button
-                          type="button"
+                        <Button
+                          size="small"
+                          variant="secondary"
+                          leadingIcon={RiAddLine}
                           onClick={() => handleOpenPaymentForm(false)}
-                          className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                          className="text-xs font-semibold text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 shrink-0"
                         >
-                          <RiAddLine className="size-3.5" />
                           Add Payment
-                        </button>
+                        </Button>
                       ) : (
-                        <button
-                          type="button"
+                        <Button
+                          size="small"
+                          variant="secondary"
+                          leadingIcon={RiAddLine}
                           onClick={() => handleOpenPaymentForm(true)}
-                          className="text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer shrink-0 text-[11px]"
+                          className="text-xs font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 shrink-0"
                           title="Record an extra payment or advance adjustment"
                         >
-                          <RiAddLine className="size-3" />
                           Add Extra / Advance
-                        </button>
+                        </Button>
                       )
                     )}
                   </div>
@@ -1566,23 +2002,24 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                           {calculatedData.balanceDue > 0 ? 'Record New Payment' : 'Record Advance / Extra Payment'}
                         </span>
                         {calculatedData.balanceDue > 0 && (
-                          <button
-                            type="button"
+                          <Button
+                            size="xs"
+                            variant="ghost"
                             onClick={() => setNewPaymentAmount(String(calculatedData.balanceDue))}
                             className="text-[10px] text-blue-600 hover:underline font-semibold cursor-pointer"
                           >
-                            Pay Full Due ({formatCurrency(calculatedData.balanceDue, '₹')})
-                          </button>
+                            Pay Full Due ({formatCurrency(calculatedData.balanceDue, currencySymbol)})
+                          </Button>
                         )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <div className="flex items-center justify-between mb-0.5">
-                            <label className="text-[10px] text-slate-500 font-medium">Amount (₹) *</label>
+                            <label className="text-[10px] text-slate-500 font-medium">Amount ({currencySymbol}) *</label>
                             {calculatedData.balanceDue > 0 && (
                               <span className="text-[10px] text-slate-400 font-mono">
-                                Due: {formatCurrency(calculatedData.balanceDue, '₹')}
+                                Due: {formatCurrency(calculatedData.balanceDue, currencySymbol)}
                               </span>
                             )}
                           </div>
@@ -1598,7 +2035,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                           />
                           {Number(newPaymentAmount) > calculatedData.balanceDue && calculatedData.balanceDue > 0 && (
                             <p className="text-[10px] text-amber-600 font-medium mt-1 leading-tight">
-                              Exceeds balance due by {formatCurrency(Number(newPaymentAmount) - calculatedData.balanceDue, '₹')} (recorded as excess/advance).
+                              Exceeds balance due by {formatCurrency(Number(newPaymentAmount) - calculatedData.balanceDue, currencySymbol)} (recorded as excess/advance).
                             </p>
                           )}
                         </div>
@@ -1610,11 +2047,24 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             onChange={(e) => setNewPaymentMethod(e.target.value as any)}
                             className="w-full bg-slate-50 border border-slate-200 rounded-md px-1.5 py-1 text-xs text-slate-800 outline-none focus:border-emerald-600 focus:bg-white cursor-pointer"
                           >
-                            <option value="UPI">UPI / QR</option>
-                            <option value="NEFT">Bank Transfer (NEFT/RTGS)</option>
-                            <option value="Cash">Cash</option>
-                            <option value="Cheque">Cheque</option>
-                            <option value="Card">Debit / Credit Card</option>
+                            {isUS ? (
+                              <>
+                                <option value="ACH">ACH Transfer / Direct Deposit</option>
+                                <option value="Zelle">Zelle</option>
+                                <option value="Wire">Wire Transfer</option>
+                                <option value="Card">Debit / Credit Card</option>
+                                <option value="Check">Check</option>
+                                <option value="Cash">Cash</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="UPI">UPI / QR</option>
+                                <option value="NEFT">Bank Transfer (NEFT/RTGS)</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Card">Debit / Credit Card</option>
+                              </>
+                            )}
                           </select>
                         </div>
                       </div>
@@ -1636,52 +2086,55 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             type="text"
                             value={newPaymentRef}
                             onChange={(e) => setNewPaymentRef(e.target.value)}
-                            placeholder="e.g. UTR-982341 / Txn ID"
+                            placeholder={isUS ? "e.g. Check #1042 / ACH Trx ID" : "e.g. UTR-982341 / Txn ID"}
                             className="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-xs font-mono outline-none focus:border-emerald-600 focus:bg-white"
                           />
                         </div>
                       </div>
 
                       <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
-                        <button
-                          type="button"
+                        <Button
+                          size="small"
+                          variant="ghost"
                           onClick={() => setShowPaymentForm(false)}
-                          className="px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 rounded-md cursor-pointer"
+                          className="text-xs font-medium"
                         >
                           Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="primary"
                           type="submit"
-                          className="px-3 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-colors shadow-2xs cursor-pointer"
+                          className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700"
                         >
                           Record Payment
-                        </button>
+                        </Button>
                       </div>
                     </form>
                   )}
 
-                  {invoiceData.payments.length === 0 ? (
+                  {(invoiceData.payments || []).length === 0 ? (
                     <p className="text-slate-400 italic text-[11px]">No payments recorded yet. Click "Add Payment" when client pays.</p>
                   ) : (
                     <div className="space-y-2">
-                      {invoiceData.payments.map((p, idx) => (
+                      {(invoiceData.payments || []).map((p, idx) => (
                         <div key={idx} className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
                           <div>
-                            <span className="font-bold text-slate-900 font-mono">{formatCurrency(p.amount, '₹')}</span>
+                            <span className="font-bold text-slate-900 font-mono">{formatCurrency(p.amount, currencySymbol)}</span>
                             <span className="text-[10px] text-slate-600 ml-2 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
                               {p.method}
                             </span>
                             <span className="text-[10px] text-slate-400 ml-2 font-mono">{p.date}</span>
                             {p.reference && <span className="text-[10px] font-mono text-slate-400 ml-2">({p.reference})</span>}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePayment(idx)}
+                          <IconButton
+                            size="small"
+                            icon={RiDeleteBinLine}
+                            aria-label="Delete payment entry"
                             title="Delete this payment entry"
-                            className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-rose-50 transition-colors cursor-pointer"
-                          >
-                            <RiDeleteBinLine className="size-3.5" />
-                          </button>
+                            onClick={() => handleRemovePayment(idx)}
+                            className="text-slate-400 hover:text-rose-600 hover:border-rose-200"
+                          />
                         </div>
                       ))}
                     </div>
@@ -2021,7 +2474,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
         </div>
 
         {/* RIGHT PANE: REAL-TIME LIVE PREVIEW CANVAS */}
-        <div className="flex-1 bg-slate-100 overflow-auto p-6 relative">
+        <div className={`flex-1 bg-slate-100 overflow-auto p-3 sm:p-6 relative ${mobileTab === 'preview' ? 'flex flex-col items-center' : 'hidden lg:flex'}`}>
           <ThemePreview
             themeId={themeId}
             data={calculatedData}

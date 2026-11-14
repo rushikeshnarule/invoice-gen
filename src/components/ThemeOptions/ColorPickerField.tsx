@@ -15,11 +15,12 @@ export const ColorPickerField: React.FC<ColorPickerFieldProps> = ({
   className = '',
 }) => {
   const [localColor, setLocalColor] = useState(value || '#2563eb');
-  const rafRef = useRef<number | null>(null);
-
-  useEffect(() => {
+  const [prevPropValue, setPrevPropValue] = useState(value);
+  if (value !== prevPropValue) {
+    setPrevPropValue(value);
     setLocalColor(value || '#2563eb');
-  }, [value]);
+  }
+  const rafRef = useRef<number | null>(null);
 
   const commitColor = (newColor: string) => {
     setLocalColor(newColor);

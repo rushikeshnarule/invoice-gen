@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { InvoiceProvider, useInvoices } from '../context/InvoiceContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ClientsView } from '../routes/ClientsView';
@@ -99,11 +100,13 @@ describe('ClientsView Interface', () => {
 
   it('renders clients view with Edit and Delete options for client accounts', () => {
     render(
-      <ThemeProvider>
-        <InvoiceProvider>
-          <ClientsView />
-        </InvoiceProvider>
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider>
+          <InvoiceProvider>
+            <ClientsView />
+          </InvoiceProvider>
+        </ThemeProvider>
+      </MemoryRouter>
     );
 
     // Check header
@@ -120,11 +123,13 @@ describe('ClientsView Interface', () => {
 
   it('opens edit modal with client details prefilled', () => {
     render(
-      <ThemeProvider>
-        <InvoiceProvider>
-          <ClientsView />
-        </InvoiceProvider>
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider>
+          <InvoiceProvider>
+            <ClientsView />
+          </InvoiceProvider>
+        </ThemeProvider>
+      </MemoryRouter>
     );
 
     // Click the first Edit button
@@ -143,11 +148,13 @@ describe('ClientsView Interface', () => {
 
   it('opens delete confirmation modal when delete icon is clicked', () => {
     render(
-      <ThemeProvider>
-        <InvoiceProvider>
-          <ClientsView />
-        </InvoiceProvider>
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider>
+          <InvoiceProvider>
+            <ClientsView />
+          </InvoiceProvider>
+        </ThemeProvider>
+      </MemoryRouter>
     );
 
     // Click the first Delete button

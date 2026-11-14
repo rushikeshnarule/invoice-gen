@@ -26,7 +26,8 @@
   font-family: Georgia, 'Times New Roman', serif;
 }
 
-.topBar {
+.topBar,
+.header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -202,7 +203,8 @@
 }
 
 /* Totals */
-.totalsSection {
+.totalsSection,
+.totalsBlock {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 24px;
@@ -324,7 +326,8 @@
   margin-left: auto;
 }
 
-.notes {
+.notes,
+.notesBlock {
   margin-top: 20px;
   font-size: 8pt;
   color: #78716c;

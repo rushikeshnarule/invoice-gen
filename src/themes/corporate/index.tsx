@@ -1,14 +1,33 @@
 import React from 'react';
 import type { ThemeComponentProps } from '../../types';
 import { Watermark } from '../Watermark';
-import { themeVars, getUpiQrString } from '../themeHelpers';
+import {
+  themeVars,
+  getUpiQrString,
+  isUSInvoice,
+  getInvoiceTitle,
+  getCodeColumnHeader,
+  getTaxColumnHeader,
+  getCurrencySymbol,
+  getNumberFormat,
+} from '../themeHelpers';
 import { formatCurrency, formatNumber, formatDate, QRCodeView } from '../../utils';
 import styles from './styles.module.css';
 
 export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
   const paperClass = options.paper === 'A5' ? styles.paperA5 : styles.paperA4;
+  const isUS = isUSInvoice(data);
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
+  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
+
+  const invoiceTitle = getInvoiceTitle(data);
+  const codeHeader = getCodeColumnHeader(data);
+  const taxHeader = getTaxColumnHeader(data);
+  const curSymbol = getCurrencySymbol(data, options);
+  const numFormat = getNumberFormat(data, options);
+  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || data.items.some((i) => (Number(i.gstRate) || 0) > 0);
 
   return (
     <div
@@ -17,35 +36,54 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
     >
       <Watermark options={options} status={data.status} />
 
-      {/* Top Header */}
-      <div className={styles.topHeader}>
-        <div className={styles.brandArea}>
+      {/* Header Bar */}
+      <div className={styles.headerBar}>
+        <div className={styles.headerLeft}>
           {options.showLogo && (data.business?.logoUrl || data.logoUrl) && (
             <img
               src={data.business?.logoUrl || data.logoUrl}
               alt={data.business.name}
               className={styles.logo}
+              style={{ maxHeight: '48px', maxWidth: '140px', objectFit: 'contain' }}
             />
           )}
           <div>
-            <div className={styles.invoiceTitle}>INVOICE</div>
-            {data.copyLabel && (
-              <div style={{ fontSize: '8pt', textTransform: 'uppercase', color: '#64748b' }}>
-                {data.copyLabel}
-              </div>
-            )}
+            <div className={styles.corporateTitle}>{data.business.name}</div>
+            <div className={styles.subTitle}>Commercial Invoice &amp; Remittance Statement</div>
           </div>
         </div>
-
-        <div className={styles.invoiceMeta}>
-          <div><strong>Invoice No:</strong> {data.invoiceNumber}</div>
-          <div><strong>Date:</strong> {formatDate(data.invoiceDate, options.numberFormat)}</div>
-          {data.dueDate && <div><strong>Due Date:</strong> {formatDate(data.dueDate, options.numberFormat)}</div>}
-          {data.placeOfSupply && <div><strong>Place of Supply:</strong> {data.placeOfSupply}</div>}
+        <div className={styles.headerRight}>
+          <div className={styles.invoiceBadge}>{invoiceTitle}</div>
+          <div className={styles.metaRow}>
+            <span>Invoice No:</span>
+            <strong>{data.invoiceNumber}</strong>
+          </div>
+          <div className={styles.metaRow}>
+            <span>Date:</span>
+            <strong>{formatDate(data.invoiceDate, options.numberFormat)}</strong>
+          </div>
+          {data.billingPeriod && (
+            <div className={styles.metaRow}>
+              <span>Period:</span>
+              <strong>{data.billingPeriod}</strong>
+            </div>
+          )}
+          {data.dueDate && (
+            <div className={styles.metaRow}>
+              <span>Due Date:</span>
+              <strong>{formatDate(data.dueDate, options.numberFormat)}</strong>
+            </div>
+          )}
+          {data.placeOfSupply && (
+            <div className={styles.metaRow}>
+              <span>{isUS ? 'State / Jurisdiction:' : 'Place of Supply:'}</span>
+              <strong>{data.placeOfSupply}</strong>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Two-Column Header: FROM / BILL TO */}
+      {/* Parties Grid */}
       <div className={styles.partiesGrid}>
         <div className={styles.partyCol}>
           <div className={styles.partyLabel}>From</div>
@@ -55,8 +93,17 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
             <div>{data.business.city}, {data.business.state} - {data.business.pincode}</div>
             <div>Phone: {data.business.phone}</div>
             <div>Email: {data.business.email}</div>
-            {data.business.gstin && <div>GSTIN: <strong>{data.business.gstin}</strong></div>}
-            {data.business.pan && <div>PAN: <strong>{data.business.pan}</strong></div>}
+            {isUS ? (
+              <>
+                {data.business.ein && <div>EIN: <strong>{data.business.ein}</strong></div>}
+                {data.business.stateTaxId && <div>State Tax ID: <strong>{data.business.stateTaxId}</strong></div>}
+              </>
+            ) : (
+              <>
+                {data.business.gstin && <div>GSTIN: <strong>{data.business.gstin}</strong></div>}
+                {data.business.pan && <div>PAN: <strong>{data.business.pan}</strong></div>}
+              </>
+            )}
           </div>
         </div>
 
@@ -68,7 +115,14 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
             <div>{data.client.city}, {data.client.state} - {data.client.pincode}</div>
             {data.client.phone && <div>Phone: {data.client.phone}</div>}
             {data.client.email && <div>Email: {data.client.email}</div>}
-            {data.client.gstin && <div>GSTIN: <strong>{data.client.gstin}</strong></div>}
+            {isUS ? (
+              <>
+                {data.client.ein && <div>EIN / Tax ID: <strong>{data.client.ein}</strong></div>}
+                {data.client.taxExempt && <div style={{ color: '#059669', fontWeight: 600 }}>Tax-Exempt Entity</div>}
+              </>
+            ) : (
+              data.client.gstin && <div>GSTIN: <strong>{data.client.gstin}</strong></div>
+            )}
           </div>
         </div>
       </div>
@@ -78,12 +132,13 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
         <thead>
           <tr>
             <th style={{ width: '32px' }} className={styles.centerCol}>#</th>
-            <th>Item & Description</th>
-            {options.showHsnSacColumn && <th style={{ width: '75px', whiteSpace: 'nowrap' }} className={styles.centerCol}>HSN/SAC</th>}
+            {showDateCol && <th style={{ width: '80px', whiteSpace: 'nowrap' }} className={styles.centerCol}>Date</th>}
+            <th>Item &amp; Description</th>
+            {options.showHsnSacColumn && <th style={{ width: '75px', whiteSpace: 'nowrap' }} className={styles.centerCol}>{codeHeader}</th>}
             <th style={{ width: '50px' }} className={styles.numCol}>Qty</th>
             <th style={{ width: '70px' }} className={styles.numCol}>Rate</th>
             {options.showDiscountColumn && <th style={{ width: '55px' }} className={styles.numCol}>Disc</th>}
-            {showGst && <th style={{ width: '50px' }} className={styles.numCol}>Tax%</th>}
+            {(showGst || (isUS && hasTaxOnItems)) && <th style={{ width: '50px' }} className={styles.numCol}>{taxHeader}</th>}
             <th style={{ width: '85px' }} className={styles.numCol}>Total</th>
           </tr>
         </thead>
@@ -91,12 +146,17 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
           {data.items.map((item, idx) => (
             <tr key={item.id || idx}>
               <td className={styles.centerCol}>{item.sno || idx + 1}</td>
+              {showDateCol && (
+                <td className={styles.centerCol} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontSize: '8pt' }}>
+                  {item.date ? formatDate(item.date, options.numberFormat) : '—'}
+                </td>
+              )}
               <td>
                 <span className={styles.itemDesc}>{item.description}</span>
               </td>
               {options.showHsnSacColumn && (
                 <td className={styles.centerCol} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                  {item.hsnSac || '—'}
+                  {item.sku || item.hsnSac || '—'}
                 </td>
               )}
               <td className={styles.numCol}>{item.quantity} {item.unit || ''}</td>
@@ -104,10 +164,10 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
               {options.showDiscountColumn && (
                 <td className={styles.numCol}>{item.discount ? `${item.discount}%` : '—'}</td>
               )}
-              {showGst && (
-                <td className={styles.numCol}>{item.gstRate}%</td>
+              {(showGst || (isUS && hasTaxOnItems)) && (
+                <td className={styles.numCol}>{item.taxable === false ? 'Exempt' : `${item.gstRate}%`}</td>
               )}
-              <td className={styles.numCol}>{formatNumber(item.total, options.numberFormat)}</td>
+              <td className={styles.numCol}>{formatNumber(item.total, numFormat)}</td>
             </tr>
           ))}
         </tbody>
@@ -120,7 +180,7 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
             <tr>
               <td style={{ color: '#64748b' }}>Sub Total</td>
               <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                {formatCurrency(data.subtotal, options.currencySymbol, options.numberFormat)}
+                {formatCurrency(data.subtotal, curSymbol, numFormat)}
               </td>
             </tr>
             {data.totalDiscount > 0 && (
@@ -128,67 +188,80 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
                 <tr>
                   <td style={{ color: '#64748b' }}>Total Discount</td>
                   <td style={{ textAlign: 'right', color: '#dc2626' }}>
-                    -{formatCurrency(data.totalDiscount, options.currencySymbol, options.numberFormat)}
+                    -{formatCurrency(data.totalDiscount, curSymbol, numFormat)}
                   </td>
                 </tr>
                 <tr>
                   <td style={{ color: '#64748b' }}>Taxable Subtotal</td>
                   <td style={{ textAlign: 'right' }}>
-                    {formatCurrency(data.totalTaxableAmount, options.currencySymbol, options.numberFormat)}
+                    {formatCurrency(data.totalTaxableAmount, curSymbol, numFormat)}
                   </td>
                 </tr>
               </>
             )}
-            {showGst && !isInterState && (
+            {isUS ? (
+              (data.totalSalesTax ?? 0) > 0 && (
+                <tr>
+                  <td style={{ color: '#64748b' }}>Sales Tax</td>
+                  <td style={{ textAlign: 'right' }}>
+                    {formatCurrency(data.totalSalesTax ?? 0, curSymbol, numFormat)}
+                  </td>
+                </tr>
+              )
+            ) : (
               <>
-                <tr>
-                  <td style={{ color: '#64748b' }}>CGST</td>
-                  <td style={{ textAlign: 'right' }}>
-                    {formatCurrency(data.totalCgst, options.currencySymbol, options.numberFormat)}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ color: '#64748b' }}>SGST</td>
-                  <td style={{ textAlign: 'right' }}>
-                    {formatCurrency(data.totalSgst, options.currencySymbol, options.numberFormat)}
-                  </td>
-                </tr>
+                {showGst && !isInterState && (
+                  <>
+                    <tr>
+                      <td style={{ color: '#64748b' }}>CGST</td>
+                      <td style={{ textAlign: 'right' }}>
+                        {formatCurrency(data.totalCgst, curSymbol, numFormat)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ color: '#64748b' }}>SGST</td>
+                      <td style={{ textAlign: 'right' }}>
+                        {formatCurrency(data.totalSgst, curSymbol, numFormat)}
+                      </td>
+                    </tr>
+                  </>
+                )}
+                {showGst && isInterState && (
+                  <tr>
+                    <td style={{ color: '#64748b' }}>IGST</td>
+                    <td style={{ textAlign: 'right' }}>
+                      {formatCurrency(data.totalIgst, curSymbol, numFormat)}
+                    </td>
+                  </tr>
+                )}
               </>
-            )}
-            {showGst && isInterState && (
-              <tr>
-                <td style={{ color: '#64748b' }}>IGST</td>
-                <td style={{ textAlign: 'right' }}>
-                  {formatCurrency(data.totalIgst, options.currencySymbol, options.numberFormat)}
-                </td>
-              </tr>
             )}
             {data.roundOff !== 0 && (
               <tr>
-                <td style={{ color: '#64748b' }}>Round off</td>
+                <td style={{ color: '#64748b' }}>Round Off</td>
                 <td style={{ textAlign: 'right' }}>
-                  {data.roundOff > 0 ? '+' : ''}{formatNumber(data.roundOff, options.numberFormat)}
+                  {data.roundOff > 0 ? '+' : ''}{formatNumber(data.roundOff, numFormat)}
                 </td>
               </tr>
             )}
             <tr className={styles.grandTotalRow}>
-              <td>Grand Total</td>
+              <td>Total Due</td>
               <td style={{ textAlign: 'right' }}>
-                {formatCurrency(data.grandTotalRounded, options.currencySymbol, options.numberFormat)}
+                {formatCurrency(data.grandTotalRounded, curSymbol, numFormat)}
               </td>
             </tr>
             {data.amountPaid > 0 && (
               <>
                 <tr>
-                  <td style={{ color: '#64748b' }}>Amount Paid</td>
+                  <td style={{ color: '#059669' }}>Amount Paid</td>
                   <td style={{ textAlign: 'right', color: '#059669' }}>
-                    {formatCurrency(data.amountPaid, options.currencySymbol, options.numberFormat)}
+                    {formatCurrency(data.amountPaid, curSymbol, numFormat)}
                   </td>
                 </tr>
                 <tr style={{ fontWeight: 700 }}>
-                  <td>Balance Due</td>
-                  <td style={{ textAlign: 'right', color: data.balanceDue > 0 ? '#dc2626' : '#0f172a' }}>
-                    {formatCurrency(data.balanceDue, options.currencySymbol, options.numberFormat)}
+                  <td style={{ color: '#dc2626' }}>Balance Due</td>
+                  <td style={{ textAlign: 'right', color: data.balanceDue > 0 ? '#dc2626' : '#111827' }}>
+                    {formatCurrency(data.balanceDue, curSymbol, numFormat)}
                   </td>
                 </tr>
               </>
@@ -197,34 +270,35 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
         </table>
       </div>
 
+      {/* Amount in words */}
       {options.showAmountInWords && data.amountInWords && (
-        <div className={styles.words}>
-          <strong>Amount Chargeable (in words):</strong> {data.amountInWords}
+        <div className={styles.amountWords}>
+          <strong>Invoice Total in Words:</strong> {data.amountInWords}
         </div>
       )}
 
       {/* Tax Summary Table */}
-      {options.showTaxSummaryTable && showGst && data.taxSummary && data.taxSummary.length > 0 && (
-        <table className={styles.taxTable}>
+      {options.showTaxSummaryTable && ((showGst && !isUS) || (isUS && (data.totalSalesTax ?? 0) > 0)) && data.taxSummary && data.taxSummary.length > 0 && (
+        <table className={styles.taxSummaryTable}>
           <thead>
             <tr>
-              <th>GST Rate</th>
-              <th>Taxable Value</th>
-              {!isInterState && <th>CGST Amount</th>}
-              {!isInterState && <th>SGST Amount</th>}
-              {isInterState && <th>IGST Amount</th>}
-              <th>Total Tax</th>
+              <th>{isUS ? 'Tax Rate' : 'GST Rate'}</th>
+              <th>Taxable Amount</th>
+              {!isUS && !isInterState && <th>CGST Amount</th>}
+              {!isUS && !isInterState && <th>SGST Amount</th>}
+              {!isUS && isInterState && <th>IGST Amount</th>}
+              <th>{isUS ? 'Sales Tax' : 'Total Tax'}</th>
             </tr>
           </thead>
           <tbody>
             {data.taxSummary.map((row, i) => (
               <tr key={i}>
-                <td>{row.gstRate}%</td>
-                <td>{formatNumber(row.taxableAmount, options.numberFormat)}</td>
-                {!isInterState && <td>{formatNumber(row.cgst, options.numberFormat)}</td>}
-                {!isInterState && <td>{formatNumber(row.sgst, options.numberFormat)}</td>}
-                {isInterState && <td>{formatNumber(row.igst, options.numberFormat)}</td>}
-                <td>{formatNumber(row.totalTax, options.numberFormat)}</td>
+                <td>{row.label || `${row.gstRate}%`}</td>
+                <td>{formatNumber(row.taxableAmount, numFormat)}</td>
+                {!isUS && !isInterState && <td>{formatNumber(row.cgst, numFormat)}</td>}
+                {!isUS && !isInterState && <td>{formatNumber(row.sgst, numFormat)}</td>}
+                {!isUS && isInterState && <td>{formatNumber(row.igst, numFormat)}</td>}
+                <td>{formatNumber(row.totalTax, numFormat)}</td>
               </tr>
             ))}
           </tbody>
@@ -233,21 +307,33 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
 
       {/* Bottom Section */}
       <div className={styles.bottomSection}>
-        {/* Left: Bank details & UPI */}
+        {/* Left: Bank details & Remittance */}
         <div>
           {options.showBankDetails && data.bankDetails && (
             <div className={styles.bankBox}>
               <div style={{ fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>
-                Bank Account &amp; Remittance
+                {isUS ? 'Remittance & Payment Details' : 'Bank Account & Remittance'}
               </div>
               <div>Account Name: {data.bankDetails.accountName}</div>
               <div>Bank: {data.bankDetails.bankName} | A/c No: {data.bankDetails.accountNumber}</div>
-              <div>IFSC Code: {data.bankDetails.ifsc} {data.bankDetails.branch ? `| Branch: ${data.bankDetails.branch}` : ''}</div>
-              {data.bankDetails.upiId && <div>UPI ID: {data.bankDetails.upiId}</div>}
+              {isUS ? (
+                <>
+                  {(data.bankDetails.routingNumber || data.bankDetails.ifsc) && (
+                    <div>Routing (ABA): <strong>{data.bankDetails.routingNumber || data.bankDetails.ifsc}</strong></div>
+                  )}
+                  {data.bankDetails.zelleId && <div>Zelle: <strong>{data.bankDetails.zelleId}</strong></div>}
+                  {data.bankDetails.paymentLink && <div>Payment Link: <strong>{data.bankDetails.paymentLink}</strong></div>}
+                </>
+              ) : (
+                <>
+                  <div>IFSC Code: {data.bankDetails.ifsc} {data.bankDetails.branch ? `| Branch: ${data.bankDetails.branch}` : ''}</div>
+                  {data.bankDetails.upiId && <div>UPI ID: {data.bankDetails.upiId}</div>}
+                </>
+              )}
             </div>
           )}
 
-          {options.showUpiQr && getUpiQrString(data) && (
+          {!isUS && options.showUpiQr && getUpiQrString(data) && (
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
               <QRCodeView
                 data={getUpiQrString(data)}

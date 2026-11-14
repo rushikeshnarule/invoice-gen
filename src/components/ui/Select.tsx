@@ -1,4 +1,5 @@
 import React from 'react';
+import { Select as BoardUISelect, SelectItem } from '@/components/base/select/select';
 
 interface Option {
   value: string;
@@ -21,43 +22,19 @@ export const Select: React.FC<SelectProps> = ({
   disabled,
 }) => {
   return (
-    <div style={{ marginBottom: 12 }}>
-      <label
-        style={{
-          display: 'block',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: '#475569',
-          marginBottom: 4,
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-        }}
-      >
-        {label}
-      </label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        style={{
-          width: '100%',
-          padding: '7px 10px',
-          fontSize: '13px',
-          borderRadius: 6,
-          border: '1px solid #cbd5e1',
-          backgroundColor: disabled ? '#f1f5f9' : '#ffffff',
-          color: '#1e293b',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          outline: 'none',
-          boxSizing: 'border-box',
-        }}
+    <div className="mb-3">
+      <BoardUISelect
+        label={label}
+        selectedKey={value}
+        onSelectionChange={(key) => onChange(String(key))}
+        isDisabled={disabled}
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <SelectItem key={opt.value} id={opt.value}>
             {opt.label}
-          </option>
+          </SelectItem>
         ))}
-      </select>
+      </BoardUISelect>
     </div>
   );
 };

@@ -1,16 +1,25 @@
 import React from 'react';
 import type { ThemeComponentProps, RemoteTemplateDefinition } from '../types';
 import { Watermark } from './Watermark';
-import { themeVars, getUpiQrString } from './themeHelpers';
-import { formatCurrency, formatNumber, formatDate, QRCodeView, amountInWords } from '../utils';
+import {
+  themeVars,
+  getUpiQrString,
+  isUSInvoice,
+  getCurrencySymbol,
+  getNumberFormat,
+} from './themeHelpers';
+import { formatCurrency, formatNumber, formatDate, QRCodeView, amountInWords, sanitizeTemplateCss } from '../utils';
 
 export interface DynamicRemoteThemeProps extends ThemeComponentProps {
   templateDef?: RemoteTemplateDefinition;
 }
 
 export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, options, templateDef }) => {
-  const showGst = data.gstType !== 'none';
-  const isInterState = data.gstType === 'igst';
+  const isUS = isUSInvoice(data);
+  const curSymbol = getCurrencySymbol(data, options);
+  const numFormat = getNumberFormat(data, options);
+  const showGst = !isUS && data.gstType !== 'none';
+  const isInterState = !isUS && data.gstType === 'igst';
   const paper = options.paper || 'A4';
   const isThermal = paper === '80mm';
   const paperClass = isThermal ? 'paper-thermal' : `paper-${paper.toLowerCase()}`;
@@ -158,7 +167,7 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
     }
   `;
 
-  const customCss = templateDef?.cachedCss || '';
+  const customCss = sanitizeTemplateCss(templateDef?.cachedCss || '');
 
   const isContractor =
     templateDef?.layout === 'contractor' ||
@@ -556,7 +565,7 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
               {data.client.address}, {data.client.city}, {data.client.state} – {data.client.pincode}
             </div>
             <div className="contractor-buyer-meta">
-              <div><strong>GST TIN/UIN (Buyer):</strong> {data.client.gstin || 'Unregistered'}</div>
+              <div><strong>{isUS ? 'EIN / Tax ID (Buyer):' : 'GST TIN/UIN (Buyer):'}</strong> {isUS ? (data.client.ein || 'Unregistered') : (data.client.gstin || 'Unregistered')}</div>
               <div><strong>Destination:</strong> {data.placeOfSupply || `${data.client.city}, ${data.client.state}`}</div>
             </div>
           </div>
@@ -568,7 +577,7 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
             <tr>
               <th style={{ width: '6%', textAlign: 'center' }}>Sr.<br/>No.</th>
               {showDateCol && <th style={{ width: '12%', textAlign: 'center', whiteSpace: 'nowrap' }}>Date</th>}
-              {showHsn && <th style={{ width: '12%', textAlign: 'center', whiteSpace: 'nowrap' }}>HSN/<br/>SAC</th>}
+              {showHsn && <th style={{ width: '12%', textAlign: 'center', whiteSpace: 'nowrap' }}>{isUS ? 'SKU' : <>HSN/<br/>SAC</>}</th>}
               <th>Description of Goods</th>
               <th style={{ width: '9%', textAlign: 'right' }}>Qty</th>
               <th style={{ width: '12%', textAlign: 'right' }}>Rate ({options.currencySymbol})</th>
@@ -781,7 +790,7 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
       className={`remote-invoice-root ${paperClass} theme-remote-${templateDef?.id || 'dynamic'}`}
       style={themeVars(options)}
     >
-      {/* Dynamic Scoped Stylesheet from Netlify */}
+      {/* Dynamic Scoped Stylesheet from Cloud */}
       <style>{defaultBaseCss}</style>
       {customCss && <style>{customCss}</style>}
 
@@ -802,6 +811,7 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
               src={data.business?.logoUrl || data.logoUrl}
               alt={data.business.name}
               className="remote-logo"
+              style={{ maxHeight: '54px', maxWidth: '180px', objectFit: 'contain' }}
             />
           )}
           <div style={{ textAlign: options.logoPosition === 'center' ? 'center' : 'left' }}>
@@ -1000,41 +1010,50 @@ export const DynamicRemoteTheme: React.FC<DynamicRemoteThemeProps> = ({ data, op
             <tbody>
               <tr>
                 <td>Subtotal</td>
-                <td style={{ textAlign: 'right' }}>{formatCurrency(data.subtotal, options.currencySymbol, options.numberFormat)}</td>
+                <td style={{ textAlign: 'right' }}>{formatCurrency(data.subtotal, curSymbol, numFormat)}</td>
               </tr>
               {data.totalDiscount > 0 && (
                 <tr style={{ color: '#059669' }}>
                   <td>Discount</td>
-                  <td style={{ textAlign: 'right' }}>-{formatCurrency(data.totalDiscount, options.currencySymbol, options.numberFormat)}</td>
+                  <td style={{ textAlign: 'right' }}>-{formatCurrency(data.totalDiscount, curSymbol, numFormat)}</td>
                 </tr>
               )}
-              {showGst && (
-                <tr>
-                  <td>Total Tax ({isInterState ? 'IGST' : 'CGST+SGST'})</td>
-                  <td style={{ textAlign: 'right' }}>{formatCurrency(data.totalTax, options.currencySymbol, options.numberFormat)}</td>
-                </tr>
+              {isUS ? (
+                (data.totalSalesTax ?? 0) > 0 && (
+                  <tr>
+                    <td>Sales Tax</td>
+                    <td style={{ textAlign: 'right' }}>{formatCurrency(data.totalSalesTax ?? 0, curSymbol, numFormat)}</td>
+                  </tr>
+                )
+              ) : (
+                showGst && (
+                  <tr>
+                    <td>Total Tax ({isInterState ? 'IGST' : 'CGST+SGST'})</td>
+                    <td style={{ textAlign: 'right' }}>{formatCurrency(data.totalTax, curSymbol, numFormat)}</td>
+                  </tr>
+                )
               )}
               {data.roundOff !== 0 && (
                 <tr>
                   <td>Round Off</td>
-                  <td style={{ textAlign: 'right' }}>{formatCurrency(data.roundOff, options.currencySymbol, options.numberFormat)}</td>
+                  <td style={{ textAlign: 'right' }}>{formatCurrency(data.roundOff, curSymbol, numFormat)}</td>
                 </tr>
               )}
               <tr className="remote-grand-total">
                 <td>Grand Total</td>
-                <td style={{ textAlign: 'right' }}>{formatCurrency(data.grandTotalRounded, options.currencySymbol, options.numberFormat)}</td>
+                <td style={{ textAlign: 'right' }}>{formatCurrency(data.grandTotalRounded, curSymbol, numFormat)}</td>
               </tr>
               {data.amountPaid > 0 && (
                 <tr style={{ color: '#059669', fontWeight: 600 }}>
                   <td>Amount Paid</td>
-                  <td style={{ textAlign: 'right' }}>{formatCurrency(data.amountPaid, options.currencySymbol, options.numberFormat)}</td>
+                  <td style={{ textAlign: 'right' }}>{formatCurrency(data.amountPaid, curSymbol, numFormat)}</td>
                 </tr>
               )}
               {data.amountPaid > 0 && (
                 <tr style={{ fontWeight: 700 }}>
                   <td>Balance Due</td>
                   <td style={{ textAlign: 'right', color: data.balanceDue > 0 ? '#dc2626' : '#059669' }}>
-                    {formatCurrency(Math.max(0, data.balanceDue), options.currencySymbol, options.numberFormat)}
+                    {formatCurrency(Math.max(0, data.balanceDue), curSymbol, numFormat)}
                   </td>
                 </tr>
               )}

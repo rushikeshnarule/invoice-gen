@@ -245,7 +245,7 @@ describe('Client Transaction Ledger & Monthly Invoices Suite', () => {
 
     const cleanData = recalculate(rawData);
 
-    const { container } = render(
+    render(
       <DynamicRemoteTheme
         data={cleanData}
         options={{

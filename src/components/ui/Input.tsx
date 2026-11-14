@@ -1,4 +1,5 @@
 import React from 'react';
+import { Input as BoardUIInput } from '@/components/base/input/input';
 
 interface InputProps {
   label: string;
@@ -16,36 +17,13 @@ export const Input: React.FC<InputProps> = ({
   disabled,
 }) => {
   return (
-    <div style={{ marginBottom: 12 }}>
-      <label
-        style={{
-          display: 'block',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: '#475569',
-          marginBottom: 4,
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-        }}
-      >
-        {label}
-      </label>
-      <input
-        type="text"
+    <div className="mb-3">
+      <BoardUIInput
+        label={label}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         placeholder={placeholder}
-        disabled={disabled}
-        style={{
-          width: '100%',
-          padding: '7px 10px',
-          fontSize: '13px',
-          borderRadius: 6,
-          border: '1px solid #cbd5e1',
-          color: '#1e293b',
-          boxSizing: 'border-box',
-          outline: 'none',
-        }}
+        isDisabled={disabled}
       />
     </div>
   );

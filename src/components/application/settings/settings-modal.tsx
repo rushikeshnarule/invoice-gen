@@ -20,12 +20,21 @@ import {
   RiWifiOffLine,
   RiFileCopyLine,
   RiDeleteBinLine,
+  RiShieldKeyholeLine,
 } from "@remixicon/react";
 import { cx } from "@/utils/cx";
 import { useInvoices } from "@/context/InvoiceContext";
+import { useLicense } from "@/context/LicenseContext";
 import { toast } from "@/components/base/toast/toast";
 import { Button } from "@/components/base/buttons/button";
 import { ImageUploadCard } from "@/components/base/image-upload/image-upload";
+import {
+  US_STATES_LIST,
+  formatEIN,
+  formatRoutingNumber,
+  formatUSZip,
+} from "@/utils/usTax";
+import type { AppRegion } from "@/types";
 import {
   getRemoteServerUrl,
   setRemoteServerUrl,
@@ -38,7 +47,7 @@ import {
   REMOTE_TEMPLATES_UPDATED_EVENT,
 } from "@/services/templateSyncService";
 
-export type BusinessSettingsTab = "identity" | "branding" | "address" | "banking" | "terms" | "backup" | "cloud_templates";
+export type BusinessSettingsTab = "identity" | "branding" | "address" | "banking" | "terms" | "cloud_templates" | "license" | "backup";
 
 export interface SettingsModalProps {
   isOpen: boolean;
@@ -89,7 +98,7 @@ const SAMPLE_HEADERS = `/*
   Access-Control-Allow-Methods: GET, OPTIONS
   Cache-Control: public, max-age=0, must-revalidate`;
 
-const SAMPLE_CSS = `/* Custom Netlify Template Styling */
+const SAMPLE_CSS = `/* Custom Cloud Template Styling */
 .remote-invoice-root.theme-remote-minimal-gold {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -114,7 +123,8 @@ const TABS: { id: BusinessSettingsTab; label: string; icon: React.ComponentType<
   { id: "address", label: "GST & Address", icon: RiFileTextLine },
   { id: "banking", label: "Bank & UPI QR", icon: RiBankCardLine },
   { id: "terms", label: "Invoice Terms", icon: RiShieldCheckLine },
-  { id: "cloud_templates", label: "Netlify Templates", icon: RiCloudLine },
+  { id: "cloud_templates", label: "Cloud Templates", icon: RiCloudLine },
+  { id: "license", label: "License & Cloud", icon: RiShieldKeyholeLine },
   { id: "backup", label: "Data & Storage", icon: RiDatabase2Line },
 ];
 
@@ -131,6 +141,7 @@ export function SettingsModal({
     exportOfflineBackup,
     importOfflineBackup,
     resetToDefaultRealData,
+    reopenSetup,
   } = useInvoices();
 
   const [activeTab, setActiveTab] = useState<BusinessSettingsTab>(defaultTab);
@@ -145,8 +156,12 @@ export function SettingsModal({
     phone: businessProfile.phone || "",
     email: businessProfile.email || "",
     website: businessProfile.website || "",
+    region: (businessProfile.region || ((typeof import.meta !== "undefined" && import.meta.env?.VITE_APP_REGION === "US") ? "US" : "IN")) as AppRegion,
+    taxType: businessProfile.taxType || ((businessProfile.region === "US" || (typeof import.meta !== "undefined" && import.meta.env?.VITE_APP_REGION === "US")) ? "sales_tax" : "gst"),
     gstin: businessProfile.gstin || "",
     pan: businessProfile.pan || "",
+    ein: businessProfile.ein || "",
+    stateTaxId: businessProfile.stateTaxId || "",
     address: businessProfile.address || "",
     city: businessProfile.city || "",
     state: businessProfile.state || "",
@@ -155,8 +170,11 @@ export function SettingsModal({
     accountName: businessProfile.bankDetails?.accountName || "",
     accountNumber: businessProfile.bankDetails?.accountNumber || "",
     ifsc: businessProfile.bankDetails?.ifsc || "",
+    routingNumber: businessProfile.bankDetails?.routingNumber || "",
     branch: businessProfile.bankDetails?.branch || "",
     upiId: businessProfile.bankDetails?.upiId || "",
+    zelleId: businessProfile.bankDetails?.zelleId || "",
+    paymentLink: businessProfile.bankDetails?.paymentLink || "",
     notes: businessProfile.notes || "",
     terms: businessProfile.terms || "",
     logoUrl: businessProfile.logoUrl || "",
@@ -166,7 +184,36 @@ export function SettingsModal({
 
   const [importJsonText, setImportJsonText] = useState("");
 
-  // Remote Netlify template sync state
+  // License state
+  const { license, isOnline: isCloudOnline, verifyLicense, activateLicense } = useLicense();
+  const [licenseInput, setLicenseInput] = useState("");
+  const [isLicenseVerifying, setIsLicenseVerifying] = useState(false);
+
+  const handleVerifyLicense = async () => {
+    setIsLicenseVerifying(true);
+    const res = await verifyLicense();
+    setIsLicenseVerifying(false);
+    if (res.valid) {
+      toast.success("License confirmed active via Cloud!");
+    } else {
+      toast.error(res.message || "License check failed");
+    }
+  };
+
+  const handleActivateLicense = async () => {
+    if (!licenseInput.trim()) return;
+    setIsLicenseVerifying(true);
+    const res = await activateLicense(licenseInput);
+    setIsLicenseVerifying(false);
+    if (res.success) {
+      toast.success(res.message);
+      setLicenseInput("");
+    } else {
+      toast.error(res.message);
+    }
+  };
+
+  // Remote Cloud template sync state
   const [remoteServerUrlState, setRemoteServerUrlState] = useState(() => getRemoteServerUrl());
   const [autoSyncState, setAutoSyncState] = useState(() => isAutoSyncEnabled());
   const [cachedTemplates, setCachedTemplates] = useState(() => getCachedRemoteTemplates());
@@ -193,7 +240,7 @@ export function SettingsModal({
 
   const handleTriggerSync = async () => {
     if (!remoteServerUrlState.trim()) {
-      toast.error("Please enter your Netlify template server URL first.");
+      toast.error("Please enter your Cloud template server URL first.");
       return;
     }
     setIsSyncing(true);
@@ -232,8 +279,12 @@ export function SettingsModal({
         phone: businessProfile.phone || "",
         email: businessProfile.email || "",
         website: businessProfile.website || "",
+        region: (businessProfile.region || ((typeof import.meta !== "undefined" && import.meta.env?.VITE_APP_REGION === "US") ? "US" : "IN")) as AppRegion,
+        taxType: businessProfile.taxType || ((businessProfile.region === "US" || (typeof import.meta !== "undefined" && import.meta.env?.VITE_APP_REGION === "US")) ? "sales_tax" : "gst"),
         gstin: businessProfile.gstin || "",
         pan: businessProfile.pan || "",
+        ein: businessProfile.ein || "",
+        stateTaxId: businessProfile.stateTaxId || "",
         address: businessProfile.address || "",
         city: businessProfile.city || "",
         state: businessProfile.state || "",
@@ -242,8 +293,11 @@ export function SettingsModal({
         accountName: businessProfile.bankDetails?.accountName || "",
         accountNumber: businessProfile.bankDetails?.accountNumber || "",
         ifsc: businessProfile.bankDetails?.ifsc || "",
+        routingNumber: businessProfile.bankDetails?.routingNumber || "",
         branch: businessProfile.bankDetails?.branch || "",
         upiId: businessProfile.bankDetails?.upiId || "",
+        zelleId: businessProfile.bankDetails?.zelleId || "",
+        paymentLink: businessProfile.bankDetails?.paymentLink || "",
         notes: businessProfile.notes || "",
         terms: businessProfile.terms || "",
         logoUrl: businessProfile.logoUrl || "",
@@ -292,8 +346,12 @@ export function SettingsModal({
       phone: formData.phone.trim(),
       email: formData.email.trim(),
       website: formData.website.trim(),
+      region: formData.region,
+      taxType: formData.region === "US" ? "sales_tax" : "gst",
       gstin: formData.gstin.trim(),
       pan: formData.pan.trim(),
+      ein: formData.ein.trim(),
+      stateTaxId: formData.stateTaxId.trim(),
       address: formData.address.trim(),
       city: formData.city.trim(),
       state: formData.state.trim(),
@@ -308,8 +366,11 @@ export function SettingsModal({
         accountName: formData.accountName.trim(),
         accountNumber: formData.accountNumber.trim(),
         ifsc: formData.ifsc.trim(),
+        routingNumber: formData.routingNumber.trim(),
         branch: formData.branch.trim(),
         upiId: formData.upiId.trim(),
+        zelleId: formData.zelleId.trim(),
+        paymentLink: formData.paymentLink.trim(),
       },
     });
 
@@ -346,6 +407,17 @@ export function SettingsModal({
       resetToDefaultRealData();
       showSavedToast();
       toast.info("Database reset to factory default data");
+    }
+  };
+
+  const handleReopenSetup = () => {
+    if (
+      window.confirm(
+        "Launch the Business Setup & Restore Wizard? This lets you re-configure your company profile or restore previous sessions detected on this machine."
+      )
+    ) {
+      reopenSetup();
+      onClose();
     }
   };
 
@@ -401,6 +473,12 @@ export function SettingsModal({
                 {TABS.map((tab) => {
                   const isSelected = activeTab === tab.id;
                   const Icon = tab.icon;
+                  const label =
+                    tab.id === "address" && formData.region === "US"
+                      ? "Tax & Address"
+                      : tab.id === "banking" && formData.region === "US"
+                      ? "Bank & Zelle"
+                      : tab.label;
                   return (
                     <button
                       key={tab.id}
@@ -414,7 +492,7 @@ export function SettingsModal({
                       )}
                     >
                       <Icon className={cx("size-4 shrink-0", isSelected ? "text-blue-600" : "text-slate-400")} />
-                      <span>{tab.label}</span>
+                      <span>{label}</span>
                     </button>
                   );
                 })}
@@ -423,7 +501,9 @@ export function SettingsModal({
 
             {/* Offline App Info Badge */}
             <div className="p-3 bg-white rounded-xl border border-slate-200/70 text-[11px] text-slate-500 space-y-1">
-              <span className="font-bold text-slate-800 block">Offline PC Edition</span>
+              <span className="font-bold text-slate-800 block">
+                {formData.region === "US" ? "🇺🇸 US Edition (USD $)" : "🇮🇳 India Edition (INR ₹)"}
+              </span>
               <p className="text-[10px] text-slate-400 leading-snug">
                 Data saved in local machine storage. Safe for zero-network environments.
               </p>
@@ -438,19 +518,21 @@ export function SettingsModal({
                 <h2 className="text-base font-bold text-slate-900">
                   {activeTab === "identity" && "Business Identity & Contacts"}
                   {activeTab === "branding" && "Company Logo, Stamp & Signatures"}
-                  {activeTab === "address" && "Registered Address & GSTIN"}
-                  {activeTab === "banking" && "Bank Account & UPI Remittance"}
+                  {activeTab === "address" && (formData.region === "US" ? "Tax Jurisdiction & Address" : "Registered Address & GSTIN")}
+                  {activeTab === "banking" && (formData.region === "US" ? "Bank Remittance & Payments (ACH / Zelle)" : "Bank Account & UPI Remittance")}
                   {activeTab === "terms" && "Default Invoice Terms & Notes"}
-                  {activeTab === "cloud_templates" && "Netlify Cloud Templates"}
+                  {activeTab === "cloud_templates" && "Cloud Templates"}
+                  {activeTab === "license" && "Commercial License & Cloud"}
                   {activeTab === "backup" && "Offline PC Database & Backup"}
                 </h2>
                 <span className="text-xs text-slate-400">
                   {activeTab === "identity" && "Official legal company name and public contact channels"}
                   {activeTab === "branding" && "Visual branding assets rendered on invoices and PDF downloads"}
-                  {activeTab === "address" && "State tax jurisdiction, GST registration and physical office"}
-                  {activeTab === "banking" && "Payment details printed on invoices & automated UPI QR code"}
+                  {activeTab === "address" && (formData.region === "US" ? "State sales tax registration, Federal EIN, and business office" : "State tax jurisdiction, GST registration and physical office")}
+                  {activeTab === "banking" && (formData.region === "US" ? "Payment details printed on invoices (ABA Routing #, Account #, Zelle)" : "Payment details printed on invoices & automated UPI QR code")}
                   {activeTab === "terms" && "Default boilerplate notes, jurisdiction and terms"}
-                  {activeTab === "cloud_templates" && "Fetch templates from Netlify & store offline permanently"}
+                  {activeTab === "cloud_templates" && "Fetch templates from Cloud & store offline permanently"}
+                  {activeTab === "license" && "Verify commercial subscription status & cloud license key"}
                   {activeTab === "backup" && "JSON export/import and offline local database management"}
                 </span>
               </div>
@@ -470,6 +552,66 @@ export function SettingsModal({
               {/* ══════════ TAB 1: IDENTITY ══════════ */}
               {activeTab === "identity" && (
                 <div className="space-y-4 max-w-lg">
+                  {/* Regional Edition Selector */}
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                    <label className="block text-[11px] font-bold text-slate-800">
+                      Country &amp; Regional Tax Edition
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            region: "US",
+                            taxType: "sales_tax",
+                            state: prev.state && !prev.state.includes("27") ? prev.state : "California (CA - 7.25%)",
+                          }));
+                        }}
+                        className={cx(
+                          "p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5",
+                          formData.region === "US"
+                            ? "bg-blue-50/80 border-blue-600 text-blue-900 ring-1 ring-blue-600"
+                            : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                        )}
+                      >
+                        <span className="text-xl">🇺🇸</span>
+                        <div>
+                          <span className="font-bold text-xs block">United States Edition</span>
+                          <span className="text-[10px] text-slate-500 block leading-tight">
+                            USD ($), Sales Tax, EIN, ABA Routing &amp; Zelle
+                          </span>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            region: "IN",
+                            taxType: "gst",
+                            state: prev.state || "Maharashtra",
+                          }));
+                        }}
+                        className={cx(
+                          "p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5",
+                          formData.region !== "US"
+                            ? "bg-blue-50/80 border-blue-600 text-blue-900 ring-1 ring-blue-600"
+                            : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                        )}
+                      >
+                        <span className="text-xl">🇮🇳</span>
+                        <div>
+                          <span className="font-bold text-xs block">India Edition</span>
+                          <span className="text-[10px] text-slate-500 block leading-tight">
+                            INR (₹), GST (CGST/SGST/IGST), PAN &amp; UPI
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                       Legal Business / Company Name *
@@ -479,7 +621,7 @@ export function SettingsModal({
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g. Knot8 Technologies"
+                      placeholder={formData.region === "US" ? "e.g. Acme Cloud Corp." : "e.g. Knot8 Technologies"}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-slate-900 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                     />
                   </div>
@@ -493,7 +635,7 @@ export function SettingsModal({
                         type="text"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="+91 98201 54321"
+                        placeholder={formData.region === "US" ? "+1 (415) 555-0199" : "+91 98201 54321"}
                         className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
                       />
                     </div>
@@ -566,178 +708,369 @@ export function SettingsModal({
                 </div>
               )}
 
-              {/* ══════════ TAB 2: ADDRESS & GST ══════════ */}
+              {/* ══════════ TAB 2: ADDRESS & GST / TAX ══════════ */}
               {activeTab === "address" && (
                 <div className="space-y-4 max-w-lg">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        GSTIN (15-Digit GST Number)
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.gstin}
-                        onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                        placeholder="27AABCA4567E1ZP"
-                        maxLength={15}
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        Income Tax PAN
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.pan}
-                        onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                        placeholder="AABCA4567E"
-                        maxLength={10}
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
-                      />
-                    </div>
-                  </div>
+                  {formData.region === "US" ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Federal EIN (Employer ID Number)
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.ein}
+                            onChange={(e) => setFormData({ ...formData, ein: formatEIN(e.target.value) })}
+                            placeholder="12-3456789"
+                            maxLength={10}
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
+                          />
+                          <span className="text-[10px] text-slate-400 mt-0.5 block">Format: XX-XXXXXXX</span>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            State Sales Tax / Permit #
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.stateTaxId}
+                            onChange={(e) => setFormData({ ...formData, stateTaxId: e.target.value.toUpperCase() })}
+                            placeholder="SR-CA-987654"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
+                          />
+                          <span className="text-[10px] text-slate-400 mt-0.5 block">Optional state license</span>
+                        </div>
+                      </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Registered Street Address
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      placeholder="Unit 402, Pinnacle Business Park, Andheri East"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Registered Street Address
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          placeholder="Suite 500, 100 Montgomery St."
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                        />
+                      </div>
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">City</label>
-                      <input
-                        type="text"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        placeholder="Mumbai"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">State</label>
-                      <input
-                        type="text"
-                        value={formData.state}
-                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                        placeholder="Maharashtra"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">PIN Code</label>
-                      <input
-                        type="text"
-                        value={formData.pincode}
-                        onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                        placeholder="400069"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none"
-                      />
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">City</label>
+                          <input
+                            type="text"
+                            value={formData.city}
+                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                            placeholder="San Francisco"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">State</label>
+                          <input
+                            type="text"
+                            list="us-states-settings-list"
+                            value={formData.state}
+                            onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                            placeholder="California (CA)"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                          />
+                          <datalist id="us-states-settings-list">
+                            {US_STATES_LIST.map((s, idx) => (
+                              <option key={idx} value={s} />
+                            ))}
+                          </datalist>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">ZIP Code</label>
+                          <input
+                            type="text"
+                            value={formData.pincode}
+                            onChange={(e) => setFormData({ ...formData, pincode: formatUSZip(e.target.value) })}
+                            placeholder="94104"
+                            maxLength={10}
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 font-mono outline-none focus:border-blue-600"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            GSTIN (15-Digit GST Number)
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.gstin}
+                            onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
+                            placeholder="27AABCA4567E1ZP"
+                            maxLength={15}
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Income Tax PAN
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.pan}
+                            onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
+                            placeholder="AABCA4567E"
+                            maxLength={10}
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Registered Street Address
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          placeholder="Unit 402, Pinnacle Business Park, Andheri East"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">City</label>
+                          <input
+                            type="text"
+                            value={formData.city}
+                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                            placeholder="Mumbai"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">State</label>
+                          <input
+                            type="text"
+                            value={formData.state}
+                            onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                            placeholder="Maharashtra"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">PIN Code</label>
+                          <input
+                            type="text"
+                            value={formData.pincode}
+                            onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                            placeholder="400069"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
-              {/* ══════════ TAB 3: BANKING & UPI ══════════ */}
+              {/* ══════════ TAB 3: BANKING & PAYMENTS ══════════ */}
               {activeTab === "banking" && (
                 <div className="space-y-4 max-w-lg">
-                  <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80 flex items-start gap-3">
-                    <RiQrCodeLine className="size-5 text-blue-600 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-blue-900 block text-xs">Automatic UPI QR Generator</span>
-                      <p className="text-[11px] text-blue-800 leading-snug">
-                        Configuring your UPI ID automatically embeds a dynamic scan-and-pay QR code on every printed invoice and receipt.
-                      </p>
-                    </div>
-                  </div>
+                  {formData.region === "US" ? (
+                    <>
+                      <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80 flex items-start gap-3">
+                        <RiBankCardLine className="size-5 text-blue-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold text-blue-900 block text-xs">US Banking &amp; Remittance Details</span>
+                          <p className="text-[11px] text-blue-800 leading-snug">
+                            Printed on invoices for ACH direct deposit, Fedwire, Zelle, and online card payments.
+                          </p>
+                        </div>
+                      </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      UPI ID / VPA (Primary Scan-to-Pay) *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.upiId}
-                      onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
-                      placeholder="e.g. yourcompany@upi"
-                      className="w-full px-3 py-2 rounded-xl border border-blue-300 font-mono text-blue-900 font-bold text-xs bg-blue-50/20 outline-none focus:border-blue-600"
-                    />
-                  </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            ABA Routing Transit # (9 Digits)
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.routingNumber}
+                            onChange={(e) => setFormData({ ...formData, routingNumber: formatRoutingNumber(e.target.value) })}
+                            placeholder="121000358"
+                            maxLength={9}
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
+                          />
+                          <span className="text-[10px] text-slate-400 mt-0.5 block">Fedwire / ACH routing code</span>
+                        </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        Bank Name
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.bankName}
-                        onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                        placeholder="HDFC Bank Ltd."
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        IFSC Code
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.ifsc}
-                        onChange={(e) => setFormData({ ...formData, ifsc: e.target.value.toUpperCase() })}
-                        placeholder="HDFC0000123"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
-                      />
-                    </div>
-                  </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Bank Account Number
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.accountNumber}
+                            onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                            placeholder="987654321012"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        Account Holder Name
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.accountName}
-                        onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                        placeholder="e.g. Knot8 Technologies"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        Bank Account Number
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.accountNumber}
-                        onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                        placeholder="50200045612389"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
-                      />
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Bank Name
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.bankName}
+                            onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                            placeholder="e.g. JPMorgan Chase Bank, N.A."
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Bank Branch
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.branch}
-                      onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                      placeholder="Andheri East Branch, Mumbai"
-                      className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
-                    />
-                  </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Account Holder / Beneficiary
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.accountName}
+                            onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                            placeholder="e.g. Acme Cloud Corp."
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Zelle ID (Email or Phone)
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.zelleId}
+                            onChange={(e) => setFormData({ ...formData, zelleId: e.target.value })}
+                            placeholder="billing@yourcompany.com"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Payment Link / Portal URL
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.paymentLink}
+                            onChange={(e) => setFormData({ ...formData, paymentLink: e.target.value })}
+                            placeholder="https://buy.stripe.com/..."
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80 flex items-start gap-3">
+                        <RiQrCodeLine className="size-5 text-blue-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold text-blue-900 block text-xs">Automatic UPI QR Generator</span>
+                          <p className="text-[11px] text-blue-800 leading-snug">
+                            Configuring your UPI ID automatically embeds a dynamic scan-and-pay QR code on every printed invoice and receipt.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          UPI ID / VPA (Primary Scan-to-Pay) *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.upiId}
+                          onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
+                          placeholder="e.g. yourcompany@upi"
+                          className="w-full px-3 py-2 rounded-xl border border-blue-300 font-mono text-blue-900 font-bold text-xs bg-blue-50/20 outline-none focus:border-blue-600"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Bank Name
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.bankName}
+                            onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                            placeholder="HDFC Bank Ltd."
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            IFSC Code
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.ifsc}
+                            onChange={(e) => setFormData({ ...formData, ifsc: e.target.value.toUpperCase() })}
+                            placeholder="HDFC0000123"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Account Holder Name
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.accountName}
+                            onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                            placeholder="e.g. Knot8 Technologies"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Bank Account Number
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.accountNumber}
+                            onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                            placeholder="50200045612389"
+                            className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-slate-900 outline-none focus:border-blue-600"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Bank Branch
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.branch}
+                          onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                          placeholder="Andheri East Branch, Mumbai"
+                          className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -772,7 +1105,7 @@ export function SettingsModal({
                 </div>
               )}
 
-              {/* ══════════ TAB 5: NETLIFY CLOUD TEMPLATES ══════════ */}
+              {/* ══════════ TAB 5: CLOUD TEMPLATES ══════════ */}
               {activeTab === "cloud_templates" && (
                 <div className="space-y-4 max-w-lg">
                   {/* Status Banner */}
@@ -804,29 +1137,29 @@ export function SettingsModal({
                   {/* Server URL Input */}
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Netlify Template Server URL
+                      Cloud Template Server URL
                     </label>
                     <div className="flex gap-2">
                       <input
                         type="url"
                         value={remoteServerUrlState}
                         onChange={(e) => setRemoteServerUrlState(e.target.value)}
-                        placeholder="https://my-invoice-templates.netlify.app"
+                        placeholder="https://cloud-templates.example.com"
                         className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-xs text-slate-900 outline-none focus:border-blue-600"
                       />
                       <Button
                         type="button"
                         size="small"
-                        variant="gradient"
+                        variant="primary"
                         leadingIcon={RiRefreshLine}
                         disabled={isSyncing || !isOnline}
                         onClick={handleTriggerSync}
                       >
-                        {isSyncing ? "Syncing..." : "Sync from Netlify"}
+                        {isSyncing ? "Syncing..." : "Sync from Cloud"}
                       </Button>
                     </div>
                     <p className="text-[10px] text-slate-400 mt-1">
-                      Enter the root Netlify URL or direct link to templates.json. Assets will be downloaded once and cached permanently offline.
+                      Enter the root Cloud URL or direct link to templates.json. Assets will be downloaded once and cached permanently offline.
                     </p>
                   </div>
 
@@ -859,9 +1192,9 @@ export function SettingsModal({
                     {cachedTemplates.length === 0 ? (
                       <div className="p-4 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 bg-slate-50/40">
                         <RiCloudLine className="size-6 text-slate-400 mx-auto mb-1" />
-                        <p className="font-semibold text-slate-700">No Netlify templates cached yet</p>
+                        <p className="font-semibold text-slate-700">No Cloud templates cached yet</p>
                         <p className="text-[11px] text-slate-400 mt-0.5">
-                          Enter your Netlify URL above and click &quot;Sync from Netlify&quot; to download template assets for 100% offline use.
+                          Enter your Cloud URL above and click &quot;Sync from Cloud&quot; to download template assets for 100% offline use.
                         </p>
                       </div>
                     ) : (
@@ -902,17 +1235,17 @@ export function SettingsModal({
                     )}
                   </div>
 
-                  {/* Netlify Deployment Quick-Start Guide */}
+                  {/* Cloud Deployment Quick-Start Guide */}
                   <div className="p-3 bg-blue-50/40 rounded-xl border border-blue-200/70 space-y-2">
                     <span className="font-bold text-xs text-blue-900 block">
-                      How to Host Custom Templates on Netlify (Free &amp; 2 Minutes)
+                      How to Host Custom Templates on Cloud (Free &amp; 2 Minutes)
                     </span>
                     <p className="text-[11px] text-blue-800 leading-relaxed">
                       1. Create a folder with <strong>templates.json</strong>, <strong>_headers</strong>, and your CSS files.
                       <br />
-                      2. Go to <strong>app.netlify.com/drop</strong> and drag-drop your folder.
+                      2. Host your folder on your static cloud hosting provider.
                       <br />
-                      3. Copy the URL given by Netlify and paste it in the box above!
+                      3. Copy your Cloud URL and paste it in the box above!
                     </p>
                     <div className="flex flex-wrap gap-2 pt-1">
                       <button
@@ -944,7 +1277,117 @@ export function SettingsModal({
                 </div>
               )}
 
-              {/* ══════════ TAB 6: BACKUP & DATABASE ══════════ */}
+              {/* ══════════ TAB 7: LICENSE & CLOUD ══════════ */}
+              {activeTab === "license" && (
+                <div className="space-y-4 max-w-lg">
+                  {/* Current Active License */}
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                          Subscription Tier
+                        </span>
+                        <div className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                          {license.tier}
+                          <span
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                              license.status === "active"
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            {license.status.toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                        {isCloudOnline ? (
+                          <>
+                            <span className="size-2 rounded-full bg-emerald-500"></span>
+                            <span className="text-[11px] font-medium text-emerald-700">Cloud Connected</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="size-2 rounded-full bg-amber-500"></span>
+                            <span className="text-[11px] font-medium text-amber-700">Offline Fallback</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-slate-600 space-y-1.5 pt-2 border-t border-slate-200/80">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Edition:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[220px]">
+                          {license.tier}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Validity:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {license.daysRemaining > 9000
+                            ? "Perpetual Lifetime"
+                            : license.expiresAt
+                            ? `Valid until ${license.expiresAt.slice(0, 10)}`
+                            : "Active"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Active Key:</span>
+                        <code className="font-mono text-[11px] bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200">
+                          {license.licenseKey
+                            ? `${license.licenseKey.slice(0, 9)}••••••••${license.licenseKey.slice(-4)}`
+                            : "None"}
+                        </code>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400">
+                        Cloud License Verification
+                      </span>
+                      <Button
+                        type="button"
+                        size="small"
+                        variant="secondary"
+                        leadingIcon={RiRefreshLine}
+                        disabled={isLicenseVerifying}
+                        onClick={handleVerifyLicense}
+                      >
+                        {isLicenseVerifying ? "Verifying..." : "Verify with Cloud"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Activate or Change Key */}
+                  <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-3">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                      Activate / Change License Key
+                    </span>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={licenseInput}
+                        onChange={(e) => setLicenseInput(e.target.value)}
+                        placeholder="INVG-PRO-20271231-A9F4"
+                        className="flex-1 px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-xs text-slate-900 outline-none focus:border-blue-600"
+                      />
+                      <Button
+                        type="button"
+                        size="small"
+                        variant="primary"
+                        leadingIcon={RiShieldKeyholeLine}
+                        disabled={isLicenseVerifying || !licenseInput.trim()}
+                        onClick={handleActivateLicense}
+                      >
+                        Activate
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ══════════ TAB 8: BACKUP & DATABASE ══════════ */}
               {activeTab === "backup" && (
                 <div className="space-y-4 max-w-lg">
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
@@ -957,11 +1400,29 @@ export function SettingsModal({
                     </div>
                   </div>
 
+                  <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-200/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 block text-xs">Setup & Restore Wizard</span>
+                      <Button
+                        type="button"
+                        size="small"
+                        variant="secondary"
+                        leadingIcon={RiRefreshLine}
+                        onClick={handleReopenSetup}
+                      >
+                        Launch Setup Wizard
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      Re-open the setup workstation to re-configure your business details or restore previous sessions detected in your Documents folder.
+                    </p>
+                  </div>
+
                   <div className="flex items-center gap-3 pt-2">
                     <Button
                       type="button"
                       size="small"
-                      variant="gradient"
+                      variant="primary"
                       leadingIcon={RiDownload2Line}
                       onClick={handleExport}
                     >
@@ -1004,7 +1465,7 @@ export function SettingsModal({
               )}
 
               {/* Save Footer Button */}
-              {activeTab !== "backup" && (
+              {activeTab !== "backup" && activeTab !== "license" && (
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-[11px] text-slate-400">
                     Changes apply immediately to newly generated invoices and QR codes.
@@ -1012,7 +1473,7 @@ export function SettingsModal({
                   <Button
                     type="submit"
                     size="small"
-                    variant="gradient"
+                    variant="primary"
                     leadingIcon={RiCheckboxCircleFill}
                   >
                     Save Changes

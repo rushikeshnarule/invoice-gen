@@ -3,7 +3,7 @@ import { render, act } from '@testing-library/react';
 import React from 'react';
 import { DynamicRemoteTheme } from '@/themes/DynamicRemoteTheme';
 import { DEFAULT_THEME_OPTIONS } from '@/types/theme';
-import type { InvoiceRenderData, RemoteTemplateDefinition } from '@/types';
+import type { InvoiceRenderData } from '@/types';
 import { BUNDLED_REMOTE_TEMPLATES } from '@/services/templateSyncService';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 

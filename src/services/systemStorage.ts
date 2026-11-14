@@ -8,6 +8,7 @@
 
 import type { BusinessInfo, BankDetails, ClientInfo } from '../types';
 import type { InvoiceRecord } from '../utils/initialOfflineData';
+import { isDemoInvoice } from '../utils/initialOfflineData';
 
 export interface SystemStorageDatabase {
   invoices: InvoiceRecord[];
@@ -19,6 +20,7 @@ export interface SystemStorageDatabase {
     optionsByTheme?: Record<string, any>;
     presets?: any[];
   };
+  licenseData?: any;
   updatedAt: string;
   version: number;
 }
@@ -39,17 +41,56 @@ const STORAGE_SETUP_KEY = 'offline-software-setup-completed-v1';
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+function getSessionToken(): string {
+  try {
+    if (typeof window !== 'undefined') {
+      const desktop = (window as any).invoiceDesktop;
+      return (
+        desktop?.sessionToken ||
+        (typeof desktop?.getSessionToken === 'function' ? desktop.getSessionToken() : '') ||
+        ''
+      );
+    }
+  } catch {}
+  return '';
+}
+
+function getAuthHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+  const token = getSessionToken();
+  return {
+    ...extraHeaders,
+    ...(token ? { 'x-invoice-token': token } : {}),
+  };
+}
+
+function appendTokenQuery(url: string): string {
+  const token = getSessionToken();
+  if (!token) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}token=${encodeURIComponent(token)}`;
+}
+
 /**
  * Checks whether persistent system memory exists on the user's PC filesystem.
  */
 export async function getSystemMemoryInfo(): Promise<SystemMemoryInfo> {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+    return { exists: false };
+  }
   try {
-    const res = await fetch('/api/system-storage/info', {
+    const res = await fetch(appendTokenQuery('/api/system-storage/info'), {
       method: 'GET',
-      headers: { 'Cache-Control': 'no-cache' },
+      headers: getAuthHeaders({ 'Cache-Control': 'no-cache' }),
     });
     if (res.ok) {
-      return (await res.json()) as SystemMemoryInfo;
+      const info = (await res.json()) as SystemMemoryInfo;
+      if (
+        info.businessName?.includes('Apex Infotech') ||
+        ((info.invoiceCount ?? 0) === 0 && (!info.businessName || info.businessName === 'My Business'))
+      ) {
+        return { exists: false };
+      }
+      return info;
     }
   } catch {
     // If running in browser or unit test without Electron backend
@@ -63,12 +104,18 @@ export async function getSystemMemoryInfo(): Promise<SystemMemoryInfo> {
 
     if (rawBusiness || rawInvoices) {
       const parsedBusiness = rawBusiness ? JSON.parse(rawBusiness) : null;
-      const parsedInvoices = rawInvoices ? JSON.parse(rawInvoices) : [];
-      if (parsedBusiness?.name?.trim() || (Array.isArray(parsedInvoices) && parsedInvoices.length > 0)) {
+      const rawRecords = rawInvoices ? JSON.parse(rawInvoices) : [];
+      const parsedInvoices = Array.isArray(rawRecords)
+        ? rawRecords.filter((inv) => !isDemoInvoice(inv))
+        : [];
+      const bizName = parsedBusiness?.name?.trim() || '';
+      const isDemoBiz = bizName.includes('Apex Infotech') || bizName === 'My Business';
+
+      if ((bizName && !isDemoBiz) || parsedInvoices.length > 0) {
         return {
           exists: true,
-          businessName: parsedBusiness?.name || '',
-          invoiceCount: Array.isArray(parsedInvoices) ? parsedInvoices.length : 0,
+          businessName: bizName,
+          invoiceCount: parsedInvoices.length,
           hasCompletedSetup: Boolean(hasSetup),
           path: 'Local Storage / PC Memory',
         };
@@ -85,10 +132,13 @@ export async function getSystemMemoryInfo(): Promise<SystemMemoryInfo> {
  * Loads the complete database from the user's Documents/Invoice Gen Data/database.json.
  */
 export async function loadSystemMemory(): Promise<SystemStorageDatabase | null> {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+    return null;
+  }
   try {
-    const res = await fetch('/api/system-storage', {
+    const res = await fetch(appendTokenQuery('/api/system-storage'), {
       method: 'GET',
-      headers: { 'Cache-Control': 'no-cache' },
+      headers: getAuthHeaders({ 'Cache-Control': 'no-cache' }),
     });
     if (res.ok) {
       const json = await res.json();
@@ -165,6 +215,9 @@ export function saveSystemMemory(
 
   // 2. Persist to PC file system via Electron server
   const sendToFileSystem = async () => {
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+      return;
+    }
     try {
       const fullDb: SystemStorageDatabase = {
         ...payload,
@@ -172,15 +225,18 @@ export function saveSystemMemory(
         version: 2,
       };
 
-      await fetch('/api/system-storage', {
+      const res = await fetch(appendTokenQuery('/api/system-storage'), {
         method: 'POST',
-        headers: {
+        headers: getAuthHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
         body: JSON.stringify(fullDb),
       });
-    } catch {
-      // Electron API unavailable (pure browser)
+      if (!res.ok) {
+        console.warn('System storage write response not OK:', res.status);
+      }
+    } catch (e) {
+      console.warn('System storage write failed:', e);
     }
   };
 
@@ -204,8 +260,52 @@ export function saveSystemMemory(
  */
 export async function openStorageDirectory(): Promise<boolean> {
   try {
-    const res = await fetch('/api/system-storage/open-folder', {
+    const res = await fetch(appendTokenQuery('/api/system-storage/open-folder'), {
       method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Loads the saved license data from the desktop PC filesystem if available.
+ */
+export async function loadSystemLicense(): Promise<any | null> {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+    return null;
+  }
+  try {
+    const res = await fetch(appendTokenQuery('/api/system-storage/license'), {
+      method: 'GET',
+      headers: getAuthHeaders({ 'Cache-Control': 'no-cache' }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.exists && json.licenseData) {
+        return json.licenseData;
+      }
+    }
+  } catch {
+    // browser or offline
+  }
+  return null;
+}
+
+/**
+ * Saves the license data to the desktop PC filesystem (Documents/Invoice Gen Data/database.json).
+ */
+export async function saveSystemLicense(licenseData: any): Promise<boolean> {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+    return true;
+  }
+  try {
+    const res = await fetch(appendTokenQuery('/api/system-storage/license'), {
+      method: 'POST',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(licenseData),
     });
     return res.ok;
   } catch {

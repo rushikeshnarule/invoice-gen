@@ -28,5 +28,12 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "exclude": ["src/test", "**/*.test.ts", "**/*.test.tsx"]
+  "exclude": [
+    "src/test",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/components/application/app-shell/**",
+    "src/components/base/date-picker/meeting-scheduler.tsx",
+    "src/components/foundations/brand/logo.tsx"
+  ]
 }

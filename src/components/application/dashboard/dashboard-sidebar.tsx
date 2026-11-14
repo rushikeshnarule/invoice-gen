@@ -7,15 +7,31 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
+import { useNavigate } from "react-router-dom";
+import { useInvoices } from "@/context/InvoiceContext";
 import {
   RiCloseLine,
   RiHomeLine,
   RiSideBarFill,
   RiSettings4Line,
+  RiShieldKeyholeLine,
+  RiSearchLine,
+  RiFileTextLine,
+  RiPaletteLine,
+  RiUserSharedLine,
+  RiAddLine,
 } from "@remixicon/react";
 import { SettingsModal } from "@/components/application/settings/settings-modal";
+import { LicenseModal } from "@/components/LicenseModal/LicenseModal";
+import { useLicense, IS_STANDALONE_UNLOCKED } from "@/context/LicenseContext";
 import { ThemeToggle } from "@/components/application/theme/theme-toggle";
 import { Badge } from "@/components/base/badges/badge";
+import { Kbd } from "@/components/base/kbd/kbd";
+import {
+  CommandPalette,
+  CommandPaletteSection,
+  CommandPaletteItem,
+} from "@/components/base/command-palette/command-palette";
 import { cx } from "@/utils/cx";
 import { DashboardTeamMenu } from "./dashboard-team-menu";
 import { DashboardUserMenu } from "./dashboard-user-menu";
@@ -210,8 +226,13 @@ export function DashboardSidebar({
   className?: string;
 } = {}) {
   const localize = useTemplateCopy();
+  const navigate = useNavigate();
+  const { invoices } = useInvoices();
+  const { license } = useLicense();
   const [collapsedState, setCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [licenseOpen, setLicenseOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"identity" | "address" | "banking" | "terms" | "backup">("identity");
   const [suppressUserHover, setSuppressUserHover] = useState(false);
   const collapsed = mobile ? false : collapsedState;
@@ -303,6 +324,23 @@ export function DashboardSidebar({
         </div>
 
         <div className="flex w-full flex-col gap-3">
+          {/* Quick Search Shortcut Pill (BoardUI quick-search node 3731:2955) */}
+          <button
+            type="button"
+            onClick={() => setCommandPaletteOpen(true)}
+            aria-label="Quick search or jump (Ctrl+K)"
+            className={cx(
+              "flex items-center rounded-xl border border-border-button-default bg-background-primary-default text-text-tertiary shadow-2xs hover:border-border-button-hover hover:bg-background-primary-hover hover:text-text-primary transition-all duration-150 cursor-pointer",
+              collapsed ? "justify-center p-2 size-9" : "w-full justify-between px-2.5 py-1.5"
+            )}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <RiSearchLine className="size-4 shrink-0 text-foreground-icon-secondary" />
+              {!collapsed && <span className="text-xs truncate">Search or jump...</span>}
+            </div>
+            {!collapsed && <Kbd className="text-[10px]">Ctrl+K</Kbd>}
+          </button>
+
           {/* Primary nav. The 2px inset is for the expanded rail only: the
               collapsed column is exactly as wide as a 36px item, so padding
               here pushes every item 2px right and the rail's own clip shaves
@@ -327,8 +365,21 @@ export function DashboardSidebar({
               className={flat ? "!bg-background-secondary-default" : undefined}
             />
           ))}
-        {/* Secondary nav: Preferences & Settings */}
+        {/* Secondary nav: Preferences, License & Settings */}
         <nav className="flex w-full flex-col gap-1">
+          {!IS_STANDALONE_UNLOCKED && (
+            <NavItem
+              icon={RiShieldKeyholeLine}
+              label="License & Activation"
+              collapsed={collapsed}
+              badge={
+                <Badge color={license.status === "active" ? "primary" : "neutral"}>
+                  {license.tierCode}
+                </Badge>
+              }
+              onClick={() => setLicenseOpen(true)}
+            />
+          )}
           <NavItem
             icon={RiSettings4Line}
             label="Settings"
@@ -356,6 +407,114 @@ export function DashboardSidebar({
         onClose={() => setSettingsOpen(false)}
         defaultTab={settingsTab}
       />
+
+      <LicenseModal
+        isOpen={licenseOpen}
+        onClose={() => setLicenseOpen(false)}
+      />
+
+      {/* ─── OFFICIAL BOARDUI COMMAND PALETTE (CTRL+K / ⌘K) ─── */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        shortcut="k"
+        placeholder="Type a command or search invoices, clients..."
+      >
+        <CommandPaletteSection title="Navigation">
+          <CommandPaletteItem
+            id="nav-invoices"
+            icon={RiHomeLine}
+            shortcut="G I"
+            onAction={() => {
+              setCommandPaletteOpen(false);
+              navigate('/invoices');
+            }}
+          >
+            Invoices Directory
+          </CommandPaletteItem>
+          <CommandPaletteItem
+            id="nav-templates"
+            icon={RiPaletteLine}
+            shortcut="G T"
+            onAction={() => {
+              setCommandPaletteOpen(false);
+              navigate('/design');
+            }}
+          >
+            Invoice Templates Gallery
+          </CommandPaletteItem>
+          <CommandPaletteItem
+            id="nav-clients"
+            icon={RiUserSharedLine}
+            shortcut="G C"
+            onAction={() => {
+              setCommandPaletteOpen(false);
+              navigate('/clients');
+            }}
+          >
+            Client Directory &amp; Ledger
+          </CommandPaletteItem>
+        </CommandPaletteSection>
+
+        <CommandPaletteSection title="Quick Billing Actions">
+          <CommandPaletteItem
+            id="act-daily"
+            icon={RiAddLine}
+            shortcut="N"
+            description="Create blank invoice"
+            onAction={() => {
+              setCommandPaletteOpen(false);
+              navigate('/invoices');
+            }}
+          >
+            New Daily Invoice
+          </CommandPaletteItem>
+          <CommandPaletteItem
+            id="act-settings"
+            icon={RiSettings4Line}
+            shortcut=","
+            description="Business profile &amp; bank info"
+            onAction={() => {
+              setCommandPaletteOpen(false);
+              setSettingsOpen(true);
+            }}
+          >
+            Business Profile Settings
+          </CommandPaletteItem>
+          {!IS_STANDALONE_UNLOCKED && (
+            <CommandPaletteItem
+              id="act-license"
+              icon={RiShieldKeyholeLine}
+              description="Manage workstation activation"
+              onAction={() => {
+                setCommandPaletteOpen(false);
+                setLicenseOpen(true);
+              }}
+            >
+              Commercial License Status
+            </CommandPaletteItem>
+          )}
+        </CommandPaletteSection>
+
+        {invoices.length > 0 && (
+          <CommandPaletteSection title="Invoices Ledger">
+            {invoices.slice(0, 10).map((inv) => (
+              <CommandPaletteItem
+                key={inv.id}
+                id={`inv-${inv.id}`}
+                icon={RiFileTextLine}
+                description={inv.data?.client?.name || inv.clientName || 'General Client'}
+                onAction={() => {
+                  setCommandPaletteOpen(false);
+                  navigate('/invoices');
+                }}
+              >
+                {inv.invoiceNumber}
+              </CommandPaletteItem>
+            ))}
+          </CommandPaletteSection>
+        )}
+      </CommandPalette>
     </aside>
   ));
 }

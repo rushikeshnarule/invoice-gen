@@ -1,14 +1,33 @@
 import React from 'react';
 import type { ThemeComponentProps } from '../../types';
 import { Watermark } from '../Watermark';
-import { themeVars, getUpiQrString } from '../themeHelpers';
+import {
+  themeVars,
+  getUpiQrString,
+  isUSInvoice,
+  getInvoiceTitle,
+  getCodeColumnHeader,
+  getTaxColumnHeader,
+  getCurrencySymbol,
+  getNumberFormat,
+} from '../themeHelpers';
 import { formatCurrency, formatNumber, formatDate, QRCodeView } from '../../utils';
 import styles from './styles.module.css';
 
 export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
   const paperClass = options.paper === 'A5' ? styles.paperA5 : styles.paperA4;
+  const isUS = isUSInvoice(data);
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
+  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
+
+  const invoiceTitle = getInvoiceTitle(data);
+  const codeHeader = getCodeColumnHeader(data);
+  const taxHeader = getTaxColumnHeader(data);
+  const curSymbol = getCurrencySymbol(data, options);
+  const numFormat = getNumberFormat(data, options);
+  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || data.items.some((i) => (Number(i.gstRate) || 0) > 0);
 
   return (
     <div
@@ -25,6 +44,7 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
               src={data.business?.logoUrl || data.logoUrl}
               alt={data.business.name}
               className={styles.logo}
+              style={{ maxHeight: '52px', maxWidth: '160px', objectFit: 'contain' }}
             />
           )}
           <div className={styles.companyName}>{data.business.name}</div>
@@ -32,17 +52,25 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
             <div>{data.business.address}, {data.business.city}</div>
             <div>{data.business.state} - {data.business.pincode}</div>
             <div>Phone: {data.business.phone} | Email: {data.business.email}</div>
-            {data.business.gstin && <div>GSTIN: <strong>{data.business.gstin}</strong></div>}
+            {isUS ? (
+              <>
+                {data.business.ein && <div>EIN: <strong>{data.business.ein}</strong></div>}
+                {data.business.stateTaxId && <div>State Tax ID: <strong>{data.business.stateTaxId}</strong></div>}
+              </>
+            ) : (
+              data.business.gstin && <div>GSTIN: <strong>{data.business.gstin}</strong></div>
+            )}
           </div>
         </div>
 
         <div className={styles.invoiceNumBlock}>
-          <div className={styles.invoiceLabel}>INVOICE</div>
+          <div className={styles.invoiceLabel}>{invoiceTitle}</div>
           <div className={styles.oversizedNumber}>#{data.invoiceNumber}</div>
           <div className={styles.metaInfo}>
             <div>Date: <strong>{formatDate(data.invoiceDate, options.numberFormat)}</strong></div>
+            {data.billingPeriod && <div>Period: <strong>{data.billingPeriod}</strong></div>}
             {data.dueDate && <div>Due: <strong>{formatDate(data.dueDate, options.numberFormat)}</strong></div>}
-            {data.placeOfSupply && <div>POS: <strong>{data.placeOfSupply}</strong></div>}
+            {data.placeOfSupply && <div>{isUS ? 'State:' : 'POS:'} <strong>{data.placeOfSupply}</strong></div>}
           </div>
         </div>
       </div>
@@ -53,7 +81,14 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
         <div className={styles.clientName}>{data.client.name}</div>
         <div className={styles.clientDetails}>
           {data.client.address}, {data.client.city}, {data.client.state} - {data.client.pincode}
-          {data.client.gstin && <span> | GSTIN: <strong>{data.client.gstin}</strong></span>}
+          {isUS ? (
+            <>
+              {data.client.ein && <span> | EIN: <strong>{data.client.ein}</strong></span>}
+              {data.client.taxExempt && <span> | <strong>Tax-Exempt Entity</strong></span>}
+            </>
+          ) : (
+            data.client.gstin && <span> | GSTIN: <strong>{data.client.gstin}</strong></span>
+          )}
         </div>
       </div>
 
@@ -62,152 +97,186 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
         <thead>
           <tr>
             <th style={{ width: '32px' }} className={styles.centerCol}>#</th>
-            <th>Item & Description</th>
-            {options.showHsnSacColumn && <th style={{ width: '75px', whiteSpace: 'nowrap' }} className={styles.centerCol}>HSN/SAC</th>}
+            {showDateCol && <th style={{ width: '80px', whiteSpace: 'nowrap' }} className={styles.centerCol}>Date</th>}
+            <th>Item &amp; Description</th>
+            {options.showHsnSacColumn && <th style={{ width: '75px', whiteSpace: 'nowrap' }} className={styles.centerCol}>{codeHeader}</th>}
             <th style={{ width: '50px' }} className={styles.numCol}>Qty</th>
             <th style={{ width: '70px' }} className={styles.numCol}>Rate</th>
             {options.showDiscountColumn && <th style={{ width: '55px' }} className={styles.numCol}>Disc</th>}
-            {showGst && <th style={{ width: '50px' }} className={styles.numCol}>Tax%</th>}
-            <th style={{ width: '85px' }} className={styles.numCol}>Total</th>
+            {(showGst || (isUS && hasTaxOnItems)) && <th style={{ width: '50px' }} className={styles.numCol}>{taxHeader}</th>}
+            <th style={{ width: '85px' }} className={styles.numCol}>Amount</th>
           </tr>
         </thead>
         <tbody>
           {data.items.map((item, idx) => (
             <tr key={item.id || idx}>
               <td className={styles.centerCol}>{item.sno || idx + 1}</td>
+              {showDateCol && (
+                <td className={styles.centerCol} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', fontSize: '8pt' }}>
+                  {item.date ? formatDate(item.date, options.numberFormat) : '—'}
+                </td>
+              )}
               <td>
                 <span className={styles.itemDesc}>{item.description}</span>
               </td>
               {options.showHsnSacColumn && (
                 <td className={styles.centerCol} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                  {item.hsnSac || '—'}
+                  {item.sku || item.hsnSac || '—'}
                 </td>
               )}
               <td className={styles.numCol}>{item.quantity} {item.unit || ''}</td>
-              <td className={styles.numCol}>{formatNumber(item.rate, options.numberFormat)}</td>
+              <td className={styles.numCol}>{formatNumber(item.rate, numFormat)}</td>
               {options.showDiscountColumn && (
                 <td className={styles.numCol}>{item.discount ? `${item.discount}%` : '—'}</td>
               )}
-              {showGst && (
-                <td className={styles.numCol}>{item.gstRate}%</td>
+              {(showGst || (isUS && hasTaxOnItems)) && (
+                <td className={styles.numCol}>{item.taxable === false ? 'Exempt' : `${item.gstRate}%`}</td>
               )}
-              <td className={styles.numCol}>{formatNumber(item.total, options.numberFormat)}</td>
+              <td className={styles.numCol}>{formatNumber(item.total, numFormat)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* High-Contrast Totals */}
-      <div className={styles.totalsSection}>
-        <table className={styles.totalsTable}>
-          <tbody>
-            <tr>
-              <td style={{ color: '#64748b', fontWeight: 600 }}>Subtotal</td>
-              <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                {formatCurrency(data.subtotal, options.currencySymbol, options.numberFormat)}
-              </td>
-            </tr>
-            {data.totalDiscount > 0 && (
-              <>
-                <tr>
-                  <td style={{ color: '#dc2626', fontWeight: 600 }}>Discount</td>
-                  <td style={{ textAlign: 'right', color: '#dc2626', fontWeight: 700 }}>
-                    -{formatCurrency(data.totalDiscount, options.currencySymbol, options.numberFormat)}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ color: '#64748b', fontWeight: 600 }}>Taxable Subtotal</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                    {formatCurrency(data.totalTaxableAmount, options.currencySymbol, options.numberFormat)}
-                  </td>
-                </tr>
-              </>
-            )}
-            {showGst && !isInterState && (
-              <>
-                <tr>
-                  <td style={{ color: '#64748b' }}>CGST</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    {formatCurrency(data.totalCgst, options.currencySymbol, options.numberFormat)}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ color: '#64748b' }}>SGST</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                    {formatCurrency(data.totalSgst, options.currencySymbol, options.numberFormat)}
-                  </td>
-                </tr>
-              </>
-            )}
-            {showGst && isInterState && (
+      {/* Summary Box */}
+      <div className={styles.summaryGrid}>
+        <div>
+          {options.showNotes && data.notes && (
+            <div className={styles.notesBlock}>
+              <strong>Note:</strong> {data.notes}
+            </div>
+          )}
+          {options.showTerms && data.terms && (
+            <div className={styles.termsBlock}>
+              <strong>Terms:</strong> {data.terms}
+            </div>
+          )}
+        </div>
+
+        <div className={styles.totalsTableWrapper}>
+          <table className={styles.totalsTable}>
+            <tbody>
               <tr>
-                <td style={{ color: '#64748b' }}>IGST</td>
+                <td style={{ color: '#64748b' }}>Sub Total</td>
                 <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                  {formatCurrency(data.totalIgst, options.currencySymbol, options.numberFormat)}
+                  {formatCurrency(data.subtotal, curSymbol, numFormat)}
                 </td>
               </tr>
-            )}
-            {data.roundOff !== 0 && (
-              <tr>
-                <td style={{ color: '#64748b' }}>Round off</td>
-                <td style={{ textAlign: 'right' }}>
-                  {data.roundOff > 0 ? '+' : ''}{formatNumber(data.roundOff, options.numberFormat)}
-                </td>
-              </tr>
-            )}
-            <tr className={styles.grandTotalRow}>
-              <td>GRAND TOTAL</td>
-              <td style={{ textAlign: 'right' }}>
-                {formatCurrency(data.grandTotalRounded, options.currencySymbol, options.numberFormat)}
-              </td>
-            </tr>
-            {data.amountPaid > 0 && (
-              <>
+              {data.totalDiscount > 0 && (
+                <>
+                  <tr>
+                    <td style={{ color: '#64748b' }}>Discount</td>
+                    <td style={{ textAlign: 'right', color: '#dc2626' }}>
+                      -{formatCurrency(data.totalDiscount, curSymbol, numFormat)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: '#64748b' }}>Taxable Subtotal</td>
+                    <td style={{ textAlign: 'right' }}>
+                      {formatCurrency(data.totalTaxableAmount, curSymbol, numFormat)}
+                    </td>
+                  </tr>
+                </>
+              )}
+              {isUS ? (
+                (data.totalSalesTax ?? 0) > 0 && (
+                  <tr>
+                    <td style={{ color: '#64748b' }}>Sales Tax</td>
+                    <td style={{ textAlign: 'right' }}>
+                      {formatCurrency(data.totalSalesTax ?? 0, curSymbol, numFormat)}
+                    </td>
+                  </tr>
+                )
+              ) : (
+                <>
+                  {showGst && !isInterState && (
+                    <>
+                      <tr>
+                        <td style={{ color: '#64748b' }}>CGST</td>
+                        <td style={{ textAlign: 'right' }}>
+                          {formatCurrency(data.totalCgst, curSymbol, numFormat)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ color: '#64748b' }}>SGST</td>
+                        <td style={{ textAlign: 'right' }}>
+                          {formatCurrency(data.totalSgst, curSymbol, numFormat)}
+                        </td>
+                      </tr>
+                    </>
+                  )}
+                  {showGst && isInterState && (
+                    <tr>
+                      <td style={{ color: '#64748b' }}>IGST</td>
+                      <td style={{ textAlign: 'right' }}>
+                        {formatCurrency(data.totalIgst, curSymbol, numFormat)}
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )}
+              {data.roundOff !== 0 && (
                 <tr>
-                  <td style={{ color: '#059669', fontWeight: 600 }}>Paid Amount</td>
-                  <td style={{ textAlign: 'right', color: '#059669', fontWeight: 700 }}>
-                    {formatCurrency(data.amountPaid, options.currencySymbol, options.numberFormat)}
+                  <td style={{ color: '#64748b' }}>Round Off</td>
+                  <td style={{ textAlign: 'right' }}>
+                    {data.roundOff > 0 ? '+' : ''}{formatNumber(data.roundOff, numFormat)}
                   </td>
                 </tr>
-                <tr style={{ fontWeight: 800 }}>
-                  <td>Balance Due</td>
-                  <td style={{ textAlign: 'right', color: data.balanceDue > 0 ? '#dc2626' : '#0f172a' }}>
-                    {formatCurrency(data.balanceDue, options.currencySymbol, options.numberFormat)}
-                  </td>
-                </tr>
-              </>
-            )}
-          </tbody>
-        </table>
+              )}
+              <tr className={styles.grandTotalRow}>
+                <td>Total Amount</td>
+                <td style={{ textAlign: 'right' }}>
+                  {formatCurrency(data.grandTotalRounded, curSymbol, numFormat)}
+                </td>
+              </tr>
+              {data.amountPaid > 0 && (
+                <>
+                  <tr>
+                    <td style={{ color: '#64748b' }}>Amount Paid</td>
+                    <td style={{ textAlign: 'right', color: '#059669' }}>
+                      {formatCurrency(data.amountPaid, curSymbol, numFormat)}
+                    </td>
+                  </tr>
+                  <tr style={{ fontWeight: 700 }}>
+                    <td style={{ color: '#dc2626' }}>Balance Due</td>
+                    <td style={{ textAlign: 'right', color: data.balanceDue > 0 ? '#dc2626' : '#0f172a' }}>
+                      {formatCurrency(data.balanceDue, curSymbol, numFormat)}
+                    </td>
+                  </tr>
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {options.showAmountInWords && data.amountInWords && (
-        <div className={styles.words}>
-          AMOUNT IN WORDS: {data.amountInWords}
+        <div className={styles.amountWords}>
+          <strong>Amount in Words:</strong> {data.amountInWords}
         </div>
       )}
 
       {/* Tax Table */}
-      {options.showTaxSummaryTable && showGst && data.taxSummary && data.taxSummary.length > 0 && (
-        <table className={styles.taxTable}>
+      {options.showTaxSummaryTable && ((showGst && !isUS) || (isUS && (data.totalSalesTax ?? 0) > 0)) && data.taxSummary && data.taxSummary.length > 0 && (
+        <table className={styles.taxSummaryTable}>
           <thead>
             <tr>
-              <th>Rate</th>
-              <th>Taxable Value</th>
-              {!isInterState && <th>CGST</th>}
-              {!isInterState && <th>SGST</th>}
-              {isInterState && <th>IGST</th>}
-              <th>Tax Total</th>
+              <th>{isUS ? 'Rate' : 'GST Rate'}</th>
+              <th>Taxable Amount</th>
+              {!isUS && !isInterState && <th>CGST</th>}
+              {!isUS && !isInterState && <th>SGST</th>}
+              {!isUS && isInterState && <th>IGST</th>}
+              <th>{isUS ? 'Sales Tax' : 'Total Tax'}</th>
             </tr>
           </thead>
           <tbody>
             {data.taxSummary.map((row, i) => (
               <tr key={i}>
-                <td>{row.gstRate}%</td>
+                <td>{row.label || `${row.gstRate}%`}</td>
                 <td>{formatNumber(row.taxableAmount, options.numberFormat)}</td>
-                {!isInterState && <td>{formatNumber(row.cgst, options.numberFormat)}</td>}
-                {!isInterState && <td>{formatNumber(row.sgst, options.numberFormat)}</td>}
-                {isInterState && <td>{formatNumber(row.igst, options.numberFormat)}</td>}
+                {!isUS && !isInterState && <td>{formatNumber(row.cgst, options.numberFormat)}</td>}
+                {!isUS && !isInterState && <td>{formatNumber(row.sgst, options.numberFormat)}</td>}
+                {!isUS && isInterState && <td>{formatNumber(row.igst, options.numberFormat)}</td>}
                 <td>{formatNumber(row.totalTax, options.numberFormat)}</td>
               </tr>
             ))}
@@ -215,42 +284,51 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
         </table>
       )}
 
-      {/* Bottom Grid */}
-      <div className={styles.bottomGrid}>
+      {/* Bottom Section */}
+      <div className={styles.bottomSection}>
         <div>
           {options.showBankDetails && data.bankDetails && (
             <div className={styles.bankBox}>
-              <div style={{ fontWeight: 800, textTransform: 'uppercase', marginBottom: 2 }}>
-                Bank Account
+              <div style={{ fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>
+                {isUS ? 'Payment & Remittance' : 'Payment Details'}
               </div>
-              <div>{data.bankDetails.bankName} | A/C: <strong>{data.bankDetails.accountNumber}</strong></div>
-              <div>IFSC: <strong>{data.bankDetails.ifsc}</strong></div>
-              {data.bankDetails.upiId && <div>UPI: <strong>{data.bankDetails.upiId}</strong></div>}
+              <div>Bank: <strong>{data.bankDetails.bankName}</strong> | A/c No: <strong>{data.bankDetails.accountNumber}</strong></div>
+              {isUS ? (
+                <>
+                  {(data.bankDetails.routingNumber || data.bankDetails.ifsc) && (
+                    <div>Routing (ABA): <strong>{data.bankDetails.routingNumber || data.bankDetails.ifsc}</strong></div>
+                  )}
+                  {data.bankDetails.zelleId && <div>Zelle: <strong>{data.bankDetails.zelleId}</strong></div>}
+                  {data.bankDetails.paymentLink && <div>Link: <strong>{data.bankDetails.paymentLink}</strong></div>}
+                </>
+              ) : (
+                <>
+                  <div>IFSC: <strong>{data.bankDetails.ifsc}</strong></div>
+                  {data.bankDetails.upiId && <div>UPI: <strong>{data.bankDetails.upiId}</strong></div>}
+                </>
+              )}
             </div>
           )}
 
-          {options.showUpiQr && getUpiQrString(data) && (
-            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+          {!isUS && options.showUpiQr && getUpiQrString(data) && (
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               <QRCodeView
                 data={getUpiQrString(data)}
-                size={65}
+                size={55}
               />
-              <div style={{ fontSize: '8pt', color: '#64748b' }}>
-                <strong style={{ color: '#0f172a' }}>Scan to Pay</strong>
-                <div>Scan with any UPI app</div>
-              </div>
+              <span style={{ fontSize: '7.5pt', color: '#64748b' }}>Scan to remit payment via UPI</span>
             </div>
           )}
         </div>
 
         <div className={styles.signBox}>
           {((options.showStamp && (data.stampUrl || data.business?.stampUrl)) || (options.showSignature && (data.signatureUrl || data.business?.signatureUrl))) ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', minHeight: '44px', margin: '4px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', minHeight: '44px', margin: '4px 0' }}>
               {options.showStamp && (data.stampUrl || data.business?.stampUrl) && (
                 <img
                   src={data.stampUrl || data.business?.stampUrl}
                   alt="Company Stamp"
-                  style={{ maxHeight: '44px', maxWidth: '75px', objectFit: 'contain' }}
+                  style={{ maxHeight: '42px', maxWidth: '75px', objectFit: 'contain' }}
                 />
               )}
               {options.showSignature && (data.signatureUrl || data.business?.signatureUrl) && (
@@ -258,35 +336,17 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
                   src={data.signatureUrl || data.business?.signatureUrl}
                   alt="Signature"
                   className={styles.signatureImg}
-                  style={{ margin: 0 }}
                 />
               )}
             </div>
           ) : null}
-          <div className={styles.signLine} style={(data.signatureUrl || data.business?.signatureUrl || (options.showStamp && (data.stampUrl || data.business?.stampUrl))) ? { marginTop: '6px' } : undefined}>
-            Authorized Signatory
-          </div>
-          <div style={{ fontSize: '8pt', fontWeight: 600, color: '#64748b', marginTop: 2 }}>
-            {data.business.name}
-          </div>
+          <div className={styles.signLabel}>Authorized Signatory</div>
         </div>
       </div>
 
-      {options.showNotes && data.notes && (
-        <div style={{ fontSize: '8pt', color: '#64748b', marginTop: 16, whiteSpace: 'pre-line' }}>
-          <strong>Notes:</strong> {data.notes}
-        </div>
-      )}
-
-      {options.showTerms && data.terms && (
-        <div style={{ fontSize: '8pt', color: '#64748b', marginTop: options.showNotes && data.notes ? 6 : 16, whiteSpace: 'pre-line' }}>
-          <strong>Terms:</strong> {data.terms}
-        </div>
-      )}
-
       {(options.showThankYouFooter || options.footerText) && (
         <div className={styles.footer}>
-          {options.showThankYouFooter && <div>THANK YOU FOR YOUR BUSINESS</div>}
+          {options.showThankYouFooter && <div>Thank you for your business!</div>}
           {options.footerText && <div style={{ marginTop: 2 }}>{options.footerText}</div>}
         </div>
       )}

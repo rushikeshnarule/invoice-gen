@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useInvoices } from '../context/InvoiceContext';
 import { getAllThemes, getTheme } from '../themes';
-import { getClientId, formatCurrency, formatDate } from '../utils';
+import { getClientId, formatCurrency, formatDate, exportInvoiceToExcel, exportInvoicesLedgerToExcel } from '../utils';
+import { ConsolidatedMonthlyModal } from '../components/ConsolidatedMonthlyModal/ConsolidatedMonthlyModal';
 import type { ClientInfo } from '../types';
 
 // BoardUI Components
 import { Badge } from '@/components/base/badges/badge';
+import { Chip } from '@/components/base/badges/chip';
+import { StatusDot } from '@/components/base/badges/status-dot';
+import { Avatar } from '@/components/base/avatar/avatar';
 import { SearchField } from '@/components/base/search-field/search-field';
+import { StatCards } from '@/components/application/dashboard/stat-cards';
 import { toast } from '@/components/base/toast/toast';
 import { Button } from '@/components/base/buttons/button';
 import { IconButton } from '@/components/base/buttons/icon-button';
@@ -36,40 +41,24 @@ import {
   RiArrowUpSLine,
   RiPrinterLine,
   RiDownload2Line,
+  RiFileExcel2Line,
   RiShoppingBagLine,
+  RiGroupLine,
+  RiCoinsFill,
 } from '@remixicon/react';
 
-function getMonthNameAndYear(ym: string): string {
-  if (!ym) return '';
-  try {
-    const [year, month] = ym.split('-').map(Number);
-    const dateObj = new Date(year, month - 1, 1);
-    return dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  } catch {
-    return ym;
-  }
-}
-
 export const ClientsView: React.FC = () => {
-  let navigate = (path: string) => {
-    window.location.href = path;
-  };
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    navigate = useNavigate();
-  } catch {
-    // Fallback when rendered outside Router in tests
-  }
+  const navigate = useNavigate();
 
   const { currentThemeId, clientDefaults, setClientDefault } = useTheme();
   const {
     clients,
     invoices,
+    businessProfile,
     saveClient,
     updateClient,
     deleteClient,
     createInvoice,
-    createMonthlyInvoice,
     getClientInvoices,
     getClientMetrics,
     setActiveInvoiceId,
@@ -78,20 +67,14 @@ export const ClientsView: React.FC = () => {
   const activeDefaultTheme = getTheme(currentThemeId);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const isUS = businessProfile?.region === 'US' || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_REGION === 'US');
+  const currencySymbol = isUS ? '$' : '₹';
+
   // ── Expandable Client Invoices Ledger ─────────────────────────────────────
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
   // ── Monthly Invoice Generator Modal State ─────────────────────────────────
   const [monthlyModalClient, setMonthlyModalClient] = useState<ClientInfo | null>(null);
-  const [monthlyMonth, setMonthlyMonth] = useState<string>(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-  });
-  const [monthlyPeriodText, setMonthlyPeriodText] = useState<string>(() => {
-    const today = new Date();
-    return today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  });
-  const [monthlyConsolidateDaily, setMonthlyConsolidateDaily] = useState<boolean>(true);
 
   // ── Add Client Modal State ────────────────────────────────────────────────
   const [showAddModal, setShowAddModal] = useState(false);
@@ -113,11 +96,12 @@ export const ClientsView: React.FC = () => {
   // ── Delete Client Modal State ─────────────────────────────────────────────
   const [deletingClient, setDeletingClient] = useState<ClientInfo | null>(null);
 
-  // ── Top Portfolio Metrics Across All Clients ──────────────────────────────
+  // ── Top Portfolio Metrics Across All Clients (Excludes cancelled invoices) ─
   const totalClients = clients.length;
-  const totalInvoicesAcrossAll = invoices.length;
-  const totalBilledAcrossAll = invoices.reduce((s, inv) => s + (inv?.total || 0), 0);
-  const totalDueAcrossAll = invoices.reduce(
+  const activeInvoicesAcrossAll = invoices.filter((inv) => inv?.status !== 'cancelled');
+  const totalInvoicesAcrossAll = activeInvoicesAcrossAll.length;
+  const totalBilledAcrossAll = activeInvoicesAcrossAll.reduce((s, inv) => s + (inv?.total || 0), 0);
+  const totalDueAcrossAll = activeInvoicesAcrossAll.reduce(
     (s, inv) => s + (inv?.status === 'paid' ? 0 : (inv?.data?.balanceDue || 0)),
     0
   );
@@ -150,67 +134,7 @@ export const ClientsView: React.FC = () => {
 
   // ── Open Monthly Bill Builder Modal ───────────────────────────────────────
   const handleOpenMonthlyModal = (client: ClientInfo) => {
-    const today = new Date();
-    const ym = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     setMonthlyModalClient(client);
-    setMonthlyMonth(ym);
-    setMonthlyPeriodText(getMonthNameAndYear(ym));
-    setMonthlyConsolidateDaily(true);
-  };
-
-  // ── Month Change in Modal ─────────────────────────────────────────────────
-  const handleMonthChange = (ym: string) => {
-    setMonthlyMonth(ym);
-    setMonthlyPeriodText(getMonthNameAndYear(ym));
-  };
-
-  // ── Confirm Generate Monthly Invoice ──────────────────────────────────────
-  const handleGenerateMonthlyBillSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!monthlyModalClient) return;
-
-    const clientId = getClientId(monthlyModalClient.name);
-    const preferredTheme = clientDefaults[clientId] || 'contractor';
-
-    let initialItems;
-    if (monthlyConsolidateDaily) {
-      // Find daily invoices for this client in the selected month
-      const clientInvs = getClientInvoices(monthlyModalClient.name);
-      const dailyInvs = clientInvs.filter(
-        (inv) => inv?.date?.startsWith(monthlyMonth) && inv?.data?.invoiceType !== 'monthly'
-      );
-      if (dailyInvs.length > 0) {
-        const flattened: any[] = [];
-        let sno = 1;
-        for (const d of dailyInvs) {
-          for (const it of d.data.items) {
-            flattened.push({
-              ...it,
-              id: `item-${Date.now()}-${sno}`,
-              sno,
-              date: it.date || d.date,
-            });
-            sno++;
-          }
-        }
-        initialItems = flattened;
-      }
-    }
-
-    const created = createMonthlyInvoice(
-      monthlyModalClient.name,
-      monthlyMonth,
-      monthlyPeriodText || getMonthNameAndYear(monthlyMonth),
-      initialItems,
-      preferredTheme
-    );
-
-    setMonthlyModalClient(null);
-    setActiveInvoiceId(created.id);
-    navigate('/invoices');
-    toast.success(
-      `Generated Monthly Bill ${created.invoiceNumber} (${monthlyPeriodText || monthlyMonth}) for ${monthlyModalClient.name}`
-    );
   };
 
   // ── Open & Print Invoices From Client Ledger ──────────────────────────────
@@ -233,6 +157,22 @@ export const ClientsView: React.FC = () => {
     toast.info('Opening Save as PDF...');
     const pdfUrl = `/print/${invoiceId}?theme=${preferredTheme}&action=save-pdf`;
     window.open(pdfUrl, '_blank');
+  };
+
+  const handleExportExcelInvoice = async (invoiceData: any) => {
+    try {
+      await exportInvoiceToExcel(invoiceData);
+    } catch (err: any) {
+      toast.error(`Failed to export Excel: ${err?.message || err}`);
+    }
+  };
+
+  const handleExportClientLedgerExcel = async (clientName: string, clientInvs: any[]) => {
+    try {
+      await exportInvoicesLedgerToExcel(clientInvs, `${clientName} Invoices Ledger`);
+    } catch (err: any) {
+      toast.error(`Failed to export ledger: ${err?.message || err}`);
+    }
   };
 
   // ── Add Client Handler ────────────────────────────────────────────────────
@@ -347,7 +287,7 @@ export const ClientsView: React.FC = () => {
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-y-auto p-8">
+    <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-y-auto p-3 sm:p-6 lg:p-8">
       {/* Indian States Datalist for fast auto-complete */}
       <datalist id="indian-states-list">
         <option value="Andhra Pradesh" />
@@ -390,14 +330,15 @@ export const ClientsView: React.FC = () => {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              <img src="/app-icon.png" alt="Invoice Gen" className="size-7 object-contain shrink-0" />
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight text-balance">
                 Clients &amp; Commercial Accounts
               </h1>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 tabular-nums">
                 {clients.length} accounts
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 max-w-xl">
+            <p className="text-xs text-slate-500 mt-0.5 max-w-xl text-pretty">
               Client portfolio metrics, transaction history, daily delivery logs, and monthly consolidated invoice generation.
             </p>
           </div>
@@ -413,44 +354,41 @@ export const ClientsView: React.FC = () => {
           </Button>
         </div>
 
-        {/* ─── CLIENT PORTFOLIO OVERVIEW METRICS ─── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
-            <span className="text-[11px] font-medium text-slate-500">Total Clients</span>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-lg font-bold text-slate-900 font-mono">{totalClients}</span>
-              <span className="text-[11px] text-slate-400 font-mono">Registered</span>
-            </div>
-          </div>
-
-          <div className="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
-            <span className="text-[11px] font-medium text-slate-500">Invoices Generated</span>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-lg font-bold text-blue-700 font-mono">{totalInvoicesAcrossAll}</span>
-              <span className="text-[11px] text-slate-400 font-mono">Ledger bills</span>
-            </div>
-          </div>
-
-          <div className="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
-            <span className="text-[11px] font-medium text-slate-500">Total Billed / Revenue</span>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-base font-bold text-slate-900 font-mono">
-                {formatCurrency(totalBilledAcrossAll, '₹')}
-              </span>
-              <span className="text-[11px] text-emerald-600 font-semibold font-mono">Gross</span>
-            </div>
-          </div>
-
-          <div className="p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
-            <span className="text-[11px] font-medium text-slate-500">Outstanding Due</span>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className={`text-base font-bold font-mono ${totalDueAcrossAll > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
-                {formatCurrency(totalDueAcrossAll, '₹')}
-              </span>
-              <span className="text-[11px] text-slate-400 font-mono">Receivable</span>
-            </div>
-          </div>
-        </div>
+        {/* ─── CLIENT PORTFOLIO OVERVIEW STAT CARDS (BOARDUI) ─── */}
+        <StatCards
+          variant="plain"
+          columns={4}
+          stats={[
+            {
+              icon: RiGroupLine,
+              label: 'Total Clients',
+              value: String(totalClients),
+              delta: 'Registered',
+              deltaColor: 'neutral',
+            },
+            {
+              icon: RiFileTextLine,
+              label: 'Invoices Generated',
+              value: String(totalInvoicesAcrossAll),
+              delta: 'Ledger bills',
+              deltaColor: 'neutral',
+            },
+            {
+              icon: RiCoinsFill,
+              label: 'Total Billed / Revenue',
+              value: formatCurrency(totalBilledAcrossAll, currencySymbol),
+              delta: 'Gross billed',
+              deltaColor: 'lime',
+            },
+            {
+              icon: RiAlertLine,
+              label: 'Outstanding Due',
+              value: formatCurrency(totalDueAcrossAll, currencySymbol),
+              delta: totalDueAcrossAll > 0 ? 'Receivable' : 'Fully settled',
+              deltaColor: totalDueAcrossAll > 0 ? 'rose' : 'lime',
+            },
+          ]}
+        />
 
         {/* Info Card */}
         <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex items-start gap-3">
@@ -497,13 +435,14 @@ export const ClientsView: React.FC = () => {
                     : 'No clients registered yet. Click "Add Client" above to create your first client account.'}
                 </p>
                 {searchQuery && (
-                  <button
-                    type="button"
+                  <Button
+                    size="small"
+                    variant="ghost"
                     onClick={() => setSearchQuery('')}
                     className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
                   >
                     Clear Search
-                  </button>
+                  </Button>
                 )}
               </div>
             ) : (
@@ -525,20 +464,25 @@ export const ClientsView: React.FC = () => {
                     {/* Top Row: Client Name + Badges on Left, Actions on Right */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="size-10 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-700 shrink-0 shadow-2xs">
-                          <RiBuildingLine className="size-5" />
-                        </div>
+                        <Avatar
+                          size="md"
+                          color="blue"
+                          initials={client.name.slice(0, 2).toUpperCase()}
+                          className="shrink-0 font-bold shadow-2xs"
+                        />
                         <div className="min-w-0 flex items-center gap-2 flex-wrap">
                           <h3 className="font-bold text-base text-slate-900 tracking-tight">{client.name}</h3>
-                          <Badge color="neutral">{client.gstin ? 'B2B GST' : 'Consumer / POS'}</Badge>
+                          <Badge color="neutral">{isUS ? (client.ein || client.resaleCertificate ? 'Commercial B2B' : 'Consumer / POS') : (client.gstin ? 'B2B GST' : 'Consumer / POS')}</Badge>
                           {metrics.balanceDue > 0 ? (
-                            <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
-                              {formatCurrency(metrics.balanceDue, '₹')} Due
-                            </span>
+                            <Chip color="rose" variant="caption" className="inline-flex items-center gap-1 font-mono font-medium">
+                              <StatusDot color="yellow" />
+                              {formatCurrency(metrics.balanceDue, currencySymbol)} Due
+                            </Chip>
                           ) : metrics.invoiceCount > 0 ? (
-                            <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <Chip color="lime" variant="caption" className="inline-flex items-center gap-1 font-mono font-medium">
+                              <StatusDot color="green" />
                               Settled
-                            </span>
+                            </Chip>
                           ) : null}
                         </div>
                       </div>
@@ -607,8 +551,8 @@ export const ClientsView: React.FC = () => {
                     {/* Middle Row: Contact & Business Metadata Strip */}
                     <div className="bg-slate-50/80 px-3.5 py-2 rounded-xl border border-slate-200/70 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600 font-mono">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-sans text-slate-400 font-medium">GSTIN:</span>
-                        <strong className="text-slate-800">{client.gstin || 'None (Unregistered)'}</strong>
+                        <span className="text-[11px] font-sans text-slate-400 font-medium">{isUS ? 'Tax ID / EIN:' : 'GSTIN:'}</span>
+                        <strong className="text-slate-800">{isUS ? (client.ein || client.gstin || 'None') : (client.gstin || 'None (Unregistered)')}</strong>
                       </div>
 
                       {locationStr && (
@@ -671,7 +615,7 @@ export const ClientsView: React.FC = () => {
                       <div className="flex items-center gap-3 flex-wrap">
                         <div className="flex items-center gap-1.5 text-xs text-slate-600 font-mono">
                           <span className="text-[11px] font-sans text-slate-400">Total Billed:</span>
-                          <strong className="text-slate-900 font-semibold">{formatCurrency(metrics.totalBilled, '₹')}</strong>
+                          <strong className="text-slate-900 font-semibold">{formatCurrency(metrics.totalBilled, currencySymbol)}</strong>
                         </div>
 
                         <span className="text-slate-300">•</span>
@@ -679,7 +623,7 @@ export const ClientsView: React.FC = () => {
                         <div className="flex items-center gap-1.5 text-xs font-mono">
                           <span className="text-[11px] font-sans text-slate-400">Balance:</span>
                           <strong className={metrics.balanceDue > 0 ? 'text-rose-600 font-semibold' : 'text-emerald-700 font-semibold'}>
-                            {metrics.balanceDue > 0 ? formatCurrency(metrics.balanceDue, '₹') : 'Nil'}
+                            {metrics.balanceDue > 0 ? formatCurrency(metrics.balanceDue, currencySymbol) : 'Nil'}
                           </strong>
                         </div>
 
@@ -734,21 +678,35 @@ export const ClientsView: React.FC = () => {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <button
-                              type="button"
+                            {clientInvs.length > 0 && (
+                              <Button
+                                size="small"
+                                variant="secondary"
+                                leadingIcon={RiFileExcel2Line}
+                                onClick={() => handleExportClientLedgerExcel(client.name, clientInvs)}
+                                className="text-xs font-semibold text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/70"
+                              >
+                                Export Excel
+                              </Button>
+                            )}
+                            <Button
+                              size="small"
+                              variant="secondary"
+                              leadingIcon={RiCalendarLine}
                               onClick={() => handleOpenMonthlyModal(client)}
-                              className="text-xs font-semibold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+                              className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/70"
                             >
-                              + Create Monthly Invoice
-                            </button>
-                            <span className="text-slate-300">|</span>
-                            <button
-                              type="button"
+                              Monthly Bill
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="primary"
+                              leadingIcon={RiAddLine}
                               onClick={() => handleCreateDailyBill(client)}
-                              className="text-xs font-semibold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+                              className="text-xs font-semibold shadow-xs"
                             >
-                              + Create Daily Invoice
-                            </button>
+                              Daily Bill
+                            </Button>
                           </div>
                         </div>
 
@@ -813,13 +771,14 @@ export const ClientsView: React.FC = () => {
                                       </td>
                                       <td className="py-2.5 px-3 whitespace-nowrap">
                                         {isMonthly ? (
-                                          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-semibold font-sans">
-                                            Monthly {inv.data.billingPeriod ? `(${inv.data.billingPeriod})` : ''}
-                                          </span>
+                                          <Chip color="blue" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                                            <RiCalendarLine className="size-3" />
+                                            Monthly {inv.data.billingPeriod ? `• ${inv.data.billingPeriod}` : ''}
+                                          </Chip>
                                         ) : (
-                                          <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-semibold font-sans">
+                                          <Chip color="neutral" variant="caption">
                                             Daily
-                                          </span>
+                                          </Chip>
                                         )}
                                       </td>
                                       <td className="py-2.5 px-3 text-slate-600 font-sans text-xs">
@@ -840,50 +799,61 @@ export const ClientsView: React.FC = () => {
                                           ))}
                                         </div>
                                       </td>
-                                      <td className="py-2.5 px-3 text-right font-bold text-slate-900 whitespace-nowrap">
-                                        {formatCurrency(inv.total, '₹')}
+                                      <td className="py-2.5 px-3 text-right font-bold text-slate-900 whitespace-nowrap font-mono">
+                                        {formatCurrency(inv.total, inv.data?.currencySymbol || currencySymbol)}
                                       </td>
                                       <td className="py-2.5 px-3 text-center whitespace-nowrap font-sans">
-                                        <span
-                                          className={`px-2 py-0.5 rounded-md text-[11px] font-medium capitalize ${
-                                            inv.status === 'paid'
-                                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                              : inv.status === 'sent'
-                                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                              : inv.status === 'overdue'
-                                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                              : 'bg-slate-100 text-slate-700 border border-slate-200'
-                                          }`}
-                                        >
-                                          {inv.status}
-                                        </span>
+                                        {inv.status === 'paid' ? (
+                                          <Chip color="lime" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                                            <StatusDot color="green" /> Paid
+                                          </Chip>
+                                        ) : inv.status === 'sent' ? (
+                                          <Chip color="blue" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                                            <StatusDot color="indigo" /> Sent
+                                          </Chip>
+                                        ) : inv.status === 'overdue' ? (
+                                          <Chip color="rose" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                                            <StatusDot color="yellow" /> Overdue
+                                          </Chip>
+                                        ) : (
+                                          <Chip color="neutral" variant="caption">
+                                            Draft
+                                          </Chip>
+                                        )}
                                       </td>
                                       <td className="py-2.5 px-3 text-right whitespace-nowrap font-sans">
                                         <div className="flex items-center justify-end gap-1">
-                                          <button
-                                            type="button"
+                                          <Button
+                                            size="small"
+                                            variant="secondary"
+                                            leadingIcon={RiEditLine}
                                             onClick={() => handleOpenInvoiceInEditor(inv.id)}
-                                            className="px-2 py-1 rounded text-xs font-semibold text-slate-700 hover:text-blue-700 hover:bg-slate-100 transition-colors"
-                                            title="Open in Invoice Editor"
+                                            className="text-xs font-semibold"
                                           >
                                             Edit
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => handlePrintInvoice(inv.id, client.name)}
-                                            className="p-1 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                                          </Button>
+                                          <IconButton
+                                            icon={RiPrinterLine}
+                                            size="small"
+                                            aria-label="Print Invoice"
                                             title="Print Invoice"
-                                          >
-                                            <RiPrinterLine className="size-3.5" />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleSavePdfInvoice(inv.id, client.name)}
-                                            className="p-1 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                                            onClick={() => handlePrintInvoice(inv.id, client.name)}
+                                          />
+                                          <IconButton
+                                            icon={RiDownload2Line}
+                                            size="small"
+                                            aria-label="Save as PDF"
                                             title="Save as PDF"
-                                          >
-                                            <RiDownload2Line className="size-3.5" />
-                                          </button>
+                                            onClick={() => handleSavePdfInvoice(inv.id, client.name)}
+                                          />
+                                          <IconButton
+                                            icon={RiFileExcel2Line}
+                                            size="small"
+                                            aria-label="Export to Excel"
+                                            title="Export to Excel (.xlsx)"
+                                            onClick={() => handleExportExcelInvoice(inv.data)}
+                                            className="text-emerald-700 hover:text-emerald-800"
+                                          />
                                         </div>
                                       </td>
                                     </tr>
@@ -904,13 +874,13 @@ export const ClientsView: React.FC = () => {
       </div>
 
       {/* ─── Add Client Modal ─── */}
-      <Modal isOpen={showAddModal} onOpenChange={setShowAddModal}>
+      <Modal isOpen={showAddModal} onOpenChange={setShowAddModal} size="lg" className="max-h-[92vh] flex flex-col">
         <ModalHeader
           title="Add Client to Offline Directory"
           description="Register a new commercial client or retail buyer in your offline local database."
         />
-        <form onSubmit={handleAddClientSubmit}>
-          <ModalBody>
+        <form onSubmit={handleAddClientSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <ModalBody className="min-h-0 flex-1 overflow-y-auto">
             <div className="space-y-3 pt-2 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">Company / Client Name *</label>
@@ -971,12 +941,14 @@ export const ClientsView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">GSTIN (Optional)</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    {isUS ? 'Federal EIN / Tax ID (Optional)' : 'GSTIN (Optional)'}
+                  </label>
                   <input
                     type="text"
                     value={gstin}
                     onChange={(e) => setGstin(e.target.value)}
-                    placeholder="e.g. 27AABCR1234F1ZX"
+                    placeholder={isUS ? 'e.g. 12-3456789' : 'e.g. 27AABCR1234F1ZX'}
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 font-mono outline-none focus:border-blue-600"
                   />
                 </div>
@@ -1030,14 +1002,16 @@ export const ClientsView: React.FC = () => {
         onOpenChange={(open) => {
           if (!open) setEditingClient(null);
         }}
+        size="lg"
+        className="max-h-[92vh] flex flex-col"
       >
         <ModalHeader
           title={`Edit Client: ${editingClient?.originalName || ''}`}
           description="Update company name, GSTIN, billing address, or contact details in your offline directory."
         />
         {editingClient && (
-          <form onSubmit={handleEditClientSubmit}>
-            <ModalBody>
+          <form onSubmit={handleEditClientSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <ModalBody className="min-h-0 flex-1 overflow-y-auto">
               <div className="space-y-3 pt-2 text-xs">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
@@ -1128,7 +1102,7 @@ export const ClientsView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      GSTIN (Optional)
+                      {isUS ? 'Federal EIN / Tax ID (Optional)' : 'GSTIN (Optional)'}
                     </label>
                     <input
                       type="text"
@@ -1139,7 +1113,7 @@ export const ClientsView: React.FC = () => {
                           form: { ...editingClient.form, gstin: e.target.value },
                         })
                       }
-                      placeholder="e.g. 27AABCR1234F1ZX"
+                      placeholder={isUS ? 'e.g. 12-3456789' : 'e.g. 27AABCR1234F1ZX'}
                       className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 font-mono outline-none focus:border-blue-600"
                     />
                   </div>
@@ -1206,14 +1180,15 @@ export const ClientsView: React.FC = () => {
         onOpenChange={(open) => {
           if (!open) setDeletingClient(null);
         }}
+        className="max-h-[92vh] flex flex-col"
       >
         <ModalHeader
           title="Delete Client Account"
           description="Are you sure you want to remove this client from your offline database?"
         />
         {deletingClient && (
-          <div>
-            <ModalBody>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <ModalBody className="min-h-0 flex-1 overflow-y-auto">
               <div className="py-2 space-y-3">
                 <div className="flex items-start gap-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-900">
                   <RiAlertLine className="size-5 text-rose-600 shrink-0 mt-0.5" />
@@ -1230,7 +1205,7 @@ export const ClientsView: React.FC = () => {
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1 font-mono text-slate-600">
                   <div><strong>Name:</strong> {deletingClient.name}</div>
                   <div><strong>Location:</strong> {deletingClient.city}, {deletingClient.state}</div>
-                  {deletingClient.gstin && <div><strong>GSTIN:</strong> {deletingClient.gstin}</div>}
+                  {deletingClient.gstin && <div><strong>{isUS ? 'Tax ID / EIN:' : 'GSTIN:'}</strong> {deletingClient.gstin}</div>}
                   {deletingClient.phone && <div><strong>Phone:</strong> {deletingClient.phone}</div>}
                 </div>
 
@@ -1262,146 +1237,15 @@ export const ClientsView: React.FC = () => {
       </Modal>
 
       {/* ─── Generate Monthly Invoice Modal ─── */}
-      <Modal
+      <ConsolidatedMonthlyModal
         isOpen={Boolean(monthlyModalClient)}
-        onOpenChange={(open) => !open && setMonthlyModalClient(null)}
-      >
-        <ModalHeader
-          title="Generate Monthly Consolidated Invoice"
-          description={`Compile daily supplies or generate a consolidated monthly bill for ${monthlyModalClient?.name || 'client'}.`}
-        />
-        {monthlyModalClient && (
-          <form onSubmit={handleGenerateMonthlyBillSubmit}>
-            <ModalBody>
-              <div className="space-y-4 pt-2 text-xs">
-                {/* Client Profile Box */}
-                <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200 flex items-center justify-between">
-                  <div>
-                    <span className="font-bold text-slate-900 text-sm block">
-                      {monthlyModalClient.name}
-                    </span>
-                    <span className="text-[11px] font-mono text-slate-500">
-                      GSTIN: {monthlyModalClient.gstin || 'Unregistered'} • {monthlyModalClient.city}, {monthlyModalClient.state}
-                    </span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                    Monthly Bill
-                  </span>
-                </div>
-
-                {/* Billing Month & Period Label */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Billing Month *
-                    </label>
-                    <input
-                      type="month"
-                      required
-                      value={monthlyMonth}
-                      onChange={(e) => handleMonthChange(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 font-mono outline-none focus:border-blue-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Billing Period Header
-                    </label>
-                    <input
-                      type="text"
-                      value={monthlyPeriodText}
-                      onChange={(e) => setMonthlyPeriodText(e.target.value)}
-                      placeholder="e.g. April 2026 or 01/04/2026 - 30/04/2026"
-                      className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-900 outline-none focus:border-blue-600"
-                    />
-                  </div>
-                </div>
-
-                {/* Daily Slips Consolidation Discovery */}
-                {(() => {
-                  const dailyInvs = getClientInvoices(monthlyModalClient.name).filter(
-                    (inv) => inv?.date?.startsWith(monthlyMonth) && inv?.data?.invoiceType !== 'monthly'
-                  );
-                  const countItems = dailyInvs.reduce((s, inv) => s + (inv?.data?.items?.length || 0), 0);
-
-                  if (countItems > 0) {
-                    return (
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                        <label className="flex items-start gap-2.5 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={monthlyConsolidateDaily}
-                            onChange={(e) => setMonthlyConsolidateDaily(e.target.checked)}
-                            className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <div>
-                            <span className="font-semibold text-slate-800 block text-xs">
-                              Consolidate {countItems} daily delivery {countItems === 1 ? 'item' : 'items'} from {dailyInvs.length} daily bills
-                            </span>
-                            <span className="text-[11px] text-slate-500 leading-relaxed block mt-0.5">
-                              Each item will preserve its exact supply date and description in the monthly line-item table.
-                            </span>
-                          </div>
-                        </label>
-
-                        {monthlyConsolidateDaily && (
-                          <div className="mt-2 pt-2 border-t border-slate-200/80 max-h-32 overflow-y-auto space-y-1">
-                            {dailyInvs.map((d) => (
-                              <div key={d.id} className="text-[10px] text-slate-600 font-mono flex items-center justify-between">
-                                <span>
-                                  <strong>{formatDate(d.date)}</strong> ({d.invoiceNumber}): {d.data.items.map((i) => i.description).join(', ')}
-                                </span>
-                                <span className="font-semibold text-slate-800">{formatCurrency(d.total, '₹')}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-200/80 text-blue-900 space-y-1">
-                      <span className="font-semibold text-xs block">
-                        Clean Monthly Invoice Mode
-                      </span>
-                      <p className="text-[11px] text-blue-700 leading-relaxed">
-                        No prior daily bills found for {monthlyModalClient.name} in {monthlyPeriodText || monthlyMonth}. A monthly invoice with date columns will be created ready for manual line-item entry.
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[11px] flex items-center gap-2">
-                  <RiInformationLine className="size-4 text-amber-600 shrink-0" />
-                  <span>
-                    Monthly invoices show day-wise supply dates for each row item and output a consolidated tax schedule.
-                  </span>
-                </div>
-              </div>
-            </ModalBody>
-            <ModalFooter>
-              <Button
-                size="small"
-                variant="secondary"
-                type="button"
-                onClick={() => setMonthlyModalClient(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="small"
-                variant="primary"
-                type="submit"
-                leadingIcon={RiCalendarLine}
-              >
-                Generate &amp; Open Monthly Bill
-              </Button>
-            </ModalFooter>
-          </form>
-        )}
-      </Modal>
+        onClose={() => setMonthlyModalClient(null)}
+        initialClient={monthlyModalClient}
+        onSuccess={() => {
+          setMonthlyModalClient(null);
+          navigate('/invoices');
+        }}
+      />
     </div>
   );
 };

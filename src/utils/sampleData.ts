@@ -223,3 +223,126 @@ const SAMPLE_DESCRIPTIONS_DEVANAGARI = [
 
 const SAMPLE_HSN = ['998314', '998313', '998315', '998316', '998319'];
 const SAMPLE_UNITS = ['Nos', 'Hrs', 'Nos', 'Lic', 'Nos'];
+
+/**
+ * Returns professional sample invoice data for the United States edition.
+ * Features US Federal EIN, California sales tax, ABA Routing, and USD ($).
+ */
+export function createSampleDataUS(itemCount = 3): InvoiceRenderData {
+  const allItems: InvoiceRenderData['items'] = [
+    {
+      id: 'us-item-1',
+      sno: 1,
+      sku: 'DEV-SRV-01',
+      description: 'Full-Stack Software Architecture & Cloud Migration',
+      quantity: 40,
+      unit: 'Hrs',
+      rate: 150,
+      taxable: true,
+      taxableAmount: 6000,
+      gstRate: 7.25, // California State Sales Tax %
+      gstAmount: 435,
+      total: 6435,
+    },
+    {
+      id: 'us-item-2',
+      sno: 2,
+      sku: 'SaaS-LIC-ENT',
+      description: 'Commercial Enterprise Workstation License (Annual)',
+      quantity: 1,
+      unit: 'Lic',
+      rate: 1200,
+      taxable: true,
+      taxableAmount: 1200,
+      gstRate: 7.25,
+      gstAmount: 87,
+      total: 1287,
+    },
+    {
+      id: 'us-item-3',
+      sno: 3,
+      sku: 'SEC-AUD-01',
+      description: 'Zero-Trust Security & SOC2 Compliance Consultation',
+      quantity: 10,
+      unit: 'Hrs',
+      rate: 180,
+      taxable: false, // Tax-Exempt B2B consulting
+      taxableAmount: 1800,
+      gstRate: 0,
+      gstAmount: 0,
+      total: 1800,
+    },
+  ];
+
+  const items = allItems.slice(0, itemCount);
+  const subtotal = items.reduce((s, it) => s + it.quantity * it.rate, 0);
+  const totalTaxableAmount = items.filter((it) => it.taxable !== false && it.gstRate > 0).reduce((s, it) => s + it.taxableAmount, 0);
+  const totalTax = Math.round(items.reduce((s, it) => s + it.gstAmount, 0) * 100) / 100;
+  const grandTotal = Math.round((subtotal + totalTax) * 100) / 100;
+
+  return {
+    region: 'US',
+    taxType: 'sales_tax',
+    invoiceNumber: 'INV-2026-101',
+    invoiceDate: '2026-04-15',
+    dueDate: '2026-05-15',
+    placeOfSupply: 'California (CA)',
+    status: 'sent',
+    business: {
+      name: 'Pacific Apex Technologies LLC',
+      address: '500 Howard Street, Suite 400',
+      city: 'San Francisco',
+      state: 'California (CA)',
+      pincode: '94105',
+      phone: '+1 (415) 890-1200',
+      email: 'invoicing@pacificapex.com',
+      website: 'www.pacificapex.com',
+      ein: '94-3829104',
+      stateTaxId: 'CA-9438291',
+      region: 'US',
+    },
+    client: {
+      name: 'Beacon Horizon Ventures Inc.',
+      address: '100 Montgomery Street, Floor 18',
+      city: 'San Francisco',
+      state: 'California (CA)',
+      pincode: '94104',
+      phone: '+1 (415) 555-0199',
+      email: 'ap@beaconhorizon.com',
+      ein: '82-1928374',
+    },
+    items,
+    gstType: 'none',
+    taxSummary: [
+      { gstRate: 0, taxableAmount: 1800, cgst: 0, sgst: 0, igst: 0, totalTax: 0, label: 'Tax-Exempt' },
+      { gstRate: 7.25, taxableAmount: 7200, cgst: 0, sgst: 0, igst: 0, totalTax: 522, label: 'Sales Tax (7.25%)' },
+    ],
+    subtotal,
+    totalDiscount: 0,
+    totalTaxableAmount,
+    totalCgst: 0,
+    totalSgst: 0,
+    totalIgst: 0,
+    totalTax,
+    totalSalesTax: totalTax,
+    grandTotal,
+    roundOff: 0,
+    grandTotalRounded: grandTotal,
+    amountInWords: 'Nine Thousand Five Hundred Twenty-Two Dollars Only',
+    payments: [],
+    amountPaid: 0,
+    balanceDue: grandTotal,
+    bankDetails: {
+      bankName: 'JPMorgan Chase Bank, N.A.',
+      accountName: 'Pacific Apex Technologies LLC',
+      accountNumber: '984029104820',
+      ifsc: '',
+      routingNumber: '121000248',
+      zelleId: 'payments@pacificapex.com',
+    },
+    notes: 'Payment is due within 30 days. Wire / ACH transfer preferred.',
+    terms: '1. Standard terms: Net 30.\n2. Overdue balances are subject to a 1.5% monthly finance charge.',
+    currencySymbol: '$',
+    currencyCode: 'USD',
+  };
+}

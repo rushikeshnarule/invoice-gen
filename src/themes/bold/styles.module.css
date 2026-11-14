@@ -173,7 +173,9 @@
 }
 
 /* High contrast totals */
-.totalsSection {
+.totalsSection,
+.summaryGrid,
+.totalsTableWrapper {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 24px;
@@ -199,7 +201,8 @@
   padding: 10px 12px;
 }
 
-.words {
+.words,
+.amountWords {
   font-size: 8.5pt;
   font-weight: 600;
   color: #334155;
@@ -211,7 +214,8 @@
 }
 
 /* Tax Table */
-.taxTable {
+.taxTable,
+.taxSummaryTable {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 20px;
@@ -245,7 +249,8 @@
 }
 
 /* Bottom */
-.bottomGrid {
+.bottomGrid,
+.bottomSection {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
@@ -266,6 +271,17 @@
   word-break: break-word;
 }
 
+.termsBlock,
+.notesBlock {
+  font-size: 8pt;
+  color: #64748b;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-left: 3px solid #cbd5e1;
+  break-inside: avoid;
+}
+
 .signBox {
   text-align: right;
   display: flex;
@@ -283,7 +299,8 @@
   margin-bottom: 4px;
 }
 
-.signLine {
+.signLine,
+.signLabel {
   border-top: 2px solid #0f172a;
   padding-top: 4px;
   font-size: 9pt;

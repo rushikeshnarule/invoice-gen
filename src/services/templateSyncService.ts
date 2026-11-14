@@ -1,8 +1,9 @@
-// ─── Netlify / Cloud Remote Template Sync Service ────────────────────────
-// Fetches template manifests & CSS assets from Netlify or any HTTPS server.
+// ─── Cloud Remote Template Sync Service ───────────────────────────────────
+// Fetches template manifests & CSS assets from Cloud or any HTTPS server.
 // Caches assets locally in localStorage / IndexedDB so they run 100% offline.
 
 import type { RemoteTemplateDefinition, RemoteTemplateManifest } from '../types';
+import { sanitizeTemplateCss } from '../utils';
 
 export const STORAGE_REMOTE_URL_KEY = 'invoice-remote-template-url';
 export const STORAGE_CACHED_TEMPLATES_KEY = 'invoice-cached-remote-templates';
@@ -281,7 +282,9 @@ export function deleteRemoteTemplate(id: string): void {
 export function normalizeManifestUrl(rawUrl: string): string {
   let url = rawUrl.trim();
   if (!url) return '';
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+  if (url.startsWith('http://') && !url.includes('localhost') && !url.includes('127.0.0.1')) {
+    url = `https://${url.slice(7)}`;
+  } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
     url = `https://${url}`;
   }
   // If no path or ends in slash or doesn't have .json, append /templates.json
@@ -302,7 +305,7 @@ export const normalizeRemoteManifestUrl = normalizeManifestUrl;
 
 /**
  * Primary synchronization method.
- * Fetches templates from Netlify, downloads CSS assets once, and caches them offline.
+ * Fetches templates from Cloud, downloads CSS assets once, and caches them offline.
  */
 export async function syncRemoteTemplates(overrideUrl?: string): Promise<SyncResult> {
   const targetUrl = overrideUrl || getRemoteServerUrl();
@@ -312,7 +315,7 @@ export async function syncRemoteTemplates(overrideUrl?: string): Promise<SyncRes
     return {
       success: false,
       status: 'no-url',
-      message: 'No Netlify template server URL configured.',
+      message: 'No Cloud template server URL configured.',
     };
   }
 
@@ -373,7 +376,7 @@ export async function syncRemoteTemplates(overrideUrl?: string): Promise<SyncRes
             const fullCssUrl = new URL(remote.cssUrl, manifestUrl).toString();
             const cssRes = await fetch(fullCssUrl);
             if (cssRes.ok) {
-              cssText = await cssRes.text();
+              cssText = sanitizeTemplateCss(await cssRes.text());
             }
           } catch (cssErr) {
             console.warn(`Failed to fetch CSS for remote template "${remote.name}":`, cssErr);
@@ -403,8 +406,8 @@ export async function syncRemoteTemplates(overrideUrl?: string): Promise<SyncRes
       success: true,
       status: isUpToDate ? 'up-to-date' : 'synced',
       message: isUpToDate
-        ? `All ${total} template(s) from Netlify are up to date.`
-        : `Synced ${total} template(s) from Netlify (${addedCount} added, ${updatedCount} updated).`,
+        ? `All ${total} template(s) from Cloud are up to date.`
+        : `Synced ${total} template(s) from Cloud (${addedCount} added, ${updatedCount} updated).`,
       addedCount,
       updatedCount,
       totalCount: total,
@@ -415,7 +418,7 @@ export async function syncRemoteTemplates(overrideUrl?: string): Promise<SyncRes
     return {
       success: false,
       status: 'error',
-      message: `Failed to fetch from Netlify: ${errMessage}`,
+      message: `Failed to fetch from Cloud: ${errMessage}`,
       totalCount: getCachedRemoteTemplates().length,
       lastSync: getLastSyncTime() || undefined,
     };

@@ -5,6 +5,8 @@
 export type PaperSize = 'A4' | 'A5' | '80mm';
 
 export type GSTType = 'igst' | 'cgst_sgst' | 'none';
+export type RegionalTaxType = 'gst' | 'sales_tax' | 'none';
+export type AppRegion = 'US' | 'IN';
 
 export interface BusinessInfo {
   name: string;
@@ -15,8 +17,14 @@ export interface BusinessInfo {
   phone: string;
   email: string;
   website?: string;
+  region?: AppRegion;
+  taxType?: RegionalTaxType;
+  // Indian Identifiers
   gstin?: string;
   pan?: string;
+  // US Identifiers
+  ein?: string; // Federal Employer Identification Number (XX-XXXXXXX)
+  stateTaxId?: string; // State Sales Tax Permit / Resale Certificate #
   logoUrl?: string; // base64 data URI or local path
   stampUrl?: string; // base64 data URI of company seal/stamp
   signatureUrl?: string; // base64 data URI of authorized signatory
@@ -32,7 +40,12 @@ export interface ClientInfo {
   pincode: string;
   phone?: string;
   email?: string;
+  // Indian Identifiers
   gstin?: string;
+  // US Identifiers
+  ein?: string;
+  taxExempt?: boolean;
+  resaleCertificate?: string;
 }
 
 export interface LineItem {
@@ -40,15 +53,17 @@ export interface LineItem {
   sno: number;
   date?: string;            // Date of purchase/delivery for this item (crucial for monthly invoices)
   description: string;
-  hsnSac?: string;
+  hsnSac?: string;          // Indian HSN/SAC code
+  sku?: string;             // US SKU / Product / Service code
+  taxable?: boolean;        // US Sales Tax taxable flag (defaults to true if rate > 0)
   quantity: number;
   unit: string;
   rate: number;
-  discount?: number;       // percentage
+  discount?: number;        // percentage
   discountAmount?: number;  // calculated
   taxableAmount: number;
-  gstRate: number;          // percentage (e.g. 18)
-  gstAmount: number;
+  gstRate: number;          // percentage (serves as Sales Tax % in US mode)
+  gstAmount: number;        // tax amount (serves as Sales Tax in US mode)
   total: number;
 }
 
@@ -59,6 +74,7 @@ export interface TaxSummaryRow {
   sgst: number;
   igst: number;
   totalTax: number;
+  label?: string;           // Optional display label e.g. "Sales Tax (7.25%)"
 }
 
 export interface PaymentInfo {
@@ -72,12 +88,21 @@ export interface BankDetails {
   bankName: string;
   accountName: string;
   accountNumber: string;
-  ifsc: string;
+  ifsc: string;             // Indian IFSC code
+  routingNumber?: string;   // US 9-digit ABA Routing Number
   branch?: string;
-  upiId?: string;
+  upiId?: string;           // Indian UPI ID
+  zelleId?: string;         // US Zelle phone or email
+  paymentLink?: string;     // US / Global online payment link
 }
 
 export interface InvoiceRenderData {
+  // Region & Tax System
+  region?: AppRegion;
+  taxType?: RegionalTaxType;
+  salesTaxRate?: number;    // Overall sales tax percentage in US mode
+  totalSalesTax?: number;   // Total sales tax in US mode
+
   // Invoice type & billing period
   invoiceType?: 'daily' | 'monthly'; // 'daily' is standard single-day bill; 'monthly' is consolidated monthly invoice
   billingPeriod?: string;            // e.g. "April 2026" or "01-04-2026 to 30-04-2026"
@@ -100,7 +125,7 @@ export interface InvoiceRenderData {
   // Line items
   items: LineItem[];
 
-  // GST
+  // GST / Tax
   gstType: GSTType;
   taxSummary: TaxSummaryRow[];
 
@@ -124,7 +149,7 @@ export interface InvoiceRenderData {
   amountPaid: number;
   balanceDue: number;
 
-  // Bank / UPI
+  // Bank / UPI / ACH
   bankDetails?: BankDetails;
   upiQrDataUrl?: string; // base64 data URI of QR
 

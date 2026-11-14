@@ -3,7 +3,7 @@
 
 import React from 'react';
 import type { InvoiceRenderData } from '../../types';
-import { formatCurrency, formatNumber } from '../../utils';
+import { formatCurrency, formatNumber, exportInvoiceToExcel } from '../../utils';
 import {
   Modal,
   ModalHeader,
@@ -12,6 +12,7 @@ import {
 } from '@/components/base/modal/modal';
 import { Button } from '@/components/base/buttons/button';
 import { Chip } from '@/components/base/badges/chip';
+import { StatusDot } from '@/components/base/badges/status-dot';
 import { toast } from '@/components/base/toast/toast';
 import {
   RiWhatsappLine,
@@ -20,6 +21,7 @@ import {
   RiFileCopyLine,
   RiShareForwardLine,
   RiDownload2Line,
+  RiFileExcel2Line,
 } from '@remixicon/react';
 
 export interface ShareInvoiceModalProps {
@@ -38,7 +40,7 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
   if (!invoice) return null;
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const shareUrl = `${origin}/print/${invoice.invoiceNumber}?theme=${themeId}&auto=true`;
+  const shareUrl = `${origin}/print/${encodeURIComponent(invoice.invoiceNumber)}?theme=${encodeURIComponent(themeId)}&auto=true`;
 
   const canNativeShare =
     typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -73,12 +75,12 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
     const clientPhone = (invoice.client.phone || '').replace(/[^0-9]/g, '');
 
     const lines: string[] = [
-      `🧾 *INVOICE: ${invoice.invoiceNumber}*`,
+      `*INVOICE: ${invoice.invoiceNumber}*`,
       `*From:* ${invoice.business.name}`,
       `*To:* ${invoice.client.name}`,
       `*Date:* ${invoice.invoiceDate}`,
       `*Grand Total:* ${invoice.currencySymbol}${formatNumber(invoice.grandTotalRounded)}`,
-      `*Status:* ${isPaid ? '✅ Paid / Settled' : '⏳ Payment Due: ' + invoice.currencySymbol + formatNumber(invoice.balanceDue)}`,
+      `*Status:* ${isPaid ? 'Paid / Settled' : 'Payment Due: ' + invoice.currencySymbol + formatNumber(invoice.balanceDue)}`,
     ];
 
     if (!isPaid && invoice.bankDetails?.upiId) {
@@ -97,7 +99,7 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
       ? `https://wa.me/${clientPhone}?text=${encodeURIComponent(message)}`
       : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 
-    window.open(waBase, '_blank');
+    window.open(waBase, '_blank', 'noopener,noreferrer');
     toast.info('Opening WhatsApp...');
   };
 
@@ -194,12 +196,12 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
   const isPaid = invoice.status === 'paid' || invoice.balanceDue <= 0;
 
   return (
-    <Modal isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Modal isOpen={isOpen} onOpenChange={(open) => !open && onClose()} size="lg" className="max-h-[92vh] flex flex-col">
       <ModalHeader
         title="Share Invoice"
         description={`Send or copy invoice ${invoice.invoiceNumber} for ${invoice.client.name}`}
       />
-      <ModalBody>
+      <ModalBody className="min-h-0 flex-1 overflow-y-auto">
         <div className="space-y-4 pt-1">
           {/* Invoice Snapshot Card */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 flex items-center justify-between">
@@ -209,12 +211,12 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
                   {invoice.invoiceNumber}
                 </span>
                 {isPaid ? (
-                  <Chip color="lime" variant="caption">
-                    Paid
+                  <Chip color="lime" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                    <StatusDot color="green" /> Paid
                   </Chip>
                 ) : (
-                  <Chip color="rose" variant="caption">
-                    Due: {formatCurrency(invoice.balanceDue, invoice.currencySymbol)}
+                  <Chip color="rose" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                    <StatusDot color="yellow" /> Due: {formatCurrency(invoice.balanceDue, invoice.currencySymbol)}
                   </Chip>
                 )}
               </div>
@@ -223,7 +225,7 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
               </p>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-sm font-bold font-mono text-slate-900">
+              <div className="text-sm font-bold font-mono text-slate-900 tabular-nums">
                 {formatCurrency(invoice.grandTotalRounded, invoice.currencySymbol)}
               </div>
               <span className="text-[10px] text-slate-400 font-mono">Grand Total</span>
@@ -317,24 +319,36 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
           </div>
 
           {/* Additional Export Options */}
-          <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-            <button
-              type="button"
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+            <Button
+              size="small"
+              variant="secondary"
+              leadingIcon={RiFileCopyLine}
               onClick={handleCopySummary}
-              className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 cursor-pointer"
+              className="text-xs font-semibold"
             >
-              <RiFileCopyLine className="size-3.5" />
-              Copy Plaintext Summary
-            </button>
+              Copy Summary
+            </Button>
 
-            <button
-              type="button"
-              onClick={handleDownloadJson}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 cursor-pointer"
+            <Button
+              size="small"
+              variant="secondary"
+              leadingIcon={RiFileExcel2Line}
+              onClick={() => exportInvoiceToExcel(invoice)}
+              className="text-xs font-semibold text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/70"
             >
-              <RiDownload2Line className="size-3.5" />
-              Download JSON Data
-            </button>
+              Download Excel (.xlsx)
+            </Button>
+
+            <Button
+              size="small"
+              variant="secondary"
+              leadingIcon={RiDownload2Line}
+              onClick={handleDownloadJson}
+              className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/50 hover:bg-blue-100/70"
+            >
+              Download JSON
+            </Button>
           </div>
         </div>
       </ModalBody>

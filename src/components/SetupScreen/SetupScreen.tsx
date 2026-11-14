@@ -2,31 +2,39 @@
 // Built strictly with official BoardUI components (Input, Button, Chip, FileUpload).
 // Clean, professional, commercial-ready with zero sample data and zero AI slop.
 // Supports:
-// 1. Loading from a previous session or previous memory (auto-detected on PC or via backup file)
-// 2. Starting with a new session / business setup with the setup wizard
+// 1. Dual Regional Edition: United States (USD $, Sales Tax, EIN) & India (INR ₹, GST, PAN)
+// 2. Loading from a previous session or previous memory (auto-detected on PC or via backup file)
+// 3. Starting with a new session / business setup with the setup wizard
 
 import React, { useState, useEffect, useContext } from 'react';
-import type { BusinessInfo, BankDetails } from '../../types';
+import type { BusinessInfo, BankDetails, AppRegion } from '../../types';
 import { InvoiceContext } from '../../context/InvoiceContext';
 import { getSystemMemoryInfo, loadSystemMemory, type SystemMemoryInfo } from '../../services/systemStorage';
+import { US_STATES_LIST, formatEIN, formatRoutingNumber, formatUSZip } from '../../utils/usTax';
 import { Input } from '@/components/base/input/input';
 import { Button } from '@/components/base/buttons/button';
 import { Chip } from '@/components/base/badges/chip';
 import { FileUpload } from '@/components/base/file-upload/file-upload';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+} from '@/components/base/segmented-control/segmented-control';
 import {
   RiArrowRightLine,
   RiArrowLeftLine,
   RiCheckLine,
   RiLoader4Line,
   RiDatabase2Line,
-  RiBuilding4Line,
   RiRefreshLine,
   RiShieldCheckLine,
   RiFolder2Line,
 } from '@remixicon/react';
 
 export interface SetupScreenProps {
-  onComplete: (profile: Partial<BusinessInfo & { bankDetails?: Partial<BankDetails> }>) => void;
+  onComplete: (
+    profile: Partial<BusinessInfo & { bankDetails?: Partial<BankDetails> }>,
+    options?: { cleanLedger?: boolean; isSkip?: boolean }
+  ) => void;
   initialProfile?: Partial<BusinessInfo & { bankDetails?: Partial<BankDetails> }>;
   stepDelayMs?: number; // Configurable for fast execution in tests
 }
@@ -67,14 +75,6 @@ const INDIAN_STATES_LIST = [
   'West Bengal (19)',
 ];
 
-const INITIALIZATION_STEPS = [
-  { id: 1, title: 'Saving business profile and contact information' },
-  { id: 2, title: 'Configuring GST state tax rules' },
-  { id: 3, title: 'Initializing local database in Documents/Invoice Gen Data' },
-  { id: 4, title: 'Configuring invoice templates' },
-  { id: 5, title: 'Launching workstation' },
-];
-
 export const SetupScreen: React.FC<SetupScreenProps> = ({
   onComplete,
   initialProfile,
@@ -102,6 +102,15 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     getSystemMemoryInfo().then((info) => {
       if (mounted) {
         setMemoryInfo(info);
+        if (
+          info.exists &&
+          (info.invoiceCount ?? 0) > 0 &&
+          info.businessName &&
+          !info.businessName.includes('Apex Infotech') &&
+          info.businessName !== 'My Business'
+        ) {
+          setActiveTab('restore');
+        }
       }
     });
     return () => {
@@ -112,9 +121,13 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   // Sanitize: never accept sample placeholder data
   const isSamplePlaceholder = initialProfile?.name?.includes('Apex Infotech');
   const safeProfile = isSamplePlaceholder ? undefined : initialProfile;
+  const isUSDefault =
+    safeProfile?.region === 'US' ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_REGION === 'US');
 
   // Form State: 100% clean and blank in production / commercial mode
   const [formData, setFormData] = useState({
+    region: (safeProfile?.region || (isUSDefault ? 'US' : 'IN')) as AppRegion,
     name: safeProfile?.name || '',
     category: 'Services',
     email: safeProfile?.email || '',
@@ -122,16 +135,30 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     website: safeProfile?.website || '',
     address: safeProfile?.address || '',
     city: safeProfile?.city || '',
-    state: safeProfile?.state || 'Maharashtra (27)',
+    state: safeProfile?.state || (isUSDefault ? 'California (CA - 7.25%)' : 'Maharashtra (27)'),
     pincode: safeProfile?.pincode || '',
     gstin: safeProfile?.gstin || '',
     pan: safeProfile?.pan || '',
+    ein: safeProfile?.ein || '',
+    stateTaxId: safeProfile?.stateTaxId || '',
     bankName: safeProfile?.bankDetails?.bankName || '',
     accountName: safeProfile?.bankDetails?.accountName || '',
     accountNumber: safeProfile?.bankDetails?.accountNumber || '',
     ifsc: safeProfile?.bankDetails?.ifsc || '',
+    routingNumber: safeProfile?.bankDetails?.routingNumber || '',
     upiId: safeProfile?.bankDetails?.upiId || '',
+    zelleId: safeProfile?.bankDetails?.zelleId || '',
   });
+
+  const isUS = formData.region === 'US';
+
+  const INITIALIZATION_STEPS = [
+    { id: 1, title: 'Saving business profile and contact information' },
+    { id: 2, title: isUS ? 'Configuring US State sales tax & compliance rules' : 'Configuring GST state tax rules' },
+    { id: 3, title: 'Initializing local database in Documents/Invoice Gen Data' },
+    { id: 4, title: 'Configuring invoice templates' },
+    { id: 5, title: 'Launching workstation' },
+  ];
 
   // Helper to support both React Aria (string) and standard DOM (event) onChange
   const extractVal = (e: any): string => (typeof e === 'string' ? e : e?.target?.value ?? '');
@@ -163,6 +190,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   const handleSkip = () => {
     const finalProfile: Partial<BusinessInfo & { bankDetails?: Partial<BankDetails> }> = {
       name: formData.name.trim() || 'My Business',
+      region: formData.region,
+      taxType: isUS ? 'sales_tax' : 'gst',
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       website: formData.website.trim(),
@@ -170,17 +199,21 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
       city: formData.city.trim(),
       state: formData.state.trim(),
       pincode: formData.pincode.trim(),
-      gstin: formData.gstin.trim(),
-      pan: formData.pan.trim(),
+      gstin: isUS ? undefined : formData.gstin.trim(),
+      pan: isUS ? undefined : formData.pan.trim(),
+      ein: isUS ? formData.ein.trim() : undefined,
+      stateTaxId: isUS ? formData.stateTaxId.trim() : undefined,
       bankDetails: {
         bankName: formData.bankName.trim(),
         accountName: formData.accountName.trim() || formData.name.trim(),
         accountNumber: formData.accountNumber.trim(),
-        ifsc: formData.ifsc.trim(),
-        upiId: formData.upiId.trim(),
+        ifsc: isUS ? '' : formData.ifsc.trim(),
+        routingNumber: isUS ? formData.routingNumber.trim() : undefined,
+        upiId: isUS ? '' : formData.upiId.trim(),
+        zelleId: isUS ? formData.zelleId.trim() : undefined,
       },
     };
-    onComplete(finalProfile);
+    onComplete(finalProfile, { cleanLedger: true, isSkip: true });
   };
 
   // Restore session from PC system storage (Documents/Invoice Gen Data)
@@ -250,6 +283,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
           setTimeout(() => {
             const finalProfile: Partial<BusinessInfo & { bankDetails?: Partial<BankDetails> }> = {
               name: formData.name.trim(),
+              region: formData.region,
+              taxType: isUS ? 'sales_tax' : 'gst',
               email: formData.email.trim(),
               phone: formData.phone.trim(),
               website: formData.website.trim(),
@@ -257,17 +292,21 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               city: formData.city.trim(),
               state: formData.state.trim(),
               pincode: formData.pincode.trim(),
-              gstin: formData.gstin.trim(),
-              pan: formData.pan.trim(),
+              gstin: isUS ? undefined : formData.gstin.trim(),
+              pan: isUS ? undefined : formData.pan.trim(),
+              ein: isUS ? formData.ein.trim() : undefined,
+              stateTaxId: isUS ? formData.stateTaxId.trim() : undefined,
               bankDetails: {
                 bankName: formData.bankName.trim(),
                 accountName: formData.accountName.trim() || formData.name.trim(),
                 accountNumber: formData.accountNumber.trim(),
-                ifsc: formData.ifsc.trim(),
-                upiId: formData.upiId.trim(),
+                ifsc: isUS ? '' : formData.ifsc.trim(),
+                routingNumber: isUS ? formData.routingNumber.trim() : undefined,
+                upiId: isUS ? '' : formData.upiId.trim(),
+                zelleId: isUS ? formData.zelleId.trim() : undefined,
               },
             };
-            onComplete(finalProfile);
+            onComplete(finalProfile, { cleanLedger: true });
           }, isTest ? 10 : 80);
         }
         return nextIndex;
@@ -275,95 +314,74 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     }, delay);
 
     return () => clearInterval(timer);
-  }, [isInitializing, formData, onComplete, stepDelayMs]);
+  }, [isInitializing, formData, isUS, onComplete, stepDelayMs]);
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // LOADING / INITIALIZATION SCREEN VIEW (Clean Logo, No Artificial Box)
+  // LOADING / INITIALIZATION SCREEN VIEW (Clean Desktop Workstation)
   // ─────────────────────────────────────────────────────────────────────────────
   if (isInitializing) {
     return (
-      <div className="flex min-h-screen w-screen items-center justify-center bg-[#070b14] p-6 select-none font-sans relative overflow-hidden">
-        {/* Ambient Radial Blue Glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(37,99,235,0.25),transparent_70%)] pointer-events-none" />
-
-        <div className="w-full max-w-xl rounded-3xl border border-slate-700/60 bg-white p-8 shadow-2xl relative z-10">
+      <div className="flex min-h-dvh w-screen items-center justify-center bg-slate-100/70 p-6 font-sans relative overflow-hidden">
+        <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-xl relative z-10">
           {/* Header */}
           <div className="text-center">
-            <img
-              src="/app-icon.png"
-              alt="Invoice Gen"
-              className="mx-auto size-16 object-contain drop-shadow-sm"
-            />
-            <h2 className="mt-4 text-xl font-bold tracking-tight text-slate-900">
+            <div className="mx-auto size-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100 shadow-2xs">
+              <RiLoader4Line className="size-6 animate-spin" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
               Initializing Workspace
             </h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Configuring {formData.name || 'your business'} on local storage...
+            <p className="text-xs text-slate-500 mt-1">
+              Configuring local storage, tax tables, and offline billing engine...
             </p>
           </div>
 
-          {/* Progress Bar & Percentage */}
+          {/* Progress Bar */}
           <div className="mt-6">
-            <div className="flex items-center justify-between text-xs font-mono font-medium text-slate-600 mb-1.5">
-              <span>Setup Progress</span>
-              <span className="text-blue-600 font-bold">{progressPercent}%</span>
+            <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1.5 font-mono">
+              <span>Initializing Workstation...</span>
+              <span className="tabular-nums">{progressPercent}%</span>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 p-0.5 border border-slate-200">
+            <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200">
               <div
-                className="h-full rounded-full bg-blue-600 transition-[width] duration-200 ease-out"
+                className="h-full bg-blue-600 transition-all duration-300 ease-out"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
 
-          {/* Step by Step Loading Checklist */}
-          <div className="mt-6 space-y-2.5">
+          {/* Step Sequence Checklist */}
+          <div className="mt-6 space-y-2.5 bg-slate-50/80 p-4 rounded-xl border border-slate-200/80 text-xs">
             {INITIALIZATION_STEPS.map((step, idx) => {
-              const isDone = initStepIndex > idx;
-              const isInProgress = initStepIndex === idx;
-
+              const isDone = idx < initStepIndex;
+              const isCurrent = idx === initStepIndex;
               return (
                 <div
                   key={step.id}
-                  className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs transition-colors duration-150 ${
+                  className={`flex items-center gap-2.5 transition-colors ${
                     isDone
-                      ? 'bg-slate-50 border border-slate-200 text-slate-800'
-                      : isInProgress
-                      ? 'bg-blue-50/80 border border-blue-200 text-blue-900 shadow-2xs'
-                      : 'text-slate-400 opacity-60 border border-transparent'
+                      ? 'text-emerald-700 font-medium'
+                      : isCurrent
+                      ? 'text-blue-700 font-bold'
+                      : 'text-slate-400'
                   }`}
                 >
-                  <div className="shrink-0">
-                    {isDone ? (
-                      <div className="flex size-4.5 items-center justify-center rounded-full bg-emerald-600 text-white">
-                        <RiCheckLine className="size-3 stroke-[3]" />
-                      </div>
-                    ) : isInProgress ? (
-                      <RiLoader4Line className="size-4.5 animate-spin text-blue-600" />
-                    ) : (
-                      <div className="size-4.5 rounded-full border border-slate-300 bg-slate-100" />
-                    )}
-                  </div>
-                  <span className={`font-medium ${isDone ? 'text-slate-800' : isInProgress ? 'text-blue-900 font-semibold' : 'text-slate-400'}`}>
-                    {step.title}
-                  </span>
-                  {isDone && (
-                    <span className="ml-auto text-[10px] font-mono text-emerald-600 font-medium">
-                      Done
-                    </span>
+                  {isDone ? (
+                    <RiCheckLine className="size-4 shrink-0 text-emerald-600" />
+                  ) : isCurrent ? (
+                    <span className="size-2 rounded-full bg-blue-600 animate-pulse shrink-0 ml-1 mr-1" />
+                  ) : (
+                    <span className="size-1.5 rounded-full bg-slate-300 shrink-0 ml-1.25 mr-1.25" />
                   )}
-                  {isInProgress && (
-                    <span className="ml-auto text-[10px] font-mono text-blue-600 font-medium">
-                      In progress...
-                    </span>
-                  )}
+                  <span>{step.title}</span>
                 </div>
               );
             })}
           </div>
 
-          <div className="mt-6 text-center text-[11px] text-slate-400">
-            Offline database configured in Documents. Launching software...
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span>Region: {isUS ? 'United States (USD $)' : 'India (INR ₹)'}</span>
+            <span>Local PC Persistence</span>
           </div>
         </div>
       </div>
@@ -371,97 +389,100 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // SETUP WIZARD & MEMORY RESTORE VIEW (Executive BoardUI Design)
+  // MAIN SETUP ONBOARDING VIEW
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-screen w-screen items-center justify-center bg-[#070b14] p-4 sm:p-8 font-sans relative overflow-y-auto select-none">
-      {/* Ambient Lighting & Executive Radial Gradients */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(37,99,235,0.22),transparent_70%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_100%,rgba(15,23,42,0.6),transparent)] pointer-events-none" />
-
-      {/* Spacious Setup Workstation Card (max-w-4xl) */}
-      <div className="w-full max-w-4xl rounded-3xl border border-slate-700/60 bg-white shadow-2xl overflow-hidden flex flex-col relative z-10 my-auto">
-        {/* Top Executive Header Bar (Clean Logo, No Artificial Frame) */}
-        <div className="px-8 py-6 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div className="flex min-h-dvh w-screen items-center justify-center bg-slate-100/70 p-4 sm:p-6 font-sans">
+      <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col">
+        {/* Workstation Hero Banner */}
+        <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+          <div className="flex items-center gap-3">
             <img
               src="/app-icon.png"
               alt="Invoice Gen"
-              className="size-12 object-contain shrink-0 drop-shadow-xs"
+              className="size-10 object-contain shrink-0 rounded-xl shadow-xs"
             />
             <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-xl font-bold tracking-tight text-white">
-                  Business Setup
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold tracking-tight text-white">
+                  Invoice Gen Workstation
                 </h1>
                 <Chip color="blue" variant="caption">
-                  Commercial Mode
+                  Business Setup • Commercial Mode {isUS ? '(US Edition)' : ''}
                 </Chip>
               </div>
-              <p className="text-xs text-slate-400 mt-1">
-                Configure your company profile and tax credentials to personalize all invoices.
+              <p className="text-xs text-slate-400 mt-0.5">
+                Local-first commercial billing, tax calculation, and financial accounting workstation.
               </p>
             </div>
           </div>
 
-          {/* Quick Skip Option */}
-          <button
-            type="button"
+          {/* Quick Skip to Dashboard */}
+          <Button
+            size="small"
+            variant="ghost"
             onClick={handleSkip}
-            className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 font-medium px-3 py-1.5 rounded-lg hover:bg-slate-800"
+            className="text-xs text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer"
           >
             Skip to Dashboard →
-          </button>
+          </Button>
         </div>
 
-        {/* ─── TWO SETUP CHOICES: Wizard vs Restore Memory ─── */}
-        <div className="grid grid-cols-2 border-b border-slate-200 bg-slate-100/90 p-2 gap-2 text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => setActiveTab('wizard')}
-            className={`py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors duration-150 cursor-pointer ${
-              activeTab === 'wizard'
-                ? 'bg-white text-blue-700 font-semibold shadow-2xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
+        {/* Tab Switcher: Setup Wizard vs Load Memory */}
+        <div className="border-b border-slate-200 bg-slate-50/60 px-8 py-2.5 flex items-center justify-between">
+          <SegmentedControl
+            aria-label="Setup Mode"
+            selectedKeys={new Set([activeTab])}
+            onSelectionChange={(keys) => {
+              const val = Array.from(keys)[0];
+              if (val === 'wizard' || val === 'restore') setActiveTab(val);
+            }}
+            className="bg-slate-100 p-0.5"
           >
-            <RiBuilding4Line className="size-4 shrink-0" />
-            <span>1. Configure Business Profile</span>
-          </button>
+            <SegmentedControlItem id="wizard" className="text-xs px-3 py-1 font-semibold">
+              1. Configure Business Profile
+            </SegmentedControlItem>
+            <SegmentedControlItem id="restore" className="text-xs px-3 py-1 font-semibold">
+              <span className="flex items-center gap-1.5">
+                <RiFolder2Line className="size-3.5 text-blue-600" />
+                <span>2. Load From Previous Session / Memory</span>
+                {memoryInfo?.exists && (
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                )}
+              </span>
+            </SegmentedControlItem>
+          </SegmentedControl>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('restore')}
-            className={`py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors duration-150 cursor-pointer ${
-              activeTab === 'restore'
-                ? 'bg-white text-blue-700 font-semibold shadow-2xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <RiDatabase2Line className="size-4 shrink-0" />
-            <span>2. Load From Previous Session / Memory</span>
-            {memoryInfo?.exists && (
-              <span className="size-2 rounded-full bg-emerald-500 ml-1" title="Saved memory detected" />
-            )}
-          </button>
+          <div className="text-[11px] text-slate-400 font-mono hidden sm:block">
+            Zero Cloud Dependency · 100% On-Device
+          </div>
         </div>
 
-        {/* ─── OPTION 2: RESTORE PREVIOUS MEMORY VIEW ─── */}
+        {/* ─── OPTION 2: RESTORE PREVIOUS SESSION VIEW ─── */}
         {activeTab === 'restore' && (
-          <div className="p-8 space-y-6">
+          <div className="p-8 sm:p-10 space-y-6">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">
+                Load Saved Business Memory
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Restore your previous profile, clients, and invoice database from this computer or a JSON backup file.
+              </p>
+            </div>
+
             {restoreError && (
-              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
                 {restoreError}
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Option A: Detected PC Storage */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Option A: Restore from machine Documents folder */}
               <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/60 flex flex-col justify-between space-y-4">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                      <RiFolder2Line className="size-4 text-blue-600" />
+                      <RiDatabase2Line className="size-4 text-blue-600" />
                       Saved machine memory
                     </span>
                     {memoryInfo?.exists ? (
@@ -604,7 +625,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 <span className={`size-6 rounded-full flex items-center justify-center text-xs font-mono ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
                   1
                 </span>
-                <span className="truncate">Identity &amp; Profile</span>
+                <span className="truncate">1. Identity</span>
               </button>
 
               <button
@@ -621,7 +642,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 <span className={`size-6 rounded-full flex items-center justify-center text-xs font-mono ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
                   2
                 </span>
-                <span className="truncate">Location &amp; Tax</span>
+                <span className="truncate">2. Taxes &amp; Region</span>
               </button>
 
               <button
@@ -638,7 +659,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 <span className={`size-6 rounded-full flex items-center justify-center text-xs font-mono ${currentStep === 3 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
                   3
                 </span>
-                <span className="truncate">Banking &amp; UPI</span>
+                <span className="truncate">3. Payment Details</span>
               </button>
             </div>
 
@@ -649,11 +670,67 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
-                      Business Identity &amp; Contact
+                      Business Identity &amp; Regional Edition
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                      This information appears on the header of every generated commercial invoice.
+                      Choose your country taxation model and enter company details printed on your invoices.
                     </p>
+                  </div>
+
+                  {/* Regional Edition Selector */}
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <label className="block text-xs font-bold text-slate-800">
+                      Tax Structure &amp; Currency Edition
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            region: 'US',
+                            state: formData.state.includes('Maharashtra') ? 'California (CA - 7.25%)' : formData.state,
+                          });
+                        }}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                          formData.region === 'US'
+                            ? 'bg-blue-50/70 border-blue-600 ring-2 ring-blue-600/20 text-blue-900 shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold">🇺🇸 United States</span>
+                          <span className="text-xs font-mono font-bold text-blue-700">USD ($)</span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 mt-1">
+                          Sales Tax, Federal EIN, State Permits, ABA Routing &amp; ACH.
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            region: 'IN',
+                            state: formData.state.includes('California') ? 'Maharashtra (27)' : formData.state,
+                          });
+                        }}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                          formData.region === 'IN'
+                            ? 'bg-blue-50/70 border-blue-600 ring-2 ring-blue-600/20 text-blue-900 shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold">🇮🇳 India</span>
+                          <span className="text-xs font-mono font-bold text-blue-700">INR (₹)</span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 mt-1">
+                          GST (CGST/SGST/IGST), GSTIN, PAN, IFSC &amp; UPI QR Code.
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
@@ -701,8 +778,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Input
-                        label="Phone / Mobile Number"
-                        placeholder="+91 98765 43210"
+                        label={isUS ? 'Phone Number' : 'Phone / Mobile Number'}
+                        placeholder={isUS ? '+1 (415) 890-1200' : '+91 98765 43210'}
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: extractVal(e) })}
                         className="text-sm"
@@ -725,10 +802,12 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
-                      Address &amp; Tax Registration
+                      Location &amp; Tax
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                      State determines CGST/SGST vs IGST calculation rules automatically.
+                      {isUS
+                        ? 'State selection automatically configures your statutory sales tax rates and tax exemption rules.'
+                        : 'State determines CGST/SGST vs IGST calculation rules automatically.'}
                     </p>
                   </div>
 
@@ -744,7 +823,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <Input
                         label="City"
-                        placeholder="e.g. Pune"
+                        placeholder={isUS ? 'e.g. San Francisco' : 'e.g. Pune'}
                         value={formData.city}
                         onChange={(e) => setFormData({ ...formData, city: extractVal(e) })}
                         className="text-sm"
@@ -752,14 +831,14 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
 
                       <div>
                         <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                          State &amp; GST Code *
+                          {isUS ? 'State & Base Sales Tax *' : 'State & GST Code *'}
                         </label>
                         <select
                           value={formData.state}
                           onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                           className="w-full h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-900 shadow-2xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
                         >
-                          {INDIAN_STATES_LIST.map((state) => (
+                          {(isUS ? US_STATES_LIST : INDIAN_STATES_LIST).map((state) => (
                             <option key={state} value={state}>
                               {state}
                             </option>
@@ -768,31 +847,57 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                       </div>
 
                       <Input
-                        label="Pincode"
-                        placeholder="e.g. 411001"
+                        label={isUS ? 'ZIP Code' : 'Pincode'}
+                        placeholder={isUS ? 'e.g. 94105' : 'e.g. 411001'}
                         value={formData.pincode}
-                        onChange={(e) => setFormData({ ...formData, pincode: extractVal(e) })}
+                        onChange={(e) => {
+                          const raw = extractVal(e);
+                          setFormData({ ...formData, pincode: isUS ? formatUSZip(raw) : raw });
+                        }}
                         className="text-sm"
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Input
-                        label="GSTIN Number (Optional)"
-                        placeholder="e.g. 27ABCDE1234F1Z5"
-                        value={formData.gstin}
-                        onChange={(e) => setFormData({ ...formData, gstin: extractVal(e).toUpperCase() })}
-                        className="text-sm font-mono"
-                      />
+                    {isUS ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="Federal Tax ID / EIN (Optional)"
+                          placeholder="e.g. 12-3456789"
+                          value={formData.ein}
+                          onChange={(e) => {
+                            const raw = extractVal(e);
+                            setFormData({ ...formData, ein: formatEIN(raw) });
+                          }}
+                          className="text-sm font-mono"
+                        />
 
-                      <Input
-                        label="PAN Card Number (Optional)"
-                        placeholder="e.g. ABCDE1234F"
-                        value={formData.pan}
-                        onChange={(e) => setFormData({ ...formData, pan: extractVal(e).toUpperCase() })}
-                        className="text-sm font-mono"
-                      />
-                    </div>
+                        <Input
+                          label="State Tax ID / Resale Permit (Optional)"
+                          placeholder="e.g. CA-9438291"
+                          value={formData.stateTaxId}
+                          onChange={(e) => setFormData({ ...formData, stateTaxId: extractVal(e).toUpperCase() })}
+                          className="text-sm font-mono"
+                        />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Input
+                          label="GSTIN Number (Optional)"
+                          placeholder="e.g. 27ABCDE1234F1Z5"
+                          value={formData.gstin}
+                          onChange={(e) => setFormData({ ...formData, gstin: extractVal(e).toUpperCase() })}
+                          className="text-sm font-mono"
+                        />
+
+                        <Input
+                          label="PAN Card Number (Optional)"
+                          placeholder="e.g. ABCDE1234F"
+                          value={formData.pan}
+                          onChange={(e) => setFormData({ ...formData, pan: extractVal(e).toUpperCase() })}
+                          className="text-sm font-mono"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -802,10 +907,12 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
-                      Banking &amp; Remittance Details
+                      Banking &amp; Remittance
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                      Printed on invoices for direct bank transfer and instant UPI QR code settlement.
+                      {isUS
+                        ? 'Printed on invoices for direct ACH / Wire deposit and Zelle payment.'
+                        : 'Printed on invoices for direct bank transfer and instant UPI QR code settlement.'}
                     </p>
                   </div>
 
@@ -813,7 +920,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Input
                         label="Bank Name"
-                        placeholder="e.g. HDFC Bank, ICICI Bank, SBI"
+                        placeholder={isUS ? 'e.g. JPMorgan Chase, Bank of America, SVB' : 'e.g. HDFC Bank, ICICI Bank, SBI'}
                         value={formData.bankName}
                         onChange={(e) => setFormData({ ...formData, bankName: extractVal(e) })}
                         className="text-sm"
@@ -831,28 +938,51 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Input
                         label="Account Number"
-                        placeholder="e.g. 50100234567890"
+                        placeholder={isUS ? 'e.g. 984029104820' : 'e.g. 50100234567890'}
                         value={formData.accountNumber}
                         onChange={(e) => setFormData({ ...formData, accountNumber: extractVal(e) })}
                         className="text-sm font-mono"
                       />
 
-                      <Input
-                        label="IFSC Code"
-                        placeholder="e.g. HDFC0001234"
-                        value={formData.ifsc}
-                        onChange={(e) => setFormData({ ...formData, ifsc: extractVal(e).toUpperCase() })}
-                        className="text-sm font-mono"
-                      />
+                      {isUS ? (
+                        <Input
+                          label="ABA Routing Number (9-digit)"
+                          placeholder="e.g. 021000021"
+                          value={formData.routingNumber}
+                          onChange={(e) => {
+                            const raw = extractVal(e);
+                            setFormData({ ...formData, routingNumber: formatRoutingNumber(raw) });
+                          }}
+                          className="text-sm font-mono"
+                        />
+                      ) : (
+                        <Input
+                          label="IFSC Code"
+                          placeholder="e.g. HDFC0001234"
+                          value={formData.ifsc}
+                          onChange={(e) => setFormData({ ...formData, ifsc: extractVal(e).toUpperCase() })}
+                          className="text-sm font-mono"
+                        />
+                      )}
                     </div>
 
-                    <Input
-                      label="UPI ID / VPA (For instant QR Code)"
-                      placeholder="e.g. yourbusiness@okaxis or 9876543210@upi"
-                      value={formData.upiId}
-                      onChange={(e) => setFormData({ ...formData, upiId: extractVal(e) })}
-                      className="text-sm font-mono"
-                    />
+                    {isUS ? (
+                      <Input
+                        label="Zelle / Online Payment Link (Optional)"
+                        placeholder="e.g. payments@pacificapex.com or https://pay.stripe.com/..."
+                        value={formData.zelleId}
+                        onChange={(e) => setFormData({ ...formData, zelleId: extractVal(e) })}
+                        className="text-sm font-mono"
+                      />
+                    ) : (
+                      <Input
+                        label="UPI ID / VPA (For instant QR Code)"
+                        placeholder="e.g. yourbusiness@okaxis or 9876543210@upi"
+                        value={formData.upiId}
+                        onChange={(e) => setFormData({ ...formData, upiId: extractVal(e) })}
+                        className="text-sm font-mono"
+                      />
+                    )}
                   </div>
                 </div>
               )}

@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Gen — Light Mode Ad Creative Hub (Exact Software Design)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* --------------------------------------------------------------------------
+     * Exact Software Light Mode Theme
+     * Canvas: #f8fafc (slate-50)
+     * Surface: #ffffff (white)
+     * Border: #e2e8f0 (slate-200)
+     * Primary Text: #0f172a (slate-900)
+     * Secondary Text: #475569 (slate-600)
+     * Accent Blue: #2563eb (blue-600)
+     * Emerald Accent: #059669 (emerald-600)
+     * -------------------------------------------------------------------------- */
+    :root {
+      --bg-page: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-surface-subtle: #f1f5f9;
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-subtle: #eff6ff;
+      --accent-border: #bfdbfe;
+      --emerald: #059669;
+      --emerald-subtle: #ecfdf5;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-xl: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background: var(--bg-page);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    .tnum {
+      font-family: 'JetBrains Mono', monospace;
+      font-feature-settings: 'tnum';
+    }
+
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* Top Navigation / Shell */
+    header {
+      padding: 40px 0 32px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 32px;
+    }
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-status-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: var(--radius-sm);
+      background: var(--accent-subtle);
+      border: 1px solid var(--accent-border);
+      color: #1d4ed8;
+    }
+
+    .actions-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 40px;
+      padding: 0 18px;
+      border-radius: var(--radius-md);
+      font-size: 13.5px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      border: 1px solid var(--accent);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .btn-secondary:hover {
+      background: #f8fafc;
+      border-color: var(--border-strong);
+    }
+
+    .hero-summary {
+      margin-top: 18px;
+      max-width: 840px;
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    /* Stat Cards Row matching the software */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-val {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .stat-caption {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Segmented Control */
+    .segmented-control {
+      display: inline-flex;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 32px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .segment-btn {
+      padding: 7px 15px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .segment-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .segment-btn.active {
+      background: var(--bg-surface-subtle);
+      color: var(--accent);
+      font-weight: 600;
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* Creatives Grid */
+    .creatives-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .creatives-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .creative-card {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .creative-card:hover {
+      border-color: var(--border-strong);
+      box-shadow: 0 6px 16px -4px rgba(15, 23, 42, 0.08);
+    }
+
+    .preview-box {
+      position: relative;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border-subtle);
+      aspect-ratio: 16 / 10;
+    }
+
+    .preview-box.aspect-square { aspect-ratio: 1 / 1; }
+    .preview-box.aspect-story { aspect-ratio: 9 / 16; max-height: 460px; }
+    .preview-box.aspect-landscape { aspect-ratio: 1.91 / 1; }
+    .preview-box.aspect-table { aspect-ratio: 4 / 3; }
+
+    .preview-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .card-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      gap: 14px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-subtle);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+
+    .tag-accent {
+      background: var(--accent-subtle);
+      border-color: var(--accent-border);
+      color: #1d4ed8;
+      font-weight: 500;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .ad-copy-box {
+      background: #f8fafc;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-size: 12.5px;
+      color: #334155;
+    }
+
+    .copy-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .copy-btn:hover {
+      text-decoration: underline;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: auto;
+    }
+
+    .file-meta {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .btn-sm {
+      height: 32px;
+      padding: 0 14px;
+      font-size: 12.5px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Lightbox Modal */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+    }
+
+    .lightbox.active {
+      display: flex;
+    }
+
+    .lightbox-img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: var(--radius-lg);
+      border: 1px solid #ffffff;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      background: #ffffff;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+      z-index: 2000;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="header-row">
+        <div class="brand-group">
+          <img src="../public/app-icon.png" alt="Invoice Gen" class="brand-icon">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <h1 class="brand-title">Invoice Gen</h1>
+              <span class="brand-status-chip">Exact Light Mode UI</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">
+              Commercial Ad Assets &bull; 100% Offline Desktop Workstation
+            </div>
+          </div>
+        </div>
+
+        <div class="actions-row">
+          <a href="./GUMROAD-LISTING-KIT.md" class="btn btn-secondary" target="_blank" style="border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; font-weight: 600;">
+            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            Gumroad Listing Kit
+          </a>
+          <a href="./CAMPAIGN-PLAYBOOK.md" class="btn btn-secondary" target="_blank">
+            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Campaign Playbook
+          </a>
+          <button class="btn btn-primary" onclick="downloadAllAssets()">
+            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download All (10 Assets)
+          </button>
+        </div>
+      </div>
+
+      <p class="hero-summary">
+        Production advertising graphics rendered in <strong>Light Mode</strong> to match the exact aesthetic of the <strong>Invoice Gen</strong> software: clean slate canvas, white floating panels, native macOS/Windows window titlebars, real invoices directory table, and compact summary metrics.
+      </p>
+    </header>
+
+    <!-- Software Metric Stat Cards -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Assets</div>
+        <div class="stat-val tnum">10 <span>Assets</span></div>
+        <div class="stat-caption">6 Ad Creatives + 4 Gumroad Store Assets</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gumroad Store Ready</div>
+        <div class="stat-val" style="font-size: 20px; color: #2563eb;">Cover &bull; Thumb &bull; Slides</div>
+        <div class="stat-caption">1280x720 &amp; 1200x1200 specs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Target Gumroad Price</div>
+        <div class="stat-val tnum" style="color: #059669;">$99 <span>Lifetime</span></div>
+        <div class="stat-caption">Pay-what-you-want enabled</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Software Installers</div>
+        <div class="stat-val" style="font-size: 19px;">Win .exe &bull; Mac .dmg</div>
+        <div class="stat-caption">Ready to upload to Gumroad</div>
+      </div>
+    </div>
+
+    <!-- Segmented Filter Bar -->
+    <div class="segmented-control">
+      <button class="segment-btn active" onclick="filterCategory('all', this)">All Assets (10)</button>
+      <button class="segment-btn" onclick="filterCategory('gumroad', this)">Gumroad Store Assets (4)</button>
+      <button class="segment-btn" onclick="filterCategory('feed', this)">Square Feed (1:1)</button>
+      <button class="segment-btn" onclick="filterCategory('landscape', this)">Landscape Banners (1.91:1)</button>
+      <button class="segment-btn" onclick="filterCategory('story', this)">Vertical Stories (9:16)</button>
+      <button class="segment-btn" onclick="filterCategory('comparison', this)">Comparison Table</button>
+      <button class="segment-btn" onclick="filterCategory('photo', this)">Hardware Photo</button>
+    </div>
+
+    <!-- Grid -->
+    <div class="creatives-grid" id="creativesGrid">
+
+      <!-- ITEM 1: Square Feed Ad -->
+      <div class="creative-card" data-category="feed">
+        <div class="preview-box aspect-square" onclick="openLightbox('ad-1-square-1080x1080.png')">
+          <img src="ad-1-square-1080x1080.png" alt="Square Feed Ad" class="preview-img">
+        </div>
+        <div class="card-body">
+          <div class="card-title">1. Exact Software Invoices Workstation (Light Mode)</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1080 &times; 1080</span>
+            <span class="tag">1:1 Square</span>
+            <span class="tag">Instagram / Facebook / LinkedIn</span>
+          </div>
+          <p class="card-desc">
+            Exact match to the software's Invoices Directory: left floating sidebar, action buttons (Export Excel, Monthly Bill, Daily Bill), 4 compact metrics cards, and live invoice rows.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Primary Copy Hook</span>
+              <button class="copy-btn" onclick="copyText('Stop paying monthly rent for your invoicing software. Run commercial billing natively on your PC with zero subscriptions.')">Copy</button>
+            </div>
+            <div>"Stop paying monthly rent for your invoicing software. Run commercial billing natively on your PC with zero subscriptions."</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">PNG &bull; 115 KB</span>
+            <a href="ad-1-square-1080x1080.png" download="invoice-gen-ad-1-square.png" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 2: Landscape Banner -->
+      <div class="creative-card" data-category="landscape">
+        <div class="preview-box aspect-landscape" onclick="openLightbox('ad-2-landscape-1200x628.png')">
+          <img src="ad-2-landscape-1200x628.png" alt="Landscape Banner" class="preview-img">
+        </div>
+        <div class="card-body">
+          <div class="card-title">2. Executive Split &amp; Financial Privacy (Light Mode)</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1200 &times; 628</span>
+            <span class="tag">1.91:1 Landscape</span>
+            <span class="tag">LinkedIn Sponsored / Google Display</span>
+          </div>
+          <p class="card-desc">
+            Clean corporate executive layout. Shows verified savings (₹0.00/month vs ₹30,000+/year), local C++ latency, and transparent filesystem storage.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Primary Copy Hook</span>
+              <button class="copy-btn" onclick="copyText('Your business finances belong on your PC, not someone else\'s cloud. One-time purchase, lifetime ownership.')">Copy</button>
+            </div>
+            <div>"Your business finances belong on your PC, not someone else's cloud. One-time purchase, lifetime ownership."</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">PNG &bull; 96 KB</span>
+            <a href="ad-2-landscape-1200x628.png" download="invoice-gen-ad-2-landscape.png" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 3: Vertical Story -->
+      <div class="creative-card" data-category="story">
+        <div class="preview-box aspect-story" onclick="openLightbox('ad-3-story-1080x1920.png')">
+          <img src="ad-3-story-1080x1920.png" alt="Vertical Story" class="preview-img">
+        </div>
+        <div class="card-body">
+          <div class="card-title">3. Mobile Vertical Editorial Layout (Light Mode)</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1080 &times; 1920</span>
+            <span class="tag">9:16 Vertical</span>
+            <span class="tag">Instagram Stories / TikTok / Shorts</span>
+          </div>
+          <p class="card-desc">
+            Structured vertical composition comparing SaaS costs with 4 core capabilities: ₹0 monthly fees, 8 commercial templates, 100% financial privacy, and multi-sheet Excel export.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Story Hook</span>
+              <button class="copy-btn" onclick="copyText('Why pay ₹3,000/month just to generate invoices? Install Invoice Gen on your PC and own your software forever.')">Copy</button>
+            </div>
+            <div>"Why pay ₹3,000/month just to generate invoices? Install Invoice Gen on your PC and own your software forever."</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">PNG &bull; 136 KB</span>
+            <a href="ad-3-story-1080x1920.png" download="invoice-gen-ad-3-story.png" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 4: Comparison Table -->
+      <div class="creative-card" data-category="comparison">
+        <div class="preview-box aspect-table" onclick="openLightbox('ad-4-comparison-1200x900.png')">
+          <img src="ad-4-comparison-1200x900.png" alt="Comparison Table" class="preview-img">
+        </div>
+        <div class="card-body">
+          <div class="card-title">4. SaaS vs. Desktop Comparison Table (Light Mode)</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1200 &times; 900</span>
+            <span class="tag">High Conversion</span>
+            <span class="tag">Retargeting / Landing Pages</span>
+          </div>
+          <p class="card-desc">
+            A grounded, factual side-by-side comparison table in light mode. Compares pricing, internet dependency, data storage, latency, template selection, and spreadsheet export.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Retargeting Copy</span>
+              <button class="copy-btn" onclick="copyText('Compare the architecture: ₹30,000/year recurring cloud fees vs. one-time purchase desktop workstation with 0ms speed.')">Copy</button>
+            </div>
+            <div>"Compare the architecture: ₹30,000/year recurring cloud fees vs. one-time purchase desktop workstation with 0ms speed."</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">PNG &bull; 116 KB</span>
+            <a href="ad-4-comparison-1200x900.png" download="invoice-gen-ad-4-comparison.png" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 5: Architecture Inspector -->
+      <div class="creative-card" data-category="architecture">
+        <div class="preview-box aspect-landscape" onclick="openLightbox('ad-5-dark-cyber-1200x675.png')">
+          <img src="ad-5-dark-cyber-1200x675.png" alt="Architecture Inspector" class="preview-img">
+        </div>
+        <div class="card-body">
+          <div class="card-title">5. Filesystem &amp; Hardware Architecture (Light Mode)</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1200 &times; 675</span>
+            <span class="tag">16:9 Banner</span>
+            <span class="tag">Twitter / X / Tech / Developers</span>
+          </div>
+          <p class="card-desc">
+            Technical inspector showing genuine local filesystem data storage in Documents/Invoice Gen Data/database.json, zero outbound telemetry, and 0.00ms local hardware arithmetic.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Developer / Tech Hook</span>
+              <button class="copy-btn" onclick="copyText('Built an invoice generator that runs 100% on bare metal. No cloud servers, no trackers, no subscriptions. Stored in transparent local JSON.')">Copy</button>
+            </div>
+            <div>"Built an invoice generator that runs 100% on bare metal. No cloud servers, no trackers, no subscriptions."</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">PNG &bull; 85 KB</span>
+            <a href="ad-5-dark-cyber-1200x675.png" download="invoice-gen-ad-5-architecture.png" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 6: Light Mode Workstation Studio Photography -->
+      <div class="creative-card" data-category="photo">
+        <div class="preview-box aspect-landscape" onclick="openLightbox('invoice_gen_workstation_light.jpg')">
+          <img src="invoice_gen_workstation_light.jpg" alt="Light Mode Workstation Photography" class="preview-img" onerror="this.src='invoice_gen_workstation_unslopped.jpg'">
+        </div>
+        <div class="card-body">
+          <div class="card-title">6. Daylight Workstation Photography (Light Mode)</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1024 &times; 1024</span>
+            <span class="tag">Editorial Photo</span>
+            <span class="tag">Brand Hero / Top-of-Funnel</span>
+          </div>
+          <p class="card-desc">
+            Sunlit architectural studio photograph. Space-gray laptop running the light-mode Invoice Gen software on a clean minimalist desk with printed receipts and ceramic coffee cup under natural window lighting.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Minimalist Editorial Hook</span>
+              <button class="copy-btn" onclick="copyText('Commercial billing belongs on your hardware. Fast, dependable, and completely offline.')">Copy</button>
+            </div>
+            <div>"Commercial billing belongs on your hardware. Fast, dependable, and completely offline."</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">JPG &bull; High-Res</span>
+            <a href="invoice_gen_workstation_light.jpg" download="invoice_gen_workstation_light.jpg" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 7: GUMROAD PRODUCT COVER (1280 x 720) -->
+      <div class="creative-card" data-category="gumroad">
+        <div class="preview-box aspect-landscape" onclick="openLightbox('gumroad-cover-1280x720.png')">
+          <img src="gumroad-cover-1280x720.png" alt="Gumroad Product Cover" class="preview-img">
+        </div>
+        <div class="card-body">
+          <div class="card-title">7. Gumroad Official Product Cover Banner</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1280 &times; 720</span>
+            <span class="tag">16:9 Gumroad Cover</span>
+            <span class="tag">Main Store Listing Banner</span>
+          </div>
+          <p class="card-desc">
+            The primary header banner for your Gumroad product page. Features the brand logo, "$99 Lifetime" pricing badge, OS badges, and the floating light-mode desktop app window.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Gumroad Product Title</span>
+              <button class="copy-btn" onclick="copyText('Invoice Gen — Desktop Invoicing Workstation')">Copy</button>
+            </div>
+            <div>"Invoice Gen — Desktop Invoicing Workstation"</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">PNG &bull; 107 KB</span>
+            <a href="gumroad-cover-1280x720.png" download="gumroad-cover-1280x720.png" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 8: GUMROAD PRODUCT THUMBNAIL (1200 x 1200) -->
+      <div class="creative-card" data-category="gumroad">
+        <div class="preview-box aspect-square" onclick="openLightbox('gumroad-thumbnail-1200x1200.png')">
+          <img src="gumroad-thumbnail-1200x1200.png" alt="Gumroad Thumbnail" class="preview-img">
+        </div>
+        <div class="card-body">
+          <div class="card-title">8. Gumroad Discover Card &amp; Thumbnail</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1200 &times; 1200</span>
+            <span class="tag">1:1 Square</span>
+            <span class="tag">Gumroad Profile &amp; Search Grid</span>
+          </div>
+          <p class="card-desc">
+            High-contrast square card optimized for Gumroad Discover and profile catalogs. Features high-res app icon, key value pills, mini software window, and pricing.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Gumroad Subtitle</span>
+              <button class="copy-btn" onclick="copyText('The 100% offline commercial invoicing software for Windows & Mac. Zero monthly subscriptions.')">Copy</button>
+            </div>
+            <div>"The 100% offline commercial invoicing software for Windows & Mac. Zero monthly subscriptions."</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">PNG &bull; 90 KB</span>
+            <a href="gumroad-thumbnail-1200x1200.png" download="gumroad-thumbnail-1200x1200.png" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 9: GUMROAD SLIDE 1 - 8 TEMPLATES (1280 x 720) -->
+      <div class="creative-card" data-category="gumroad">
+        <div class="preview-box aspect-landscape" onclick="openLightbox('gumroad-slide-1-templates-1280x720.png')">
+          <img src="gumroad-slide-1-templates-1280x720.png" alt="Gumroad Templates Slide" class="preview-img">
+        </div>
+        <div class="card-body">
+          <div class="card-title">9. Gumroad Carousel Slide 1: 8 Templates</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1280 &times; 720</span>
+            <span class="tag">16:9 Carousel</span>
+            <span class="tag">Feature Demonstration</span>
+          </div>
+          <p class="card-desc">
+            Proves commercial versatility: side-by-side previews of Modern Minimalist, Corporate B2B, Contractor Progress, and 80mm Thermal Storefront POS receipts.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Slide Headline</span>
+              <button class="copy-btn" onclick="copyText('8 Built-in Commercial Invoicing Templates. Switch styles in 1 click.')">Copy</button>
+            </div>
+            <div>"8 Built-in Commercial Invoicing Templates. Switch styles in 1 click."</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">PNG &bull; 87 KB</span>
+            <a href="gumroad-slide-1-templates-1280x720.png" download="gumroad-slide-1-templates-1280x720.png" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEM 10: GUMROAD SLIDE 2 - EXCEL & LOCAL DATA (1280 x 720) -->
+      <div class="creative-card" data-category="gumroad">
+        <div class="preview-box aspect-landscape" onclick="openLightbox('gumroad-slide-2-excel-1280x720.png')">
+          <img src="gumroad-slide-2-excel-1280x720.png" alt="Gumroad Excel Slide" class="preview-img">
+        </div>
+        <div class="card-body">
+          <div class="card-title">10. Gumroad Carousel Slide 2: Excel &amp; Data</div>
+          <div class="tag-row">
+            <span class="tag tag-accent">1280 &times; 720</span>
+            <span class="tag">16:9 Carousel</span>
+            <span class="tag">Data Privacy &amp; Export</span>
+          </div>
+          <p class="card-desc">
+            Details the 1-click multi-sheet formatted Excel (.xlsx) export (Summary, Invoices Ledger, GST Tax Pools) and local filesystem database sovereignty.
+          </p>
+          <div class="ad-copy-box">
+            <div class="copy-header">
+              <span>Slide Headline</span>
+              <button class="copy-btn" onclick="copyText('Accountant-Ready Multi-Sheet Excel Export & 100% Local PC Data Sovereignty.')">Copy</button>
+            </div>
+            <div>"Accountant-Ready Multi-Sheet Excel Export & 100% Local PC Data Sovereignty."</div>
+          </div>
+          <div class="card-footer">
+            <span class="file-meta">PNG &bull; 104 KB</span>
+            <a href="gumroad-slide-2-excel-1280x720.png" download="gumroad-slide-2-excel-1280x720.png" class="btn btn-primary btn-sm">Download</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+    <button class="lightbox-close" onclick="closeLightbox(event)">✕</button>
+    <img src="" alt="Enlarged" class="lightbox-img" id="lightboxImg">
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">Copied to clipboard</div>
+
+  <script>
+    function filterCategory(cat, btn) {
+      document.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.creative-card');
+      cards.forEach(card => {
+        if (cat === 'all' || card.getAttribute('data-category') === cat) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function openLightbox(src) {
+      const lb = document.getElementById('lightbox');
+      const img = document.getElementById('lightboxImg');
+      img.src = src;
+      lb.classList.add('active');
+    }
+
+    function closeLightbox(e) {
+      if (e.target.id === 'lightbox' || e.target.classList.contains('lightbox-close')) {
+        document.getElementById('lightbox').classList.remove('active');
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('lightbox').classList.remove('active');
+      }
+    });
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard');
+      }).catch(() => {
+        const input = document.createElement('textarea');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showToast('Copied to clipboard');
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    function downloadAllAssets() {
+      const assets = [
+        'gumroad-cover-1280x720.png',
+        'gumroad-thumbnail-1200x1200.png',
+        'gumroad-slide-1-templates-1280x720.png',
+        'gumroad-slide-2-excel-1280x720.png',
+        'ad-1-square-1080x1080.png',
+        'ad-2-landscape-1200x628.png',
+        'ad-3-story-1080x1920.png',
+        'ad-4-comparison-1200x900.png',
+        'ad-5-dark-cyber-1200x675.png',
+        'invoice_gen_workstation_light.jpg'
+      ];
+
+      assets.forEach((file, index) => {
+        setTimeout(() => {
+          const a = document.createElement('a');
+          a.href = file;
+          a.download = file;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }, index * 250);
+      });
+
+      showToast('Downloading all 10 assets...');
+    }
+  </script>
+</body>
+</html>

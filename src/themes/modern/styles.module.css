@@ -23,7 +23,8 @@
 }
 
 /* Coloured top band */
-.topBand {
+.topBand,
+.accentBand {
   background-color: var(--accent, #2563eb);
   color: #ffffff;
   padding: 16px 24px;
@@ -31,6 +32,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  box-sizing: border-box;
 }
 
 .bandLeft {
@@ -41,14 +43,18 @@
   flex: 1;
 }
 
-.bandLogo {
+.bandLogo,
+.logo {
   max-height: 44px;
   max-width: 130px;
+  width: auto;
+  height: auto;
   object-fit: contain;
   background-color: #ffffff;
   padding: 4px 6px;
   border-radius: 4px;
   flex-shrink: 0;
+  display: block;
 }
 
 .bandCompany {
@@ -59,7 +65,8 @@
   word-break: break-word;
 }
 
-.bandRight {
+.bandRight,
+.metaBlock {
   text-align: right;
   flex-shrink: 0;
   min-width: 0;
@@ -69,6 +76,57 @@
   font-size: 16pt;
   font-weight: 800;
   letter-spacing: 1px;
+}
+
+.copyBadge {
+  display: inline-block;
+  font-size: 7.5pt;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.itemTitle {
+  font-weight: 600;
+  color: #1f2937;
+  display: block;
+}
+
+.termsNotes {
+  font-size: 8pt;
+  color: #64748b;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  line-height: 1.4;
+  break-inside: avoid;
+}
+
+.signWrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.signLabel {
+  border-top: 1px solid #cbd5e1;
+  padding-top: 4px;
+  width: 160px;
+  font-size: 8.5pt;
+  color: #475569;
+  font-weight: 600;
+  text-align: center;
 }
 
 .bandMeta {

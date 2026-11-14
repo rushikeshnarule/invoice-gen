@@ -16,7 +16,7 @@ import {
 import { getAllThemes, getTheme, THEMES } from '@/themes';
 import type { RemoteTemplateDefinition } from '@/types';
 
-describe('Netlify / Remote Template Synchronization Service', () => {
+describe('Cloud / Remote Template Synchronization Service', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
@@ -111,7 +111,7 @@ describe('Netlify / Remote Template Synchronization Service', () => {
     });
   });
 
-  describe('Syncing Remote Templates from Live Netlify Server', () => {
+  describe('Syncing Remote Templates from Live Cloud Server', () => {
     it('successfully downloads manifest and CSS assets, storing them offline', async () => {
       const mockManifest = {
         version: '1.0.0',
@@ -172,7 +172,7 @@ describe('Netlify / Remote Template Synchronization Service', () => {
       const result = await syncRemoteTemplates('https://broken-url.netlify.app');
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('Failed to fetch from Netlify');
+      expect(result.message).toContain('Failed to fetch from Cloud');
     });
 
     it('rejects invalid manifest structure without templates array', async () => {
@@ -212,7 +212,7 @@ describe('Netlify / Remote Template Synchronization Service', () => {
 
       const found = updatedThemes.find((t) => t.id === 'emerald-corporate-test');
       expect(found).toBeDefined();
-      expect(found?.name).toBe('Emerald Corporate (Remote) (Netlify)');
+      expect(found?.name).toBe('Emerald Corporate (Remote) (Cloud)');
       expect((found as any)?.isRemote).toBe(true);
     });
 
@@ -232,7 +232,7 @@ describe('Netlify / Remote Template Synchronization Service', () => {
 
       const theme = getTheme('sky-minimal');
       expect(theme.id).toBe('sky-minimal');
-      expect(theme.name).toBe('Sky Minimalist (Netlify)');
+      expect(theme.name).toBe('Sky Minimalist (Cloud)');
       expect((theme as any).isRemote).toBe(true);
       expect(typeof theme.component).toBe('function');
     });

@@ -13,40 +13,18 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   onChange,
 }) => {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 6,
-        }}
-      >
-        <label
-          style={{
-            fontSize: '12px',
-            fontWeight: 600,
-            color: '#475569',
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-          }}
-        >
+    <div className="mb-3.5">
+      <div className="flex justify-between items-center mb-1.5">
+        <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
           {label}
         </label>
-        <span style={{ fontSize: '12px', fontFamily: 'monospace', color: '#64748b' }}>
+        <span className="text-xs font-mono text-slate-500">
           {value.toUpperCase()}
         </span>
       </div>
 
-      {/* 10-color BoardUI Palette Swatches */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: 6,
-          marginBottom: 8,
-        }}
-      >
+      {/* BoardUI Accent Palette Swatches */}
+      <div className="grid grid-cols-5 gap-1.5 mb-2">
         {ACCENT_PALETTE.map((hex) => {
           const isSelected = hex.toLowerCase() === value.toLowerCase();
           return (
@@ -55,68 +33,33 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
               type="button"
               onClick={() => onChange(hex)}
               title={hex}
-              style={{
-                height: 28,
-                backgroundColor: hex,
-                borderRadius: 6,
-                border: isSelected ? '2px solid #0f172a' : '1px solid rgba(0,0,0,0.1)',
-                cursor: 'pointer',
-                transform: isSelected ? 'scale(1.08)' : 'scale(1)',
-                transition: 'transform 0.1s ease',
-                position: 'relative',
-              }}
+              className={`h-7 rounded-lg transition-transform cursor-pointer relative ${
+                isSelected ? 'scale-105 ring-2 ring-slate-900 ring-offset-1' : 'border border-slate-200/80 hover:scale-102'
+              }`}
+              style={{ backgroundColor: hex }}
             >
               {isSelected && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: 6,
-                    height: 6,
-                    backgroundColor: '#ffffff',
-                    borderRadius: '50%',
-                  }}
-                />
+                <span className="absolute inset-0 m-auto size-1.5 rounded-full bg-white shadow-xs" />
               )}
             </button>
           );
         })}
       </div>
 
-      {/* Custom Hex Input with native color picker */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      {/* Custom Hex Input */}
+      <div className="flex gap-2 items-center">
         <input
           type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          style={{
-            width: 32,
-            height: 32,
-            padding: 0,
-            border: '1px solid #cbd5e1',
-            borderRadius: 6,
-            cursor: 'pointer',
-            backgroundColor: 'transparent',
-          }}
+          className="size-8 p-0 border border-slate-300 rounded-lg cursor-pointer bg-white"
         />
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="#2563EB"
-          maxLength={7}
-          style={{
-            flex: 1,
-            padding: '6px 10px',
-            fontSize: '12px',
-            fontFamily: 'monospace',
-            borderRadius: 6,
-            border: '1px solid #cbd5e1',
-            color: '#1e293b',
-            outline: 'none',
-          }}
+          placeholder="#000000"
+          className="flex-1 px-2.5 py-1 text-xs font-mono border border-slate-300 rounded-lg uppercase outline-none focus:border-blue-600 bg-white"
         />
       </div>
     </div>

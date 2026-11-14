@@ -22,7 +22,8 @@
   font-size: var(--font-size-sm, 9pt);
 }
 
-.headerGrid {
+.headerGrid,
+.header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -204,7 +205,8 @@
 }
 
 /* Totals */
-.totalsSection {
+.totalsSection,
+.totalsBlock {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 24px;
@@ -273,7 +275,8 @@
 }
 
 /* Bottom elements */
-.footerGrid {
+.footerGrid,
+.footer {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -313,12 +316,22 @@
   margin-bottom: 4px;
 }
 
-.notesTerms {
+.notesTerms,
+.notesBlock {
   margin-top: 18px;
   font-size: 8pt;
   color: #6b7280;
   line-height: 1.4;
   break-inside: avoid;
+}
+
+.signLine {
+  border-top: 1px solid #111827;
+  padding-top: 4px;
+  font-size: 8pt;
+  font-weight: 600;
+  width: 140px;
+  text-align: center;
 }
 
 .thankYou {

@@ -48,7 +48,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         <div
           class="_invoiceLabel_368423"
         >
-          INVOICE
+          TAX INVOICE
         </div>
         <div
           class="_oversizedNumber_368423"
@@ -72,7 +72,8 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             </strong>
           </div>
           <div>
-            POS: 
+            POS:
+             
             <strong>
               Maharashtra (27)
             </strong>
@@ -153,13 +154,13 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             class="_numCol_368423"
             style="width: 50px;"
           >
-            Tax%
+            GST%
           </th>
           <th
             class="_numCol_368423"
             style="width: 85px;"
           >
-            Total
+            Amount
           </th>
         </tr>
       </thead>
@@ -203,8 +204,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_368423"
           >
-            18
-            %
+            18%
           </td>
           <td
             class="_numCol_368423"
@@ -251,8 +251,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_368423"
           >
-            12
-            %
+            12%
           </td>
           <td
             class="_numCol_368423"
@@ -299,8 +298,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_368423"
           >
-            5
-            %
+            5%
           </td>
           <td
             class="_numCol_368423"
@@ -311,141 +309,172 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       </tbody>
     </table>
     <div
-      class="_totalsSection_368423"
+      class="_summaryGrid_368423"
     >
-      <table
-        class="_totalsTable_368423"
+      <div>
+        <div
+          class="_notesBlock_368423"
+        >
+          <strong>
+            Note:
+          </strong>
+           
+          Thank you for your business. Payment is expected within 30 days.
+        </div>
+        <div
+          class="_termsBlock_368423"
+        >
+          <strong>
+            Terms:
+          </strong>
+           
+          1. Goods once sold will not be taken back.
+2. Interest @ 18% p.a. will be charged on overdue invoices.
+3. Subject to Mumbai jurisdiction.
+        </div>
+      </div>
+      <div
+        class="_totalsTableWrapper_368423"
       >
-        <tbody>
-          <tr>
-            <td
-              style="color: rgb(100, 116, 139); font-weight: 600;"
+        <table
+          class="_totalsTable_368423"
+        >
+          <tbody>
+            <tr>
+              <td
+                style="color: rgb(100, 116, 139);"
+              >
+                Sub Total
+              </td>
+              <td
+                style="text-align: right; font-weight: 600;"
+              >
+                ₹4,950.00
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="color: rgb(100, 116, 139);"
+              >
+                Discount
+              </td>
+              <td
+                style="text-align: right; color: rgb(220, 38, 38);"
+              >
+                -
+                ₹75.00
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="color: rgb(100, 116, 139);"
+              >
+                Taxable Subtotal
+              </td>
+              <td
+                style="text-align: right;"
+              >
+                ₹4,875.00
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="color: rgb(100, 116, 139);"
+              >
+                CGST
+              </td>
+              <td
+                style="text-align: right;"
+              >
+                ₹270.75
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="color: rgb(100, 116, 139);"
+              >
+                SGST
+              </td>
+              <td
+                style="text-align: right;"
+              >
+                ₹270.75
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="color: rgb(100, 116, 139);"
+              >
+                Round Off
+              </td>
+              <td
+                style="text-align: right;"
+              >
+                +
+                0.50
+              </td>
+            </tr>
+            <tr
+              class="_grandTotalRow_368423"
             >
-              Subtotal
-            </td>
-            <td
-              style="text-align: right; font-weight: 700;"
+              <td>
+                Total Amount
+              </td>
+              <td
+                style="text-align: right;"
+              >
+                ₹5,417.00
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="color: rgb(100, 116, 139);"
+              >
+                Amount Paid
+              </td>
+              <td
+                style="text-align: right; color: rgb(5, 150, 105);"
+              >
+                ₹5,000.00
+              </td>
+            </tr>
+            <tr
+              style="font-weight: 700;"
             >
-              ₹4,950.00
-            </td>
-          </tr>
-          <tr>
-            <td
-              style="color: rgb(220, 38, 38); font-weight: 600;"
-            >
-              Discount
-            </td>
-            <td
-              style="text-align: right; color: rgb(220, 38, 38); font-weight: 700;"
-            >
-              -
-              ₹75.00
-            </td>
-          </tr>
-          <tr>
-            <td
-              style="color: rgb(100, 116, 139); font-weight: 600;"
-            >
-              Taxable Subtotal
-            </td>
-            <td
-              style="text-align: right; font-weight: 700;"
-            >
-              ₹4,875.00
-            </td>
-          </tr>
-          <tr>
-            <td
-              style="color: rgb(100, 116, 139);"
-            >
-              CGST
-            </td>
-            <td
-              style="text-align: right; font-weight: 600;"
-            >
-              ₹270.75
-            </td>
-          </tr>
-          <tr>
-            <td
-              style="color: rgb(100, 116, 139);"
-            >
-              SGST
-            </td>
-            <td
-              style="text-align: right; font-weight: 600;"
-            >
-              ₹270.75
-            </td>
-          </tr>
-          <tr>
-            <td
-              style="color: rgb(100, 116, 139);"
-            >
-              Round off
-            </td>
-            <td
-              style="text-align: right;"
-            >
-              +
-              0.50
-            </td>
-          </tr>
-          <tr
-            class="_grandTotalRow_368423"
-          >
-            <td>
-              GRAND TOTAL
-            </td>
-            <td
-              style="text-align: right;"
-            >
-              ₹5,417.00
-            </td>
-          </tr>
-          <tr>
-            <td
-              style="color: rgb(5, 150, 105); font-weight: 600;"
-            >
-              Paid Amount
-            </td>
-            <td
-              style="text-align: right; color: rgb(5, 150, 105); font-weight: 700;"
-            >
-              ₹5,000.00
-            </td>
-          </tr>
-          <tr
-            style="font-weight: 800;"
-          >
-            <td>
-              Balance Due
-            </td>
-            <td
-              style="text-align: right; color: rgb(220, 38, 38);"
-            >
-              ₹417.00
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <td
+                style="color: rgb(220, 38, 38);"
+              >
+                Balance Due
+              </td>
+              <td
+                style="text-align: right; color: rgb(220, 38, 38);"
+              >
+                ₹417.00
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
     <div
-      class="_words_368423"
+      class="_amountWords_368423"
     >
-      AMOUNT IN WORDS: 
+      <strong>
+        Amount in Words:
+      </strong>
+       
       Fifteen Thousand Three Hundred and Forty Two Rupees Only
     </div>
     <table
-      class="_taxTable_368423"
+      class="_taxSummaryTable_368423"
     >
       <thead>
         <tr>
           <th>
-            Rate
+            GST Rate
           </th>
           <th>
-            Taxable Value
+            Taxable Amount
           </th>
           <th>
             CGST
@@ -454,15 +483,14 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             SGST
           </th>
           <th>
-            Tax Total
+            Total Tax
           </th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>
-            18
-            %
+            18%
           </td>
           <td>
             675.00
@@ -479,8 +507,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            12
-            %
+            12%
           </td>
           <td>
             3,000.00
@@ -497,8 +524,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            5
-            %
+            5%
           </td>
           <td>
             1,200.00
@@ -516,20 +542,23 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       </tbody>
     </table>
     <div
-      class="_bottomGrid_368423"
+      class="_bottomSection_368423"
     >
       <div>
         <div
           class="_bankBox_368423"
         >
           <div
-            style="font-weight: 800; text-transform: uppercase; margin-bottom: 2px;"
+            style="font-weight: 700; text-transform: uppercase; margin-bottom: 2px;"
           >
-            Bank Account
+            Payment Details
           </div>
           <div>
-            HDFC Bank
-             | A/C: 
+            Bank: 
+            <strong>
+              HDFC Bank
+            </strong>
+             | A/c No: 
             <strong>
               50100123456789
             </strong>
@@ -548,17 +577,17 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           </div>
         </div>
         <div
-          style="margin-top: 10px; display: flex; align-items: center; gap: 10px;"
+          style="margin-top: 8px; display: flex; align-items: center; gap: 8px;"
         >
           <div
             class=""
-            style="display: inline-block; width: 65px; height: 65px; background-color: rgb(255, 255, 255); padding: 2px; border-radius: 4px; border: 1px solid rgb(229, 231, 235); line-height: 0;"
+            style="display: inline-block; width: 55px; height: 55px; background-color: rgb(255, 255, 255); padding: 2px; border-radius: 4px; border: 1px solid rgb(229, 231, 235); line-height: 0;"
           >
             <svg
-              height="65"
+              height="55"
               shape-rendering="crispEdges"
               viewBox="0 0 57 57"
-              width="65"
+              width="55"
               xmlns="http://www.w3.org/2000/svg"
             >
               <rect
@@ -572,60 +601,28 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
               />
             </svg>
           </div>
-          <div
-            style="font-size: 8pt; color: rgb(100, 116, 139);"
+          <span
+            style="font-size: 7.5pt; color: rgb(100, 116, 139);"
           >
-            <strong
-              style="color: rgb(15, 23, 42);"
-            >
-              Scan to Pay
-            </strong>
-            <div>
-              Scan with any UPI app
-            </div>
-          </div>
+            Scan to remit payment via UPI
+          </span>
         </div>
       </div>
       <div
         class="_signBox_368423"
       >
         <div
-          class="_signLine_368423"
+          class="_signLabel_368423"
         >
           Authorized Signatory
         </div>
-        <div
-          style="font-size: 8pt; font-weight: 600; color: rgb(100, 116, 139); margin-top: 2px;"
-        >
-          TechCraft Solutions Pvt. Ltd.
-        </div>
       </div>
-    </div>
-    <div
-      style="font-size: 8pt; color: rgb(100, 116, 139); margin-top: 16px; white-space: pre-line;"
-    >
-      <strong>
-        Notes:
-      </strong>
-       
-      Thank you for your business. Payment is expected within 30 days.
-    </div>
-    <div
-      style="font-size: 8pt; color: rgb(100, 116, 139); margin-top: 6px; white-space: pre-line;"
-    >
-      <strong>
-        Terms:
-      </strong>
-       
-      1. Goods once sold will not be taken back.
-2. Interest @ 18% p.a. will be charged on overdue invoices.
-3. Subject to Mumbai jurisdiction.
     </div>
     <div
       class="_footer_368423"
     >
       <div>
-        THANK YOU FOR YOUR BUSINESS
+        Thank you for your business!
       </div>
     </div>
   </div>
@@ -909,8 +906,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_f43ed2"
           >
-            18
-            %
+            18%
           </td>
           <td
             class="_numCol_f43ed2"
@@ -957,8 +953,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_f43ed2"
           >
-            12
-            %
+            12%
           </td>
           <td
             class="_numCol_f43ed2"
@@ -1005,8 +1000,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_f43ed2"
           >
-            5
-            %
+            5%
           </td>
           <td
             class="_numCol_f43ed2"
@@ -1156,8 +1150,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       <tbody>
         <tr>
           <td>
-            18
-            %
+            18%
           </td>
           <td>
             675.00
@@ -1174,8 +1167,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            12
-            %
+            12%
           </td>
           <td>
             3,000.00
@@ -1192,8 +1184,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            5
-            %
+            5%
           </td>
           <td>
             1,200.00
@@ -1356,10 +1347,10 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
     style="--accent: #0f766e; --accent-light: #0f766e15; --accent-border: #0f766e40; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 9pt; --font-size-sm: 8pt; --font-size-lg: 11pt; --font-size-xl: 14pt; --font-size-2xl: 19pt;"
   >
     <div
-      class="_headerRow_5ca51f"
+      class="_headerBand_5ca51f"
     >
       <div
-        style="display: flex; align-items: center;"
+        style="display: flex; align-items: center; gap: 8px;"
       >
         <div>
           <div
@@ -1499,7 +1490,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             class="_centerCol_5ca51f"
             style="width: 65px; white-space: nowrap;"
           >
-            HSN
+            HSN/SAC
           </th>
           <th
             class="_numCol_5ca51f"
@@ -1523,7 +1514,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             class="_numCol_5ca51f"
             style="width: 40px;"
           >
-            GST
+            GST%
           </th>
           <th
             class="_numCol_5ca51f"
@@ -1573,8 +1564,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_5ca51f"
           >
-            18
-            %
+            18%
           </td>
           <td
             class="_numCol_5ca51f"
@@ -1621,8 +1611,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_5ca51f"
           >
-            12
-            %
+            12%
           </td>
           <td
             class="_numCol_5ca51f"
@@ -1669,8 +1658,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_5ca51f"
           >
-            5
-            %
+            5%
           </td>
           <td
             class="_numCol_5ca51f"
@@ -1681,22 +1669,13 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       </tbody>
     </table>
     <div
-      class="_bottomSplit_5ca51f"
+      class="_bottomSection_5ca51f"
     >
       <div
-        class="_detailsCol_5ca51f"
+        class="_bottomLeft_5ca51f"
       >
         <div
-          style="margin-bottom: 4px;"
-        >
-          <strong>
-            In Words:
-          </strong>
-           
-          Fifteen Thousand Three Hundred and Forty Two Rupees Only
-        </div>
-        <div
-          class="_bankBox_5ca51f"
+          class="_compactBank_5ca51f"
         >
           <strong>
             Bank Details:
@@ -1705,25 +1684,27 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           HDFC Bank
            | A/c: 
           50100123456789
-           | IFSC: 
-          HDFC0001234
+          <span>
+             | IFSC: 
+            HDFC0001234
+          </span>
           <span>
              | UPI: 
             billing@techcraft.upi
           </span>
         </div>
         <div
-          style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;"
+          style="margin-top: 4px; display: flex; align-items: center; gap: 6px;"
         >
           <div
             class=""
-            style="display: inline-block; width: 50px; height: 50px; background-color: rgb(255, 255, 255); padding: 2px; border-radius: 4px; border: 1px solid rgb(229, 231, 235); line-height: 0;"
+            style="display: inline-block; width: 45px; height: 45px; background-color: rgb(255, 255, 255); padding: 2px; border-radius: 4px; border: 1px solid rgb(229, 231, 235); line-height: 0;"
           >
             <svg
-              height="50"
+              height="45"
               shape-rendering="crispEdges"
               viewBox="0 0 57 57"
-              width="50"
+              width="45"
               xmlns="http://www.w3.org/2000/svg"
             >
               <rect
@@ -1744,7 +1725,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           </span>
         </div>
         <div
-          style="font-size: 7pt; color: rgb(75, 85, 99); margin-bottom: 2px;"
+          style="font-size: 7pt; color: rgb(75, 85, 99); margin-top: 4px;"
         >
           <strong>
             Note:
@@ -1753,7 +1734,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           Thank you for your business. Payment is expected within 30 days.
         </div>
         <div
-          style="font-size: 7pt; color: rgb(107, 114, 128); white-space: pre-line;"
+          style="font-size: 7pt; color: rgb(107, 114, 128); margin-top: 2px;"
         >
           <strong>
             Terms:
@@ -1764,9 +1745,11 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
 3. Subject to Mumbai jurisdiction.
         </div>
       </div>
-      <div>
+      <div
+        class="_bottomRight_5ca51f"
+      >
         <table
-          class="_totalsTable_5ca51f"
+          class="_compactTotals_5ca51f"
         >
           <tbody>
             <tr>
@@ -1774,7 +1757,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
                 Subtotal
               </td>
               <td
-                style="text-align: right;"
+                style="text-align: right; font-weight: 600;"
               >
                 ₹4,950.00
               </td>
@@ -1822,7 +1805,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             </tr>
             <tr>
               <td>
-                Round off
+                Round Off
               </td>
               <td
                 style="text-align: right;"
@@ -1857,10 +1840,10 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
               style="font-weight: 700;"
             >
               <td>
-                Balance
+                Due
               </td>
               <td
-                style="text-align: right;"
+                style="text-align: right; color: rgb(220, 38, 38);"
               >
                 ₹417.00
               </td>
@@ -1868,14 +1851,17 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           </tbody>
         </table>
         <div
-          style="margin-top: 8px;"
+          class="_compactWords_5ca51f"
+        >
+          Fifteen Thousand Three Hundred and Forty Two Rupees Only
+        </div>
+        <div
+          class="_signArea_5ca51f"
         >
           <div
-            class="_signLine_5ca51f"
+            class="_signLabel_5ca51f"
           >
-            For 
-            TechCraft Solutions Pvt. Ltd.
-             (Auth. Signatory)
+            Authorized Signatory
           </div>
         </div>
       </div>
@@ -1898,54 +1884,71 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
     style="--accent: #334155; --accent-light: #33415515; --accent-border: #33415540; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
-      class="_topHeader_41f0b7"
+      class="_headerBar_41f0b7"
     >
       <div
-        class="_brandArea_41f0b7"
+        class="_headerLeft_41f0b7"
       >
         <div>
           <div
-            class="_invoiceTitle_41f0b7"
+            class="_corporateTitle_41f0b7"
           >
-            INVOICE
+            TechCraft Solutions Pvt. Ltd.
           </div>
           <div
-            style="font-size: 8pt; text-transform: uppercase; color: rgb(100, 116, 139);"
+            class="_subTitle_41f0b7"
           >
-            Original for Recipient
+            Commercial Invoice & Remittance Statement
           </div>
         </div>
       </div>
       <div
-        class="_invoiceMeta_41f0b7"
+        class="_headerRight_41f0b7"
       >
-        <div>
-          <strong>
+        <div
+          class="_invoiceBadge_41f0b7"
+        >
+          TAX INVOICE
+        </div>
+        <div
+          class="_metaRow_41f0b7"
+        >
+          <span>
             Invoice No:
-          </strong>
-           
-          INV-2024-0042
-        </div>
-        <div>
+          </span>
           <strong>
+            INV-2024-0042
+          </strong>
+        </div>
+        <div
+          class="_metaRow_41f0b7"
+        >
+          <span>
             Date:
-          </strong>
-           
-          15 Nov 2024
-        </div>
-        <div>
+          </span>
           <strong>
+            15 Nov 2024
+          </strong>
+        </div>
+        <div
+          class="_metaRow_41f0b7"
+        >
+          <span>
             Due Date:
-          </strong>
-           
-          15 Dec 2024
-        </div>
-        <div>
+          </span>
           <strong>
-            Place of Supply:
+            15 Dec 2024
           </strong>
-           
-          Maharashtra (27)
+        </div>
+        <div
+          class="_metaRow_41f0b7"
+        >
+          <span>
+            Place of Supply:
+          </span>
+          <strong>
+            Maharashtra (27)
+          </strong>
         </div>
       </div>
     </div>
@@ -2085,7 +2088,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             class="_numCol_41f0b7"
             style="width: 50px;"
           >
-            Tax%
+            GST%
           </th>
           <th
             class="_numCol_41f0b7"
@@ -2135,8 +2138,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_41f0b7"
           >
-            18
-            %
+            18%
           </td>
           <td
             class="_numCol_41f0b7"
@@ -2183,8 +2185,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_41f0b7"
           >
-            12
-            %
+            12%
           </td>
           <td
             class="_numCol_41f0b7"
@@ -2231,8 +2232,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_41f0b7"
           >
-            5
-            %
+            5%
           </td>
           <td
             class="_numCol_41f0b7"
@@ -2314,7 +2314,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             <td
               style="color: rgb(100, 116, 139);"
             >
-              Round off
+              Round Off
             </td>
             <td
               style="text-align: right;"
@@ -2327,7 +2327,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             class="_grandTotalRow_41f0b7"
           >
             <td>
-              Grand Total
+              Total Due
             </td>
             <td
               style="text-align: right;"
@@ -2337,7 +2337,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           </tr>
           <tr>
             <td
-              style="color: rgb(100, 116, 139);"
+              style="color: rgb(5, 150, 105);"
             >
               Amount Paid
             </td>
@@ -2350,7 +2350,9 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <tr
             style="font-weight: 700;"
           >
-            <td>
+            <td
+              style="color: rgb(220, 38, 38);"
+            >
               Balance Due
             </td>
             <td
@@ -2363,16 +2365,16 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       </table>
     </div>
     <div
-      class="_words_41f0b7"
+      class="_amountWords_41f0b7"
     >
       <strong>
-        Amount Chargeable (in words):
+        Invoice Total in Words:
       </strong>
        
       Fifteen Thousand Three Hundred and Forty Two Rupees Only
     </div>
     <table
-      class="_taxTable_41f0b7"
+      class="_taxSummaryTable_41f0b7"
     >
       <thead>
         <tr>
@@ -2380,7 +2382,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             GST Rate
           </th>
           <th>
-            Taxable Value
+            Taxable Amount
           </th>
           <th>
             CGST Amount
@@ -2396,8 +2398,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       <tbody>
         <tr>
           <td>
-            18
-            %
+            18%
           </td>
           <td>
             675.00
@@ -2414,8 +2415,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            12
-            %
+            12%
           </td>
           <td>
             3,000.00
@@ -2432,8 +2432,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            5
-            %
+            5%
           </td>
           <td>
             1,200.00
@@ -2579,7 +2578,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
     style="--accent: #b45309; --accent-light: #b4530915; --accent-border: #b4530940; --font-family: Georgia, 'Noto Sans Devanagari', 'Times New Roman', serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
-      class="_topBar_46e9ea"
+      class="_header_46e9ea"
     >
       <div>
         <div
@@ -2606,7 +2605,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         <div
           class="_invoiceTitle_46e9ea"
         >
-          Invoice
+          TAX INVOICE
         </div>
         <div
           class="_invoiceNum_46e9ea"
@@ -2647,6 +2646,10 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             Maharashtra
              
             411018
+          </div>
+          <div>
+            Phone: 
+            +91 98210 12345
           </div>
           <div>
             GSTIN: 
@@ -2708,9 +2711,9 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         <tr>
           <th
             class="_centerCol_46e9ea"
-            style="width: 32px;"
+            style="width: 28px;"
           >
-            №
+            #
           </th>
           <th>
             Description
@@ -2719,35 +2722,35 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             class="_centerCol_46e9ea"
             style="width: 75px; white-space: nowrap;"
           >
-            HSN
+            HSN/SAC
           </th>
           <th
             class="_numCol_46e9ea"
-            style="width: 50px;"
+            style="width: 45px;"
           >
             Qty
           </th>
           <th
             class="_numCol_46e9ea"
-            style="width: 70px;"
+            style="width: 65px;"
           >
             Rate
           </th>
           <th
             class="_numCol_46e9ea"
-            style="width: 55px;"
+            style="width: 50px;"
           >
             Disc
           </th>
           <th
             class="_numCol_46e9ea"
-            style="width: 50px;"
+            style="width: 45px;"
           >
-            Tax
+            GST%
           </th>
           <th
             class="_numCol_46e9ea"
-            style="width: 85px;"
+            style="width: 80px;"
           >
             Amount
           </th>
@@ -2793,8 +2796,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_46e9ea"
           >
-            18
-            %
+            18%
           </td>
           <td
             class="_numCol_46e9ea"
@@ -2841,8 +2843,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_46e9ea"
           >
-            12
-            %
+            12%
           </td>
           <td
             class="_numCol_46e9ea"
@@ -2889,8 +2890,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_46e9ea"
           >
-            5
-            %
+            5%
           </td>
           <td
             class="_numCol_46e9ea"
@@ -2901,7 +2901,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       </tbody>
     </table>
     <div
-      class="_totalsSection_46e9ea"
+      class="_totalsBlock_46e9ea"
     >
       <table
         class="_totalsTable_46e9ea"
@@ -2914,7 +2914,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
               Subtotal
             </td>
             <td
-              style="text-align: right;"
+              style="text-align: right; font-weight: 500;"
             >
               ₹4,950.00
             </td>
@@ -3051,8 +3051,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       <tbody>
         <tr>
           <td>
-            18
-            %
+            18%
           </td>
           <td>
             675.00
@@ -3069,8 +3068,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            12
-            %
+            12%
           </td>
           <td>
             3,000.00
@@ -3087,8 +3085,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            5
-            %
+            5%
           </td>
           <td>
             1,200.00
@@ -3123,7 +3120,9 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <div>
             A/c: 
             50100123456789
-             | IFSC: 
+          </div>
+          <div>
+            IFSC: 
             HDFC0001234
           </div>
           <div>
@@ -3164,19 +3163,18 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         <div
           class="_signLine_46e9ea"
         >
-          Authorized Signature
+          Authorized Signatory
         </div>
       </div>
     </div>
     <div
-      class="_notes_46e9ea"
+      class="_notesBlock_46e9ea"
     >
       Note: 
       Thank you for your business. Payment is expected within 30 days.
     </div>
     <div
-      class="_notes_46e9ea"
-      style="margin-top: 6px;"
+      class="_notesBlock_46e9ea"
     >
       Terms: 
       1. Goods once sold will not be taken back.
@@ -3187,7 +3185,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       class="_footer_46e9ea"
     >
       <div>
-        With sincere gratitude for your patronage
+        Thank you for your patronage.
       </div>
     </div>
   </div>
@@ -3201,7 +3199,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
     style="--accent: #111827; --accent-light: #11182715; --accent-border: #11182740; --font-family: system-ui, -apple-system, 'Noto Sans Devanagari', 'Segoe UI', Roboto, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
-      class="_headerGrid_2947d5"
+      class="_header_2947d5"
     >
       <div>
         <div
@@ -3231,6 +3229,10 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             GSTIN: 
             27AABCT1234F1ZP
           </div>
+          <div>
+            PAN: 
+            AABCT1234F
+          </div>
         </div>
       </div>
       <div
@@ -3239,7 +3241,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         <div
           class="_invoiceTitle_2947d5"
         >
-          INVOICE
+          TAX INVOICE
         </div>
         <div
           class="_invoiceNum_2947d5"
@@ -3353,7 +3355,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             class="_centerCol_2947d5"
             style="width: 75px; white-space: nowrap;"
           >
-            HSN
+            HSN/SAC
           </th>
           <th
             class="_numCol_2947d5"
@@ -3377,7 +3379,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             class="_numCol_2947d5"
             style="width: 45px;"
           >
-            Tax
+            GST%
           </th>
           <th
             class="_numCol_2947d5"
@@ -3395,11 +3397,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             1
           </td>
           <td>
-            <span
-              class="_itemDesc_2947d5"
-            >
-              Web Application Development — React + Node.js (Phase 1)
-            </span>
+            Web Application Development — React + Node.js (Phase 1)
           </td>
           <td
             class="_centerCol_2947d5"
@@ -3427,8 +3425,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_2947d5"
           >
-            18
-            %
+            18%
           </td>
           <td
             class="_numCol_2947d5"
@@ -3443,11 +3440,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             2
           </td>
           <td>
-            <span
-              class="_itemDesc_2947d5"
-            >
-              UI/UX Design — Mobile App Wireframes & Prototypes
-            </span>
+            UI/UX Design — Mobile App Wireframes & Prototypes
           </td>
           <td
             class="_centerCol_2947d5"
@@ -3475,8 +3468,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_2947d5"
           >
-            12
-            %
+            12%
           </td>
           <td
             class="_numCol_2947d5"
@@ -3491,11 +3483,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             3
           </td>
           <td>
-            <span
-              class="_itemDesc_2947d5"
-            >
-              Cloud Infrastructure Setup — AWS EC2, RDS, S3
-            </span>
+            Cloud Infrastructure Setup — AWS EC2, RDS, S3
           </td>
           <td
             class="_centerCol_2947d5"
@@ -3523,8 +3511,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <td
             class="_numCol_2947d5"
           >
-            5
-            %
+            5%
           </td>
           <td
             class="_numCol_2947d5"
@@ -3535,7 +3522,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       </tbody>
     </table>
     <div
-      class="_totalsSection_2947d5"
+      class="_totalsBlock_2947d5"
     >
       <table
         class="_totalsTable_2947d5"
@@ -3548,7 +3535,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
               Subtotal
             </td>
             <td
-              style="text-align: right;"
+              style="text-align: right; font-weight: 500;"
             >
               ₹4,950.00
             </td>
@@ -3685,8 +3672,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       <tbody>
         <tr>
           <td>
-            18
-            %
+            18%
           </td>
           <td>
             675.00
@@ -3703,8 +3689,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            12
-            %
+            12%
           </td>
           <td>
             3,000.00
@@ -3721,8 +3706,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         </tr>
         <tr>
           <td>
-            5
-            %
+            5%
           </td>
           <td>
             1,200.00
@@ -3759,7 +3743,9 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           <div>
             A/c: 
             50100123456789
-             | IFSC: 
+          </div>
+          <div>
+            IFSC: 
             HDFC0001234
           </div>
           <div>
@@ -3798,31 +3784,31 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         class="_signBox_2947d5"
       >
         <div
-          style="border-top: 0.5px solid rgb(209, 213, 219); padding-top: 4px; width: 150px; margin-left: auto;"
+          class="_signLine_2947d5"
         >
           Authorized Signatory
         </div>
       </div>
     </div>
     <div
-      class="_notesTerms_2947d5"
+      class="_notesBlock_2947d5"
     >
-      <div>
-        Thank you for your business. Payment is expected within 30 days.
-      </div>
-      <div
-        style="margin-top: 4px;"
-      >
-        1. Goods once sold will not be taken back.
-2. Interest @ 18% p.a. will be charged on overdue invoices.
-3. Subject to Mumbai jurisdiction.
-      </div>
+      Note: 
+      Thank you for your business. Payment is expected within 30 days.
     </div>
     <div
-      class="_thankYou_2947d5"
+      class="_notesBlock_2947d5"
+    >
+      Terms: 
+      1. Goods once sold will not be taken back.
+2. Interest @ 18% p.a. will be charged on overdue invoices.
+3. Subject to Mumbai jurisdiction.
+    </div>
+    <div
+      class="_footer_2947d5"
     >
       <div>
-        Thank you
+        Thank you for your business.
       </div>
     </div>
   </div>
@@ -3836,36 +3822,29 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
     style="--accent: #2563eb; --accent-light: #2563eb15; --accent-border: #2563eb40; --font-family: 'Inter', 'Noto Sans Devanagari', system-ui, sans-serif; --font-size-base: 11pt; --font-size-sm: 10pt; --font-size-lg: 13pt; --font-size-xl: 16pt; --font-size-2xl: 21pt;"
   >
     <div
-      class="_topBand_717718"
+      class="_accentBand_717718"
     >
       <div
-        class="_bandLeft_717718"
+        style="display: flex; align-items: center; gap: 12px; min-width: 0px; flex: 1 1 0%;"
       >
-        <div>
+        <div
+          style="min-width: 0px;"
+        >
           <div
-            class="_bandCompany_717718"
+            class="_bandTitle_717718"
           >
-            TechCraft Solutions Pvt. Ltd.
+            TAX INVOICE
           </div>
-          <div
-            class="_bandMeta_717718"
+          <span
+            class="_copyBadge_717718"
           >
-            Mumbai
-            , 
-            Maharashtra
-             | 
-            +91 98765 43210
-          </div>
+            Original for Recipient
+          </span>
         </div>
       </div>
       <div
-        class="_bandRight_717718"
+        class="_metaBlock_717718"
       >
-        <div
-          class="_bandTitle_717718"
-        >
-          TAX INVOICE
-        </div>
         <div
           class="_bandMeta_717718"
         >
@@ -4019,13 +3998,13 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
               class="_numCol_717718"
               style="width: 50px;"
             >
-              Tax
+              GST%
             </th>
             <th
               class="_numCol_717718"
               style="width: 85px;"
             >
-              Total
+              Amount
             </th>
           </tr>
         </thead>
@@ -4038,7 +4017,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             </td>
             <td>
               <span
-                class="_itemDesc_717718"
+                class="_itemTitle_717718"
               >
                 Web Application Development — React + Node.js (Phase 1)
               </span>
@@ -4069,8 +4048,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             <td
               class="_numCol_717718"
             >
-              18
-              %
+              18%
             </td>
             <td
               class="_numCol_717718"
@@ -4086,7 +4064,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             </td>
             <td>
               <span
-                class="_itemDesc_717718"
+                class="_itemTitle_717718"
               >
                 UI/UX Design — Mobile App Wireframes & Prototypes
               </span>
@@ -4117,8 +4095,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             <td
               class="_numCol_717718"
             >
-              12
-              %
+              12%
             </td>
             <td
               class="_numCol_717718"
@@ -4134,7 +4111,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             </td>
             <td>
               <span
-                class="_itemDesc_717718"
+                class="_itemTitle_717718"
               >
                 Cloud Infrastructure Setup — AWS EC2, RDS, S3
               </span>
@@ -4165,8 +4142,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
             <td
               class="_numCol_717718"
             >
-              5
-              %
+              5%
             </td>
             <td
               class="_numCol_717718"
@@ -4316,8 +4292,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         <tbody>
           <tr>
             <td>
-              18
-              %
+              18%
             </td>
             <td>
               675.00
@@ -4334,8 +4309,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           </tr>
           <tr>
             <td>
-              12
-              %
+              12%
             </td>
             <td>
               3,000.00
@@ -4352,8 +4326,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           </tr>
           <tr>
             <td>
-              5
-              %
+              5%
             </td>
             <td>
               1,200.00
@@ -4432,28 +4405,25 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
                 Scan QR to Pay
               </strong>
               <div>
-                Scan with any UPI app
+                Instant UPI transfer
               </div>
             </div>
           </div>
         </div>
         <div
-          class="_signBox_717718"
+          class="_signWrapper_717718"
         >
-          <div
-            class="_signLine_717718"
-          >
-            Authorized Signatory
-          </div>
-          <div
-            style="font-size: 7.5pt; color: rgb(148, 163, 184); margin-top: 2px;"
-          >
-            TechCraft Solutions Pvt. Ltd.
+          <div>
+            <div
+              class="_signLabel_717718"
+            >
+              Authorized Signatory
+            </div>
           </div>
         </div>
       </div>
       <div
-        style="font-size: 8pt; color: rgb(100, 116, 139); margin-top: 14px;"
+        class="_termsNotes_717718"
       >
         <strong>
           Note:
@@ -4462,11 +4432,16 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         Thank you for your business. Payment is expected within 30 days.
       </div>
       <div
-        style="font-size: 7.5pt; color: rgb(148, 163, 184); margin-top: 6px; white-space: pre-line;"
+        class="_termsNotes_717718"
       >
-        1. Goods once sold will not be taken back.
+        <strong>
+          Terms & Conditions:
+        </strong>
+        <div>
+          1. Goods once sold will not be taken back.
 2. Interest @ 18% p.a. will be charged on overdue invoices.
 3. Subject to Mumbai jurisdiction.
+        </div>
       </div>
       <div
         class="_footer_717718"
@@ -4567,7 +4542,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           1
           . 
           Web Application Development — React + Node.js (Phase 1)
-           [HSN: 998314]
+           [HSN/SAC: 998314]
         </div>
         <div
           class="_itemMath_aadc0e"
@@ -4594,7 +4569,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           2
           . 
           UI/UX Design — Mobile App Wireframes & Prototypes
-           [HSN: 998313]
+           [HSN/SAC: 998313]
         </div>
         <div
           class="_itemMath_aadc0e"
@@ -4620,7 +4595,7 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           3
           . 
           Cloud Infrastructure Setup — AWS EC2, RDS, S3
-           [HSN: 998315]
+           [HSN/SAC: 998315]
         </div>
         <div
           class="_itemMath_aadc0e"
@@ -4790,28 +4765,20 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       <div>
         A/C: 
         50100123456789
-         | IFSC: 
-        HDFC0001234
+         
+        | IFSC: HDFC0001234
       </div>
     </div>
     <div
-      class="_footer_aadc0e"
+      style="font-size: 7pt; text-align: center; margin-top: 8px;"
+    >
+      Thank you for your business. Payment is expected within 30 days.
+    </div>
+    <div
+      class="_centerFooter_aadc0e"
     >
       <div>
-        Thank you for your business. Payment is expected within 30 days.
-      </div>
-      <div
-        style="margin-top: 2px;"
-      >
-        Terms: 
-        1. Goods once sold will not be taken back.
-2. Interest @ 18% p.a. will be charged on overdue invoices.
-3. Subject to Mumbai jurisdiction.
-      </div>
-      <div
-        style="margin-top: 4px;"
-      >
-        THANK YOU! VISIT AGAIN
+        *** THANK YOU! ***
       </div>
     </div>
   </div>

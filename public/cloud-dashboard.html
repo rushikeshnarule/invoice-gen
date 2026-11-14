@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Gen — Commercial Pro Fleet &amp; License Manager</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+
+  <!-- Typography: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ---------------------------------------------------------------------------
+     * Design Tokens — Light Theme Default, Quiet Chrome, 4px Spacing Grid
+     * --------------------------------------------------------------------------- */
+    :root {
+      --color-bg-page: #f8fafc;
+      --color-bg-card: #ffffff;
+      --color-bg-subtle: #f1f5f9;
+      --color-bg-hover: #e2e8f0;
+      
+      --color-text-primary: #0f172a;
+      --color-text-secondary: #475569;
+      --color-text-tertiary: #94a3b8;
+      --color-text-placeholder: #94a3b8;
+      
+      --color-border: #e2e8f0;
+      --color-border-subtle: #f1f5f9;
+      --color-border-focus: #0f172a;
+      
+      --color-accent: #0f172a;
+      --color-accent-hover: #1e293b;
+      --color-emerald: #10b981;
+      --color-amber: #d97706;
+      --color-rose: #e11d48;
+
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+      --radius-2xl: 16px;
+      --radius-full: 9999px;
+
+      --shadow-subtle: 0 1px 2px 0 rgba(0,0,0,0.04);
+      --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04);
+      --shadow-dropdown: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+      --shadow-modal: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05);
+    }
+
+    /* Dark Mode (Quiet, Low-Contrast Slate Ramp) */
+    .dark {
+      --color-bg-page: #090d16;
+      --color-bg-card: #0f172a;
+      --color-bg-subtle: #1e293b;
+      --color-bg-hover: #293548;
+      
+      --color-text-primary: #f8fafc;
+      --color-text-secondary: #cbd5e1;
+      --color-text-tertiary: #64748b;
+      --color-text-placeholder: #475569;
+      
+      --color-border: #1e293b;
+      --color-border-subtle: #172234;
+      --color-border-focus: #38bdf8;
+      
+      --color-accent: #f8fafc;
+      --color-accent-hover: #e2e8f0;
+      --color-emerald: #34d399;
+      --color-amber: #fbbf24;
+      --color-rose: #fb7185;
+
+      --shadow-subtle: 0 1px 2px 0 rgba(0,0,0,0.3);
+      --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.4);
+      --shadow-dropdown: 0 8px 16px rgba(0,0,0,0.5);
+      --shadow-modal: 0 25px 50px rgba(0,0,0,0.7);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--color-bg-page);
+      color: var(--color-text-primary);
+      min-height: 100vh;
+      padding: 32px 20px;
+      display: flex;
+      justify-content: center;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .app-viewport {
+      max-width: 1080px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ---------------------------------------------------------------------------
+     * Header Card (Quiet Chrome)
+     * --------------------------------------------------------------------------- */
+    .header-card {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: 18px 24px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-lg);
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-primary);
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .brand-text h1 {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--color-text-primary);
+    }
+
+    .brand-meta {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .live-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--color-bg-subtle);
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .status-dot-pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-emerald);
+      display: inline-block;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Segmented Navigation */
+    .nav-tabs {
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border);
+      padding: 3px;
+      border-radius: var(--radius-lg);
+      display: inline-flex;
+      gap: 2px;
+    }
+
+    .nav-tab {
+      background: transparent;
+      border: none;
+      color: var(--color-text-secondary);
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .nav-tab:hover {
+      color: var(--color-text-primary);
+    }
+
+    .nav-tab.active {
+      background: var(--color-bg-card);
+      color: var(--color-text-primary);
+      font-weight: 600;
+      box-shadow: var(--shadow-subtle);
+    }
+
+    .theme-toggle-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .theme-toggle-btn:hover {
+      background: var(--color-bg-subtle);
+      color: var(--color-text-primary);
+    }
+
+    /* ---------------------------------------------------------------------------
+     * Real-Time KPI Metric Cards (Zero Fake Data)
+     * --------------------------------------------------------------------------- */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .kpi-card {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: 16px 20px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+    }
+
+    .kpi-icon-box {
+      color: var(--color-text-tertiary);
+      display: flex;
+      align-items: center;
+    }
+
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--color-text-primary);
+      line-height: 1.1;
+    }
+
+    .kpi-footer {
+      font-size: 11.5px;
+      color: var(--color-text-tertiary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ---------------------------------------------------------------------------
+     * Action & Search Toolbar
+     * --------------------------------------------------------------------------- */
+    .toolbar-card {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow-card);
+    }
+
+    .search-field {
+      flex: 1;
+      min-width: 240px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-icon-svg {
+      position: absolute;
+      left: 12px;
+      color: var(--color-text-tertiary);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-text {
+      width: 100%;
+      background: var(--color-bg-page);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+      padding: 8px 12px 8px 34px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.15s;
+    }
+
+    .input-text:focus {
+      border-color: var(--color-border-focus);
+      background: var(--color-bg-card);
+    }
+
+    .select-dropdown {
+      background: var(--color-bg-page);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .select-dropdown:focus {
+      border-color: var(--color-border-focus);
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--color-accent);
+      color: var(--color-bg-card);
+      border-color: var(--color-accent);
+    }
+
+    .dark .btn-primary {
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: #f8fafc;
+    }
+
+    .btn-primary:hover {
+      background: var(--color-accent-hover);
+    }
+
+    .dark .btn-primary:hover {
+      background: #e2e8f0;
+    }
+
+    .btn-secondary {
+      background: var(--color-bg-card);
+      border-color: var(--color-border);
+      color: var(--color-text-primary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-bg-subtle);
+      border-color: #cbd5e1;
+    }
+
+    .dark .btn-secondary:hover {
+      border-color: #334155;
+    }
+
+    .btn-small {
+      padding: 4px 10px;
+      font-size: 11.5px;
+      border-radius: var(--radius-sm);
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: inherit;
+    }
+
+    .btn-small:hover {
+      color: var(--color-text-primary);
+      background: var(--color-bg-subtle);
+    }
+
+    .btn-danger {
+      padding: 4px 10px;
+      font-size: 11.5px;
+      border-radius: var(--radius-sm);
+      background: var(--color-bg-card);
+      border: 1px solid #fecdd3;
+      color: #e11d48;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-danger:hover {
+      background: #fff1f2;
+      border-color: #fda4af;
+    }
+
+    .dark .btn-danger {
+      background: #1e1b20;
+      border-color: #881337;
+      color: #fda4af;
+    }
+
+    /* ---------------------------------------------------------------------------
+     * Commercial Pro License Cards
+     * --------------------------------------------------------------------------- */
+    .license-card {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      margin-bottom: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .license-header {
+      padding: 16px 20px;
+      background: var(--color-bg-card);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .license-info {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .key-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      background: var(--color-bg-page);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tier-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--color-bg-subtle);
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+    }
+
+    .validity-tag {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .validity-active {
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+    }
+
+    .dark .validity-active {
+      background: #064e3b;
+      color: #6ee7b7;
+      border: 1px solid #047857;
+    }
+
+    .validity-warning {
+      background: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .dark .validity-warning {
+      background: #451a03;
+      color: #fcd34d;
+      border: 1px solid #78350f;
+    }
+
+    .validity-expired {
+      background: #fff1f2;
+      color: #be123c;
+      border: 1px solid #fecdd3;
+    }
+
+    .dark .validity-expired {
+      background: #4c0519;
+      color: #fda4af;
+      border: 1px solid #881337;
+    }
+
+    .seat-status-box {
+      text-align: right;
+      min-width: 150px;
+    }
+
+    .seat-status-text {
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .seat-bar-track {
+      width: 140px;
+      height: 4px;
+      background: var(--color-bg-subtle);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .seat-bar-fill {
+      height: 100%;
+      background: var(--color-accent);
+      border-radius: var(--radius-full);
+      transition: width 0.3s ease;
+    }
+
+    .dark .seat-bar-fill {
+      background: #38bdf8;
+    }
+
+    /* Hardware Telemetry List */
+    .devices-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .device-row {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .device-row:last-child {
+      border-bottom: none;
+    }
+
+    .device-row:hover {
+      background: var(--color-bg-page);
+    }
+
+    .device-primary-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .device-name {
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--color-text-primary);
+    }
+
+    .os-badge {
+      font-size: 11px;
+      background: var(--color-bg-subtle);
+      padding: 1px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+    }
+
+    .connection-badge {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: var(--radius-sm);
+      font-weight: 500;
+    }
+
+    .badge-online {
+      background: #ecfdf5;
+      color: #047857;
+    }
+
+    .dark .badge-online {
+      background: #064e3b;
+      color: #6ee7b7;
+    }
+
+    .badge-offline {
+      background: var(--color-bg-subtle);
+      color: var(--color-text-tertiary);
+    }
+
+    .device-specs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 4px 16px;
+      margin-top: 8px;
+      font-size: 11.5px;
+    }
+
+    .spec-item {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .spec-label {
+      color: var(--color-text-tertiary);
+      font-size: 11px;
+      min-width: 60px;
+    }
+
+    .spec-val {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--color-text-secondary);
+      word-break: break-all;
+    }
+
+    .spec-val code {
+      background: var(--color-bg-subtle);
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid var(--color-border);
+      font-size: 11px;
+    }
+
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--color-text-tertiary);
+      font-size: 13px;
+      background: var(--color-bg-card);
+      border-radius: var(--radius-xl);
+      border: 1px dashed var(--color-border);
+    }
+
+    .empty-icon {
+      color: var(--color-text-tertiary);
+      margin-bottom: 8px;
+    }
+
+    /* Duration Selector Pills */
+    .duration-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .pill-btn {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .pill-btn:hover {
+      border-color: var(--color-border-focus);
+      color: var(--color-text-primary);
+    }
+
+    .pill-btn.active {
+      background: var(--color-accent);
+      color: var(--color-bg-card);
+      border-color: var(--color-accent);
+    }
+
+    .dark .pill-btn.active {
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: #f8fafc;
+    }
+
+    /* CDN Card */
+    .cdn-card {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      box-shadow: var(--shadow-subtle);
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      max-width: 500px;
+      width: 100%;
+      box-shadow: var(--shadow-modal);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--color-bg-page);
+    }
+
+    .modal-head h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--color-text-tertiary);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 6px;
+    }
+
+    .modal-close:hover {
+      color: var(--color-text-primary);
+    }
+
+    .modal-content {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 75vh;
+      overflow-y: auto;
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+    }
+
+    .modal-foot {
+      padding: 14px 20px;
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      background: var(--color-bg-page);
+    }
+
+    /* Notification Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--color-bg-card);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 10px 16px;
+      box-shadow: var(--shadow-dropdown);
+      font-size: 12.5px;
+      font-weight: 500;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 640px) {
+      .header-card { padding: 14px 16px; }
+      .device-row { flex-direction: column; align-items: flex-start; }
+      .seat-status-box { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-viewport">
+    
+    <!-- ─── Header Card ─── -->
+    <header class="header-card">
+      <div class="brand-group">
+        <div class="brand-icon">IG</div>
+        <div class="brand-text">
+          <h1>Commercial Pro Fleet Manager</h1>
+          <div class="brand-meta">
+            <span class="live-chip">
+              <span class="status-dot-pulse"></span>
+              Netlify Production Server
+            </span>
+            <span>&bull;</span>
+            <span id="sync-timestamp" style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">Connecting...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Segmented Tab Navigation -->
+        <div class="nav-tabs">
+          <button class="nav-tab active" id="btn-tab-licenses" onclick="switchTab('licenses')">
+            Commercial Fleet
+          </button>
+          <button class="nav-tab" id="btn-tab-templates" onclick="switchTab('templates')">
+            Template CDN
+          </button>
+        </div>
+
+        <!-- Light / Dark Theme Switcher -->
+        <button class="theme-toggle-btn" id="theme-toggle-btn" title="Toggle theme" onclick="toggleTheme()">
+          <span id="theme-icon-container">
+            <!-- Default light theme shows moon to switch to dark -->
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          </span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ─── VIEW 1: COMMERCIAL PRO FLEET ─── -->
+    <div id="view-licenses">
+      
+      <!-- Real-Time Production KPIs -->
+      <div class="kpi-grid" style="margin-bottom: 16px;">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Commercial Pro Licenses</span>
+            <div class="kpi-icon-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpi-keys">0</div>
+          <div class="kpi-footer">Active issued commercial keys</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Hardware Workstations</span>
+            <div class="kpi-icon-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpi-devices">0</div>
+          <div class="kpi-footer">Enrolled target machines</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Active Online</span>
+            <div class="kpi-icon-box">
+              <span class="status-dot-pulse"></span>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpi-online">0</div>
+          <div class="kpi-footer">Live telemetry heartbeats</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Total Seat Capacity</span>
+            <div class="kpi-icon-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpi-seats">0</div>
+          <div class="kpi-footer">Licensed device slots</div>
+        </div>
+      </div>
+
+      <!-- Action & Search Toolbar -->
+      <div class="toolbar-card" style="margin-bottom: 16px;">
+        <div class="search-field">
+          <span class="search-icon-svg">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </span>
+          <input
+            type="text"
+            id="search-box"
+            class="input-text"
+            placeholder="Search by client, key, hostname, or machine ID..."
+            oninput="renderLicenses()"
+          />
+        </div>
+
+        <button class="btn btn-primary" onclick="openAllotKeyModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Allot Commercial Key
+        </button>
+        <button class="btn btn-secondary" onclick="openAllotDeviceModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+          Allot Device
+        </button>
+        <button class="btn btn-secondary" id="btn-refresh" onclick="refreshDashboard()">
+          <svg id="refresh-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- License Cards Container -->
+      <div id="licenses-container">
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <strong>Connecting to Netlify Production Edge...</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── VIEW 2: TEMPLATE CDN ─── -->
+    <div id="view-templates" style="display: none;">
+      <div class="kpi-card" style="margin-bottom: 14px;">
+        <h2 style="font-size: 15px; font-weight: 600; color: var(--color-text-primary);">
+          Official Stylesheet Distribution CDN
+        </h2>
+        <p style="color: var(--color-text-secondary); font-size: 12.5px; margin-top: 2px;">
+          Production template manifests and print CSS served via Netlify edge distribution.
+        </p>
+      </div>
+
+      <div class="cdn-card">
+        <div>
+          <span class="tier-badge" style="margin-right: 6px;">Official</span>
+          <strong>Excel Sales Invoice</strong> &mdash; Default accounting green header with double underline
+        </div>
+        <a href="/assets/excel-sales-invoice.css" target="_blank" class="btn btn-secondary" style="font-size: 11.5px; padding: 4px 10px; text-decoration: none;">
+          View CSS
+        </a>
+      </div>
+
+      <div class="cdn-card">
+        <div>
+          <span class="tier-badge" style="margin-right: 6px;">Corporate</span>
+          <strong>Excel Corporate Invoice</strong> &mdash; Corporate Navy dual-address commercial format
+        </div>
+        <a href="/assets/excel-corporate-invoice.css" target="_blank" class="btn btn-secondary" style="font-size: 11.5px; padding: 4px 10px; text-decoration: none;">
+          View CSS
+        </a>
+      </div>
+
+      <div class="cdn-card">
+        <div>
+          <span class="tier-badge" style="margin-right: 6px;">Consulting</span>
+          <strong>Excel Service Invoice</strong> &mdash; Consultant &amp; Freelance project breakdown
+        </div>
+        <a href="/assets/excel-service-invoice.css" target="_blank" class="btn btn-secondary" style="font-size: 11.5px; padding: 4px 10px; text-decoration: none;">
+          View CSS
+        </a>
+      </div>
+
+      <div class="cdn-card">
+        <div>
+          <span class="tier-badge" style="margin-right: 6px;">Retail</span>
+          <strong>Excel Small Business Invoice</strong> &mdash; Small business sales ledger with GST columns
+        </div>
+        <a href="/assets/excel-small-business-invoice.css" target="_blank" class="btn btn-secondary" style="font-size: 11.5px; padding: 4px 10px; text-decoration: none;">
+          View CSS
+        </a>
+      </div>
+
+      <div class="cdn-card">
+        <div>
+          <span class="tier-badge" style="margin-right: 6px;">Special</span>
+          <strong>Construction &amp; Contractor Special</strong> &mdash; Progress billing and labor breakdown
+        </div>
+        <a href="/assets/construction-contractor.css" target="_blank" class="btn btn-secondary" style="font-size: 11.5px; padding: 4px 10px; text-decoration: none;">
+          View CSS
+        </a>
+      </div>
+
+      <div class="cdn-card">
+        <div>
+          <span class="tier-badge" style="margin-right: 6px;">Thermal POS</span>
+          <strong>Express POS Thermal</strong> &mdash; 80mm and 58mm monochrome receipt printing
+        </div>
+        <a href="/assets/express-pos-thermal.css" target="_blank" class="btn btn-secondary" style="font-size: 11.5px; padding: 4px 10px; text-decoration: none;">
+          View CSS
+        </a>
+      </div>
+
+      <div class="cdn-card">
+        <div>
+          <span class="validity-tag validity-active" style="margin-right: 6px;">JSON API</span>
+          <strong>Remote Template Manifest</strong> &mdash; Dynamic template sync endpoint
+        </div>
+        <a href="/templates.json" target="_blank" class="btn btn-primary" style="font-size: 11.5px; padding: 4px 10px; text-decoration: none;">
+          Inspect /templates.json
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── MODAL 1: ALLOT NEW COMMERCIAL PRO KEY ─── -->
+  <div class="modal-overlay" id="modal-allot-key">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Allot Commercial Pro License Key</h3>
+        <button class="modal-close" onclick="closeAllotKeyModal()">&times;</button>
+      </div>
+      <div class="modal-content">
+        <div class="form-row">
+          <label class="form-label">Client / Organization Name</label>
+          <input type="text" id="new-key-client" class="input-text" placeholder="e.g. Acme Commercial Enterprise Ltd." />
+        </div>
+
+        <!-- How Long It Will Work (Validity Period) -->
+        <div class="form-row">
+          <label class="form-label">Validity Duration (How long it will work)</label>
+          <div class="duration-pills">
+            <button type="button" class="pill-btn" onclick="selectDuration(30, this)">30 Days</button>
+            <button type="button" class="pill-btn" onclick="selectDuration(90, this)">90 Days</button>
+            <button type="button" class="pill-btn" onclick="selectDuration(180, this)">180 Days</button>
+            <button type="button" class="pill-btn active" onclick="selectDuration(365, this)">1 Year</button>
+            <button type="button" class="pill-btn" onclick="selectDuration(730, this)">2 Years</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-row">
+            <label class="form-label">Expiration Date</label>
+            <input type="date" id="new-key-expiry" class="input-text" onchange="onCustomDateChange()" />
+          </div>
+          <div class="form-row">
+            <label class="form-label">Seat Quota</label>
+            <input type="number" id="new-key-seats" class="input-text" value="5" min="1" max="500" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Generated Commercial Pro License Key</label>
+          <input type="text" id="new-key-code" class="input-text" style="font-family: 'JetBrains Mono', monospace;" readonly />
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeAllotKeyModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAllotKey()">Allot Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL 2: MANAGE / EXTEND KEY VALIDITY ─── -->
+  <div class="modal-overlay" id="modal-manage-validity">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Manage Key Validity (Extend Duration)</h3>
+        <button class="modal-close" onclick="closeManageValidityModal()">&times;</button>
+      </div>
+      <div class="modal-content">
+        <div class="form-row">
+          <label class="form-label">Target Commercial Pro Key</label>
+          <input type="text" id="validity-target-key" class="input-text" style="font-family: 'JetBrains Mono', monospace;" readonly />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Current Expiration Date</label>
+          <input type="text" id="validity-current-expiry" class="input-text" style="font-family: 'JetBrains Mono', monospace;" readonly />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Extend Duration (Add Validity)</label>
+          <div class="duration-pills">
+            <button type="button" class="pill-btn" onclick="extendByDays(30)">+30 Days</button>
+            <button type="button" class="pill-btn" onclick="extendByDays(90)">+90 Days</button>
+            <button type="button" class="pill-btn" onclick="extendByDays(180)">+180 Days</button>
+            <button type="button" class="pill-btn active" onclick="extendByDays(365)">+1 Year</button>
+            <button type="button" class="pill-btn" onclick="extendByDays(730)">+2 Years</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">New Expiration Date</label>
+          <input type="date" id="validity-new-expiry" class="input-text" />
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeManageValidityModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitExtendValidity()">Update Validity</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL 3: ALLOT HARDWARE DEVICE ─── -->
+  <div class="modal-overlay" id="modal-allot-device">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Allot Hardware Device to License</h3>
+        <button class="modal-close" onclick="closeAllotDeviceModal()">&times;</button>
+      </div>
+      <div class="modal-content">
+        <div class="form-row">
+          <label class="form-label">Target Commercial Pro Key</label>
+          <select id="dev-target-key" class="select-dropdown"></select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-row">
+            <label class="form-label">Device Hostname</label>
+            <input type="text" id="dev-name" class="input-text" placeholder="e.g. DESKTOP-MAIN-01" />
+          </div>
+          <div class="form-row">
+            <label class="form-label">Operating System User</label>
+            <input type="text" id="dev-username" class="input-text" placeholder="e.g. Rushi" />
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-row">
+            <label class="form-label">Platform</label>
+            <select id="dev-platform" class="select-dropdown">
+              <option value="windows">Windows 11 / 10</option>
+              <option value="mac">macOS</option>
+              <option value="linux">Linux</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Location</label>
+            <input type="text" id="dev-location" class="input-text" value="Pune, Maharashtra" />
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Hardware Machine ID / MachineGuid</label>
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="dev-machine-id" class="input-text" style="flex: 1; font-family: 'JetBrains Mono', monospace;" />
+            <button class="btn btn-secondary" onclick="generateMachineIdSuggestion()">Generate</button>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-row">
+            <label class="form-label">Processor Model</label>
+            <input type="text" id="dev-cpu" class="input-text" value="Intel(R) Core(TM) i5 (8 Cores)" />
+          </div>
+          <div class="form-row">
+            <label class="form-label">Memory (RAM)</label>
+            <input type="text" id="dev-ram" class="input-text" value="8.0 GB" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" onclick="closeAllotDeviceModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAllotDevice()">Allot Device</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="toast" id="toast-notify">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toast-text">Operation completed</span>
+  </div>
+
+  <!-- ─── Core Application Logic (Real-Time Netlify Production Sync) ─── -->
+  <script>
+    let allotmentsData = [];
+
+    // Theme Management: Light Theme Default
+    function initTheme() {
+      const saved = localStorage.getItem('boardui_theme') || 'light';
+      if (saved === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+        setThemeIcon('sun');
+      } else {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+        setThemeIcon('moon');
+      }
+    }
+
+    function setThemeIcon(mode) {
+      const container = document.getElementById('theme-icon-container');
+      if (!container) return;
+      if (mode === 'sun') {
+        // In dark mode, show sun icon to switch to light
+        container.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
+      } else {
+        // In light mode, show moon icon to switch to dark
+        container.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+      }
+    }
+
+    function toggleTheme() {
+      const isCurrentlyDark = document.documentElement.classList.contains('dark');
+      if (isCurrentlyDark) {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+        localStorage.setItem('boardui_theme', 'light');
+        setThemeIcon('moon');
+        showToast('Switched to Light Theme');
+      } else {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+        localStorage.setItem('boardui_theme', 'dark');
+        setThemeIcon('sun');
+        showToast('Switched to Dark Theme');
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast-notify');
+      const text = document.getElementById('toast-text');
+      text.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    // Cryptographic Checksum for Commercial Pro Keys (INVG-PRO-YYYYMMDD-XXXX)
+    function computeKeyChecksum(date) {
+      const seed = 'INVOICE-GEN-PRO-' + date + '-SALT-2026';
+      let hash = 0;
+      for (let i = 0; i < seed.length; i++) {
+        hash = (hash << 5) - hash + seed.charCodeAt(i);
+        hash |= 0;
+        hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+      }
+      return (hash >>> 0).toString(16).toUpperCase().padStart(8, '0').slice(0, 4);
+    }
+
+    function generateKeyFromDate(dateStr) {
+      const cleanDate = dateStr.replace(/-/g, '');
+      const sum = computeKeyChecksum(cleanDate);
+      return 'INVG-PRO-' + cleanDate + '-' + sum;
+    }
+
+    // Real-Time Netlify Function Endpoint Fetch
+    async function fetchCloudAllotments() {
+      try {
+        const res = await fetch('/.netlify/functions/license-check?action=get_allotments&_t=' + Date.now());
+        const data = await res.json();
+        if (data.success && Array.isArray(data.allotments)) {
+          allotmentsData = data.allotments;
+          if (data.summary) {
+            document.getElementById('kpi-keys').innerText = data.summary.totalKeys;
+            document.getElementById('kpi-devices').innerText = data.summary.totalDevices;
+            document.getElementById('kpi-online').innerText = data.summary.activeDevicesOnline;
+            document.getElementById('kpi-seats').innerText = data.summary.totalSeats;
+          }
+          document.getElementById('sync-timestamp').innerText = 'Synced ' + new Date().toLocaleTimeString();
+        } else {
+          document.getElementById('sync-timestamp').innerText = 'Connected';
+        }
+      } catch (err) {
+        console.warn('Real-time edge fetch warning:', err);
+        document.getElementById('sync-timestamp').innerText = 'Offline Mode';
+      }
+      renderLicenses();
+      populateDeviceKeySelect();
+    }
+
+    function refreshDashboard() {
+      const svg = document.getElementById('refresh-svg');
+      if (svg) {
+        svg.style.transform = 'rotate(360deg)';
+        svg.style.transition = 'transform 0.4s ease';
+      }
+      fetchCloudAllotments().then(() => {
+        if (svg) {
+          setTimeout(() => { svg.style.transform = 'none'; }, 400);
+        }
+        showToast('Real-time data refreshed');
+      });
+    }
+
+    function renderLicenses() {
+      const q = (document.getElementById('search-box')?.value || '').toLowerCase().trim();
+
+      const filtered = allotmentsData.filter(item => {
+        return !q ||
+          item.licenseKey.toLowerCase().includes(q) ||
+          item.licensedTo.toLowerCase().includes(q) ||
+          (item.devices && item.devices.some(d =>
+            d.deviceName.toLowerCase().includes(q) ||
+            d.machineId.toLowerCase().includes(q) ||
+            (d.username && d.username.toLowerCase().includes(q)) ||
+            (d.cpuModel && d.cpuModel.toLowerCase().includes(q)) ||
+            (d.ipAddress && d.ipAddress.toLowerCase().includes(q)) ||
+            (d.location && d.location.toLowerCase().includes(q))
+          ));
+      });
+
+      const container = document.getElementById('licenses-container');
+      if (!container) return;
+
+      if (filtered.length === 0) {
+        if (allotmentsData.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+              </div>
+              <strong style="color: var(--color-text-primary); font-size: 14px;">No Commercial Pro licenses currently allotted.</strong>
+              <p style="margin-top: 4px; font-size: 12px; max-width: 420px; margin-left: auto; margin-right: auto; color: var(--color-text-secondary);">
+                Issue your first commercial license by clicking "+ Allot Commercial Key" above to generate a signed key and set its validity.
+              </p>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="empty-state">
+              <strong style="color: var(--color-text-primary);">No matching commercial licenses or workstations found.</strong>
+              <p style="margin-top: 4px;">Try searching with a different client name, key, or hostname.</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      // Collect all workstations across active licenses
+      const allWorkstations = [];
+      filtered.forEach(lic => {
+        if (Array.isArray(lic.devices)) {
+          lic.devices.forEach(dev => {
+            allWorkstations.push({
+              ...dev,
+              parentLicenseKey: lic.licenseKey,
+              parentLicensedTo: lic.licensedTo,
+            });
+          });
+        }
+      });
+
+      // Filter workstations if search query matches device
+      const displayedWorkstations = allWorkstations.filter(d => {
+        if (!q) return true;
+        return (
+          d.deviceName.toLowerCase().includes(q) ||
+          d.machineId.toLowerCase().includes(q) ||
+          (d.username && d.username.toLowerCase().includes(q)) ||
+          (d.cpuModel && d.cpuModel.toLowerCase().includes(q)) ||
+          (d.ipAddress && d.ipAddress.toLowerCase().includes(q)) ||
+          (d.location && d.location.toLowerCase().includes(q)) ||
+          d.parentLicenseKey.toLowerCase().includes(q) ||
+          d.parentLicensedTo.toLowerCase().includes(q)
+        );
+      });
+
+      // Render Single Unified Dashboard
+      container.innerHTML = `
+        <!-- Unified Commercial License Header Card -->
+        <div class="license-card" style="margin-bottom: 20px;">
+          ${filtered.map(item => {
+            const percent = Math.min(100, Math.round((item.usedSeats / item.totalSeats) * 100));
+            const validityInfo = formatValidity(item.expiresAt);
+            const expiryFormatted = item.expiresAt ? item.expiresAt.slice(0, 10) : 'Perpetual';
+
+            return `
+            <div class="license-header">
+              <div class="license-info">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <span class="key-badge">
+                    ${item.licenseKey}
+                    <button class="btn-small" onclick="copyKey('${item.licenseKey}')" title="Copy key">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                      Copy
+                    </button>
+                  </span>
+                  <span class="tier-badge">Commercial Pro</span>
+                  <span class="validity-tag ${validityInfo.cssClass}">
+                    ${validityInfo.label}
+                  </span>
+                  <button class="btn-small" onclick="openManageValidityModal('${item.licenseKey}', '${item.expiresAt || ''}')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Manage Validity
+                  </button>
+                </div>
+                <div style="font-size: 13px; color: var(--color-text-secondary); margin-top: 4px;">
+                  <strong style="color: var(--color-text-primary);">${item.licensedTo}</strong> 
+                  <span style="color: var(--color-text-tertiary);">&bull;</span> 
+                  <span>Expires: <strong>${expiryFormatted}</strong></span>
+                </div>
+              </div>
+
+              <div class="seat-status-box">
+                <div class="seat-status-text">
+                  ${item.usedSeats} / ${item.totalSeats} Seats Allotted (${percent}%)
+                </div>
+                <div class="seat-bar-track">
+                  <div class="seat-bar-fill" style="width: ${percent}%;"></div>
+                </div>
+                <div style="font-size: 11.5px; color: var(--color-text-tertiary); margin-top: 4px;">
+                  ${item.availableSeats} seats available
+                </div>
+              </div>
+            </div>
+            `;
+          }).join('')}
+        </div>
+
+        <!-- Single Unified Connected Hardware Workstations Board -->
+        <div class="license-card" style="margin-bottom: 24px;">
+          <div style="padding: 14px 20px; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; background: var(--color-bg-page);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+              <strong style="font-size: 13.5px; color: var(--color-text-primary);">Connected Hardware Workstations</strong>
+              <span class="tier-badge" style="font-family: 'JetBrains Mono', monospace;">${displayedWorkstations.length} Active</span>
+            </div>
+            <div style="font-size: 11.5px; color: var(--color-text-tertiary);">
+              Real-time physical hardware bound to commercial licensing
+            </div>
+          </div>
+
+          <ul class="devices-list">
+            ${displayedWorkstations.length === 0 ? `
+              <li class="empty-state" style="border: none; border-radius: 0; padding: 32px 16px;">
+                <div style="font-size: 13px; color: var(--color-text-secondary); font-weight: 500;">No hardware workstations currently bound.</div>
+                <div style="color: var(--color-text-tertiary); font-size: 11.5px; margin-top: 4px;">Workstations will appear here automatically when activated in Invoice Gen.</div>
+              </li>
+            ` : displayedWorkstations.map(d => {
+              const osLabel = d.platform === 'mac' ? 'macOS' : (d.platform === 'linux' ? 'Linux' : 'Windows');
+              const isOnline = d.status === 'active';
+              return `
+              <li class="device-row">
+                <div style="flex: 1; min-width: 0;">
+                  <div class="device-primary-line">
+                    <span class="device-name">${d.deviceName}</span>
+                    ${d.username ? `<span style="font-size: 11px; color: var(--color-text-tertiary); font-family: 'JetBrains Mono', monospace;">(${d.username})</span>` : ''}
+                    <span class="os-badge">${osLabel}</span>
+                    <span class="connection-badge ${isOnline ? 'badge-online' : 'badge-offline'}">
+                      ${isOnline ? 'Online' : 'Offline'}
+                    </span>
+                    <span class="os-badge" style="font-family: 'JetBrains Mono', monospace;">${d.appVersion || 'v1.3.2'}</span>
+                  </div>
+
+                  <div class="device-specs-grid">
+                    <div class="spec-item">
+                      <span class="spec-label">OS:</span>
+                      <span class="spec-val">${d.osVersion}</span>
+                    </div>
+                    <div class="spec-item">
+                      <span class="spec-label">GUID:</span>
+                      <span class="spec-val"><code>${d.machineId}</code></span>
+                    </div>
+                    ${d.cpuModel ? `
+                    <div class="spec-item">
+                      <span class="spec-label">CPU:</span>
+                      <span class="spec-val">${d.cpuModel} ${d.ramGB ? '&bull; ' + d.ramGB : ''}</span>
+                    </div>
+                    ` : ''}
+                    <div class="spec-item">
+                      <span class="spec-label">Network:</span>
+                      <span class="spec-val">${d.ipAddress} (${d.location})</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0;">
+                  <div style="text-align: right; font-size: 11px; color: var(--color-text-tertiary);">
+                    <span>${formatHeartbeat(d.lastActiveAt)}</span>
+                  </div>
+                  <button class="btn-danger" onclick="revokeDevice('${d.parentLicenseKey || d.licenseKey}', '${d.id}', '${d.deviceName}')">
+                    Revoke Seat
+                  </button>
+                </div>
+              </li>
+              `;
+            }).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    function formatValidity(expiresAt) {
+      if (!expiresAt) return { label: 'Active', cssClass: 'validity-active' };
+      const diffMs = new Date(expiresAt).getTime() - Date.now();
+      if (diffMs < 0) {
+        return { label: 'Expired', cssClass: 'validity-expired' };
+      }
+      const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      if (days <= 30) {
+        return { label: 'Expiring Soon', cssClass: 'validity-warning' };
+      }
+      return { label: 'Active', cssClass: 'validity-active' };
+    }
+
+    function formatHeartbeat(iso) {
+      if (!iso) return 'Active Now';
+      try {
+        const diffMs = Date.now() - new Date(iso).getTime();
+        const mins = Math.floor(diffMs / 60000);
+        if (mins < 2) return 'Active Now';
+        if (mins < 60) return mins + 'm ago';
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return hrs + 'h ago';
+        return Math.floor(hrs / 24) + 'd ago';
+      } catch {
+        return iso;
+      }
+    }
+
+    function switchTab(tab) {
+      document.getElementById('btn-tab-licenses').classList.toggle('active', tab === 'licenses');
+      document.getElementById('btn-tab-templates').classList.toggle('active', tab === 'templates');
+      document.getElementById('view-licenses').style.display = tab === 'licenses' ? 'block' : 'none';
+      document.getElementById('view-templates').style.display = tab === 'templates' ? 'block' : 'none';
+    }
+
+    function copyKey(key) {
+      navigator.clipboard.writeText(key).then(() => {
+        showToast('Copied ' + key);
+      });
+    }
+
+    // ─── DURATION & VALIDITY MANAGEMENT ───
+    function selectDuration(days, btn) {
+      document.querySelectorAll('#modal-allot-key .pill-btn').forEach(p => p.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const d = new Date(Date.now() + days * 86400000);
+      const dateStr = d.toISOString().slice(0, 10);
+      document.getElementById('new-key-expiry').value = dateStr;
+      document.getElementById('new-key-code').value = generateKeyFromDate(dateStr);
+    }
+
+    function onCustomDateChange() {
+      document.querySelectorAll('#modal-allot-key .pill-btn').forEach(p => p.classList.remove('active'));
+      const dateStr = document.getElementById('new-key-expiry').value;
+      if (dateStr) {
+        document.getElementById('new-key-code').value = generateKeyFromDate(dateStr);
+      }
+    }
+
+    function openAllotKeyModal() {
+      const d = new Date(Date.now() + 365 * 86400000);
+      const dateStr = d.toISOString().slice(0, 10);
+      document.getElementById('new-key-expiry').value = dateStr;
+      document.getElementById('new-key-code').value = generateKeyFromDate(dateStr);
+      document.getElementById('new-key-client').value = '';
+      document.getElementById('new-key-seats').value = '5';
+      document.getElementById('modal-allot-key').classList.add('show');
+    }
+
+    function closeAllotKeyModal() {
+      document.getElementById('modal-allot-key').classList.remove('show');
+    }
+
+    async function submitAllotKey() {
+      const client = document.getElementById('new-key-client').value.trim();
+      const licenseKey = document.getElementById('new-key-code').value.trim();
+      const totalSeats = parseInt(document.getElementById('new-key-seats').value, 10) || 5;
+      const expiresAt = document.getElementById('new-key-expiry').value;
+
+      if (!client || !licenseKey) {
+        alert('Please specify the Client / Organization name.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/.netlify/functions/license-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'allot_key',
+            licenseKey,
+            client,
+            tier: 'Commercial Pro',
+            tierCode: 'PRO',
+            totalSeats,
+            expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeAllotKeyModal();
+          showToast('Commercial Pro Key ' + licenseKey + ' issued!');
+          fetchCloudAllotments();
+          return;
+        } else {
+          alert(data.message || 'Key allotment failed');
+        }
+      } catch (e) {
+        showToast('Allotment error: ' + e.message);
+      }
+    }
+
+    // Manage / Extend Validity Dialog
+    let currentManagingKey = null;
+
+    function openManageValidityModal(key, currentExpiry) {
+      currentManagingKey = key;
+      document.getElementById('validity-target-key').value = key;
+      document.getElementById('validity-current-expiry').value = currentExpiry ? currentExpiry.slice(0, 10) : 'Perpetual';
+
+      const baseTime = currentExpiry ? Math.max(Date.now(), new Date(currentExpiry).getTime()) : Date.now();
+      const newD = new Date(baseTime + 365 * 86400000);
+      document.getElementById('validity-new-expiry').value = newD.toISOString().slice(0, 10);
+      document.getElementById('modal-manage-validity').classList.add('show');
+    }
+
+    function closeManageValidityModal() {
+      document.getElementById('modal-manage-validity').classList.remove('show');
+    }
+
+    function extendByDays(days) {
+      const currExp = document.getElementById('validity-current-expiry').value;
+      const baseTime = (currExp && currExp !== 'Perpetual') ? Math.max(Date.now(), new Date(currExp).getTime()) : Date.now();
+      const newD = new Date(baseTime + days * 86400000);
+      document.getElementById('validity-new-expiry').value = newD.toISOString().slice(0, 10);
+    }
+
+    async function submitExtendValidity() {
+      if (!currentManagingKey) return;
+      const newExp = document.getElementById('validity-new-expiry').value;
+
+      try {
+        const res = await fetch('/.netlify/functions/license-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update_key_expiry',
+            licenseKey: currentManagingKey,
+            expiresAt: newExp ? new Date(newExp).toISOString() : undefined
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeManageValidityModal();
+          showToast('Validity updated to ' + newExp);
+          fetchCloudAllotments();
+        } else {
+          alert(data.message || 'Validity update failed');
+        }
+      } catch (e) {
+        showToast('Validity update error: ' + e.message);
+      }
+    }
+
+    // ─── DEVICE ALLOTMENT & REVOCATION ───
+    function populateDeviceKeySelect() {
+      const select = document.getElementById('dev-target-key');
+      if (!select) return;
+      if (allotmentsData.length === 0) {
+        select.innerHTML = '<option value="">No commercial licenses available</option>';
+        return;
+      }
+      select.innerHTML = allotmentsData.map(l => 
+        `<option value="${l.licenseKey}">${l.licenseKey} (${l.licensedTo} - ${l.usedSeats}/${l.totalSeats} seats)</option>`
+      ).join('');
+    }
+
+    function openAllotDeviceModal() {
+      if (allotmentsData.length === 0) {
+        alert('Please allot a Commercial Pro license key first before binding hardware devices.');
+        return;
+      }
+      generateMachineIdSuggestion();
+      populateDeviceKeySelect();
+      document.getElementById('modal-allot-device').classList.add('show');
+    }
+
+    function closeAllotDeviceModal() {
+      document.getElementById('modal-allot-device').classList.remove('show');
+    }
+
+    function generateMachineIdSuggestion() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        document.getElementById('dev-machine-id').value = crypto.randomUUID();
+      } else {
+        const plat = document.getElementById('dev-platform').value;
+        const prefix = plat === 'mac' ? 'MAC' : (plat === 'linux' ? 'LNX' : 'WIN');
+        const hex = Math.random().toString(16).substring(2, 6).toUpperCase();
+        const num = Math.floor(1000 + Math.random() * 9000);
+        document.getElementById('dev-machine-id').value = prefix + '-NODE-' + hex + '-' + num;
+      }
+    }
+
+    async function submitAllotDevice() {
+      const licenseKey = document.getElementById('dev-target-key').value;
+      const deviceName = document.getElementById('dev-name').value.trim() || 'DESKTOP-CLIENT';
+      const username = document.getElementById('dev-username').value.trim();
+      const platform = document.getElementById('dev-platform').value;
+      const location = document.getElementById('dev-location').value.trim() || 'Pune, Maharashtra';
+      const machineId = document.getElementById('dev-machine-id').value.trim();
+      const cpuModel = document.getElementById('dev-cpu').value.trim();
+      const ramGB = document.getElementById('dev-ram').value.trim();
+
+      if (!licenseKey || !machineId) {
+        alert('License key and Machine ID are required.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/.netlify/functions/license-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'register_device',
+            licenseKey,
+            deviceName,
+            username,
+            platform,
+            machineId,
+            location,
+            cpuModel,
+            ramGB,
+            osVersion: platform === 'mac' ? 'macOS Sequoia 15.0' : (platform === 'linux' ? 'Ubuntu 24.04 LTS' : 'Windows 11 Pro 64-bit')
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeAllotDeviceModal();
+          showToast('Device "' + deviceName + '" enrolled!');
+          fetchCloudAllotments();
+        } else {
+          alert(data.message || 'Device allotment failed');
+        }
+      } catch (e) {
+        showToast('Device allotment failed: ' + e.message);
+      }
+    }
+
+    async function revokeDevice(licenseKey, deviceId, name) {
+      if (!confirm('Revoke license seat for machine "' + name + '"?')) return;
+      try {
+        const res = await fetch('/.netlify/functions/license-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'revoke_device', licenseKey, deviceId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Device seat freed');
+          fetchCloudAllotments();
+        } else {
+          alert(data.message || 'Revocation failed');
+        }
+      } catch (e) {
+        showToast('Revocation error: ' + e.message);
+      }
+    }
+
+    // Initialize
+    initTheme();
+    fetchCloudAllotments();
+    setInterval(fetchCloudAllotments, 30000);
+  </script>
+</body>
+</html>
