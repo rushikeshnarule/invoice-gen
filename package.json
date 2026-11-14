@@ -122,7 +122,6 @@
       "gatekeeperAssess": false
     },
     "pkg": {
-      "allowPackageDowngrade": false,
       "hasStrictIdentifier": true,
       "installLocation": "/Applications",
       "artifactName": "Invoice-Gen-Setup-${version}-${arch}.${ext}"
