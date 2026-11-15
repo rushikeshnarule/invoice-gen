@@ -20,8 +20,9 @@ import {
   RiPaletteLine,
   RiUserSharedLine,
   RiAddLine,
+  RiSparklingFill,
 } from "@remixicon/react";
-import { SettingsModal } from "@/components/application/settings/settings-modal";
+import { SettingsModal, type BusinessSettingsTab } from "@/components/application/settings/settings-modal";
 import { LicenseModal } from "@/components/LicenseModal/LicenseModal";
 import { useLicense, IS_STANDALONE_UNLOCKED } from "@/context/LicenseContext";
 import { ThemeToggle } from "@/components/application/theme/theme-toggle";
@@ -233,7 +234,7 @@ export function DashboardSidebar({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [licenseOpen, setLicenseOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"identity" | "address" | "banking" | "terms" | "backup">("identity");
+  const [settingsTab, setSettingsTab] = useState<BusinessSettingsTab>("identity");
   const [suppressUserHover, setSuppressUserHover] = useState(false);
   const collapsed = mobile ? false : collapsedState;
 
@@ -480,6 +481,19 @@ export function DashboardSidebar({
             }}
           >
             Business Profile Settings
+          </CommandPaletteItem>
+          <CommandPaletteItem
+            id="act-updates"
+            icon={RiSparklingFill}
+            shortcut="U"
+            description="Check GitHub for software updates"
+            onAction={() => {
+              setCommandPaletteOpen(false);
+              setSettingsTab("updates");
+              setSettingsOpen(true);
+            }}
+          >
+            Check for Software Updates
           </CommandPaletteItem>
           {!IS_STANDALONE_UNLOCKED && (
             <CommandPaletteItem

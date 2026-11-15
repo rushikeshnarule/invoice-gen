@@ -1,0 +1,301 @@
+import React, { useState } from "react";
+import {
+  RiRefreshLine,
+  RiCheckboxCircleFill,
+  RiAlertFill,
+  RiDownload2Line,
+  RiExternalLinkLine,
+  RiWindowsFill,
+  RiAppleFill,
+  RiAndroidFill,
+  RiSparklingFill,
+  RiShieldCheckLine,
+} from "@remixicon/react";
+import {
+  checkForUpdates,
+  getUpdatePreferences,
+  saveUpdatePreferences,
+  CURRENT_APP_VERSION,
+  detectPlatform,
+  type ReleaseInfo,
+} from "@/services/updateService";
+
+export const SettingsUpdatesTab: React.FC = () => {
+  const [checking, setChecking] = useState(false);
+  const [lastCheckResult, setLastCheckResult] = useState<{
+    status: "idle" | "up-to-date" | "update-available" | "error";
+    release?: ReleaseInfo;
+    error?: string;
+  }>({ status: "idle" });
+
+  const [autoCheck, setAutoCheck] = useState(() => getUpdatePreferences().autoCheckOnStartup);
+  const { platform, arch } = detectPlatform();
+
+  const handleToggleAutoCheck = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = e.target.checked;
+    setAutoCheck(enabled);
+    saveUpdatePreferences({ autoCheckOnStartup: enabled });
+  };
+
+  const handleCheckNow = async () => {
+    setChecking(true);
+    try {
+      const res = await checkForUpdates(true);
+      if (res.error) {
+        setLastCheckResult({ status: "error", error: res.error });
+      } else if (res.hasUpdate && res.release) {
+        setLastCheckResult({ status: "update-available", release: res.release });
+      } else {
+        setLastCheckResult({ status: "up-to-date", release: res.release });
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to connect to update server";
+      setLastCheckResult({ status: "error", error: message });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return "";
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Current Version & Health Card */}
+      <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="size-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
+            <RiShieldCheckLine className="size-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-slate-900 text-base">Invoice Gen Workstation</h3>
+              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+                v{CURRENT_APP_VERSION}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5 capitalize">
+              Platform: {platform} {arch ? `(${arch})` : ""} • Commercial Edition
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleCheckNow}
+          disabled={checking}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95 shrink-0"
+        >
+          <RiRefreshLine className={`size-4 ${checking ? "animate-spin" : ""}`} />
+          <span>{checking ? "Checking..." : "Check for Updates"}</span>
+        </button>
+      </div>
+
+      {/* Result Alerts */}
+      {lastCheckResult.status === "up-to-date" && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-3 animate-in fade-in">
+          <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-semibold text-emerald-900">You're up to date!</h4>
+            <p className="text-xs text-emerald-700 mt-0.5">
+              Invoice Gen v{CURRENT_APP_VERSION} is currently the latest version released. No action needed.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {lastCheckResult.status === "update-available" && lastCheckResult.release && (
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 space-y-4 animate-in fade-in">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-blue-600 text-white shrink-0">
+                <RiSparklingFill className="size-4 text-amber-300" />
+              </span>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">
+                  New Version Available: v{lastCheckResult.release.version}
+                </h4>
+                <p className="text-xs text-slate-600">
+                  Released on {new Date(lastCheckResult.release.publishedAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            {lastCheckResult.release.recommendedAsset && (
+              <a
+                href={lastCheckResult.release.recommendedAsset.downloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition-all shrink-0 cursor-pointer"
+              >
+                <RiDownload2Line className="size-4" />
+                <span>Download Now ({formatFileSize(lastCheckResult.release.recommendedAsset.size)})</span>
+              </a>
+            )}
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-white/80 border border-blue-100 text-xs text-slate-700 max-h-40 overflow-y-auto whitespace-pre-wrap">
+            {lastCheckResult.release.body}
+          </div>
+        </div>
+      )}
+
+      {lastCheckResult.status === "error" && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+          <RiAlertFill className="size-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="text-sm font-semibold text-amber-900">Unable to check for updates</h4>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {lastCheckResult.error || "Please check your network connection or browse GitHub directly."}
+            </p>
+            <a
+              href="https://github.com/rushikeshnarule/invoice-gen/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline mt-2"
+            >
+              <span>Visit GitHub Releases</span>
+              <RiExternalLinkLine className="size-3.5" />
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-check Settings */}
+      <div className="p-4 rounded-2xl border border-slate-200/80 bg-white flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-semibold text-slate-900">Automatic Update Notifications</h4>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Silently check GitHub for new versions whenever Invoice Gen starts up
+          </p>
+        </div>
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoCheck}
+            onChange={handleToggleAutoCheck}
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+        </label>
+      </div>
+
+      {/* Official Download Links Matrix */}
+      <div>
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+          Direct Platform Packages &amp; Installers
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Windows */}
+          <div className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-blue-200 transition-colors flex flex-col justify-between">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                <RiWindowsFill className="size-5" />
+              </div>
+              <div>
+                <h5 className="text-xs font-bold text-slate-900">Windows (x64)</h5>
+                <p className="text-[11px] text-slate-500">Windows 10, 11</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100">
+              <a
+                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-Setup-1.4.0.exe"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-1.5 px-2 rounded-lg bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-xs font-medium transition-colors"
+              >
+                Installer (.exe)
+              </a>
+              <a
+                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice%20Gen%201.4.0.exe"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
+              >
+                Portable (.exe)
+              </a>
+            </div>
+          </div>
+
+          {/* macOS */}
+          <div className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 transition-colors flex flex-col justify-between">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="p-2 rounded-xl bg-slate-100 text-slate-800">
+                <RiAppleFill className="size-5" />
+              </div>
+              <div>
+                <h5 className="text-xs font-bold text-slate-900">macOS (Apple Silicon &amp; Intel)</h5>
+                <p className="text-[11px] text-slate-500">macOS 12.0+ Monterey, Sonoma, Sequoia</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100">
+              <a
+                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-Setup-1.4.0-arm64.pkg"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors"
+              >
+                Apple Silicon (.pkg)
+              </a>
+              <a
+                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-Setup-1.4.0-x64.pkg"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
+              >
+                Intel (.pkg)
+              </a>
+            </div>
+          </div>
+
+          {/* Android */}
+          <div className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-emerald-200 transition-colors flex flex-col justify-between">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+                <RiAndroidFill className="size-5" />
+              </div>
+              <div>
+                <h5 className="text-xs font-bold text-slate-900">Android APK</h5>
+                <p className="text-[11px] text-slate-500">Phones &amp; Tablets (Android 8.0+)</p>
+              </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-slate-100">
+              <a
+                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-1.4.0.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors"
+              >
+                Download APK (.apk)
+              </a>
+            </div>
+          </div>
+
+          {/* All GitHub Releases */}
+          <div className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-purple-200 transition-colors flex flex-col justify-between">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="p-2 rounded-xl bg-purple-50 text-purple-600">
+                <RiExternalLinkLine className="size-5" />
+              </div>
+              <div>
+                <h5 className="text-xs font-bold text-slate-900">All Releases Archive</h5>
+                <p className="text-[11px] text-slate-500">View v1.4.0, v1.3.3, v1.3.0, v1.2.0</p>
+              </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-slate-100">
+              <a
+                href="https://github.com/rushikeshnarule/invoice-gen/releases"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-purple-600 hover:text-white text-slate-700 text-xs font-medium transition-colors"
+              >
+                Browse GitHub Releases
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

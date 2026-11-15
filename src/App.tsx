@@ -16,6 +16,7 @@ import {
   type DashboardNavItem,
 } from './components/application/dashboard/dashboard-sidebar';
 import { Toaster } from '@/components/base/toast/toast';
+import { UpdateBanner } from './components/application/updates/UpdateBanner';
 
 // Remix Icons
 import {
@@ -133,6 +134,7 @@ const SaasAppShell: React.FC = () => {
 
       {/* ─── MAIN WORKSPACE CONTAINER ─── */}
       <main className="flex-1 overflow-hidden flex flex-col rounded-none md:rounded-3xl border-0 md:border border-slate-200/80 bg-white shadow-sidebar pb-16 md:pb-0">
+        <UpdateBanner />
         <Routes>
           <Route path="/" element={<InvoicesView />} />
           <Route path="/invoices" element={<InvoicesView />} />

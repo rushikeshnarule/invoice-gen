@@ -21,7 +21,9 @@ import {
   RiFileCopyLine,
   RiDeleteBinLine,
   RiShieldKeyholeLine,
+  RiSparklingFill,
 } from "@remixicon/react";
+import { SettingsUpdatesTab } from "./settings-updates-tab";
 import { cx } from "@/utils/cx";
 import { useInvoices } from "@/context/InvoiceContext";
 import { useLicense } from "@/context/LicenseContext";
@@ -47,7 +49,7 @@ import {
   REMOTE_TEMPLATES_UPDATED_EVENT,
 } from "@/services/templateSyncService";
 
-export type BusinessSettingsTab = "identity" | "branding" | "address" | "banking" | "terms" | "cloud_templates" | "license" | "backup";
+export type BusinessSettingsTab = "identity" | "branding" | "address" | "banking" | "terms" | "cloud_templates" | "license" | "backup" | "updates";
 
 export interface SettingsModalProps {
   isOpen: boolean;
@@ -126,6 +128,7 @@ const TABS: { id: BusinessSettingsTab; label: string; icon: React.ComponentType<
   { id: "cloud_templates", label: "Cloud Templates", icon: RiCloudLine },
   { id: "license", label: "License & Cloud", icon: RiShieldKeyholeLine },
   { id: "backup", label: "Data & Storage", icon: RiDatabase2Line },
+  { id: "updates", label: "Software Updates", icon: RiSparklingFill },
 ];
 
 export function SettingsModal({
@@ -524,6 +527,7 @@ export function SettingsModal({
                   {activeTab === "cloud_templates" && "Cloud Templates"}
                   {activeTab === "license" && "Commercial License & Cloud"}
                   {activeTab === "backup" && "Offline PC Database & Backup"}
+                  {activeTab === "updates" && "Software Updates & Releases"}
                 </h2>
                 <span className="text-xs text-slate-400">
                   {activeTab === "identity" && "Official legal company name and public contact channels"}
@@ -534,6 +538,7 @@ export function SettingsModal({
                   {activeTab === "cloud_templates" && "Fetch templates from Cloud & store offline permanently"}
                   {activeTab === "license" && "Verify commercial subscription status & cloud license key"}
                   {activeTab === "backup" && "JSON export/import and offline local database management"}
+                  {activeTab === "updates" && "Check for newer builds and download packages directly from GitHub"}
                 </span>
               </div>
 
@@ -1464,8 +1469,11 @@ export function SettingsModal({
                 </div>
               )}
 
+              {/* ══════════ TAB 9: SOFTWARE UPDATES ══════════ */}
+              {activeTab === "updates" && <SettingsUpdatesTab />}
+
               {/* Save Footer Button */}
-              {activeTab !== "backup" && activeTab !== "license" && (
+              {activeTab !== "backup" && activeTab !== "license" && activeTab !== "updates" && (
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-[11px] text-slate-400">
                     Changes apply immediately to newly generated invoices and QR codes.
