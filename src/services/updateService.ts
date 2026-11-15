@@ -154,31 +154,53 @@ export async function checkForUpdates(force = false): Promise<UpdateCheckResult>
   const prefs = getUpdatePreferences();
 
   try {
-    let response = await fetch(GITHUB_API_URL, {
-      headers: {
-        Accept: "application/vnd.github.v3+json",
-      },
-    });
-
     let data: Record<string, unknown> | null = null;
-    if (response.ok) {
-      data = await response.json() as Record<string, unknown>;
-    } else {
-      // Fallback to releases list in case /latest endpoint lags
-      const fallbackUrl = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
-      const fallbackRes = await fetch(fallbackUrl, {
-        headers: { Accept: "application/vnd.github.v3+json" },
-      });
-      if (fallbackRes.ok) {
-        const list = await fallbackRes.json() as Record<string, unknown>[];
-        if (Array.isArray(list) && list.length > 0) {
-          data = list[0];
+
+    // 1. Try Desktop IPC first (runs via Node.js: zero CSP, zero CORS, resilient user-agent)
+    const desktop = typeof window !== "undefined" ? (window as unknown as {
+      invoiceDesktop?: {
+        checkUpdates?: () => Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }>;
+      };
+    }).invoiceDesktop : undefined;
+
+    if (desktop?.checkUpdates) {
+      try {
+        const ipcRes = await desktop.checkUpdates();
+        if (ipcRes && ipcRes.success && ipcRes.data) {
+          data = ipcRes.data;
         }
+      } catch (ipcErr) {
+        console.warn("Desktop checkUpdates IPC failed, falling back to fetch:", ipcErr);
       }
     }
 
+    // 2. Fallback to fetch (browser / mobile / fallback)
     if (!data) {
-      throw new Error(`GitHub API returned status ${response.status}`);
+      let response = await fetch(GITHUB_API_URL, {
+        headers: {
+          Accept: "application/vnd.github.v3+json",
+        },
+      });
+
+      if (response.ok) {
+        data = await response.json() as Record<string, unknown>;
+      } else {
+        // Fallback to releases list in case /latest endpoint lags
+        const fallbackUrl = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
+        const fallbackRes = await fetch(fallbackUrl, {
+          headers: { Accept: "application/vnd.github.v3+json" },
+        });
+        if (fallbackRes.ok) {
+          const list = await fallbackRes.json() as Record<string, unknown>[];
+          if (Array.isArray(list) && list.length > 0) {
+            data = list[0];
+          }
+        }
+      }
+
+      if (!data) {
+        throw new Error(`GitHub API returned status ${response?.status || 500}`);
+      }
     }
 
     const rawTag = (String(data.tag_name || "")).replace(/^v/i, "");

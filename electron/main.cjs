@@ -126,7 +126,7 @@ async function startLocalServer(distPath) {
       res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
       res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self' 'unsafe-inline' data: blob: https://rushi-invoice-templates.netlify.app; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* http://localhost:* https://rushi-invoice-templates.netlify.app; img-src 'self' data: blob: https:;"
+        "default-src 'self' 'unsafe-inline' data: blob: https://rushi-invoice-templates.netlify.app; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* http://localhost:* https://rushi-invoice-templates.netlify.app https://api.github.com https://github.com https://*.githubusercontent.com https://objects.githubusercontent.com; img-src 'self' data: blob: https:;"
       );
 
       // Validate Host header to protect against DNS rebinding attacks
@@ -851,6 +851,59 @@ ipcMain.handle('desktop:get-opened-file', async () => {
 });
 
 // ─── Direct In-App Auto-Update & Installer Engine ───────────────────────
+function fetchGitHubRelease() {
+  return new Promise((resolve, reject) => {
+    const fetchUrl = (url, fallback = true) => {
+      const parsed = new URL(url);
+      const req = https.get({
+        hostname: parsed.hostname,
+        path: parsed.pathname + parsed.search,
+        headers: {
+          'User-Agent': 'Invoice-Gen-Workstation-Desktop',
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              const parsedData = JSON.parse(body);
+              if (Array.isArray(parsedData)) {
+                return resolve(parsedData[0] || null);
+              }
+              return resolve(parsedData);
+            } catch (e) {
+              return reject(new Error('Failed to parse release JSON'));
+            }
+          }
+          if (fallback && url.endsWith('/latest')) {
+            return fetchUrl('https://api.github.com/repos/rushikeshnarule/invoice-gen/releases', false);
+          }
+          reject(new Error(`GitHub API returned status ${res.statusCode}`));
+        });
+      });
+      req.on('error', (err) => {
+        if (fallback && url.endsWith('/latest')) {
+          return fetchUrl('https://api.github.com/repos/rushikeshnarule/invoice-gen/releases', false);
+        }
+        reject(err);
+      });
+    };
+
+    fetchUrl('https://api.github.com/repos/rushikeshnarule/invoice-gen/releases/latest');
+  });
+}
+
+ipcMain.handle('desktop:check-updates', async () => {
+  try {
+    const data = await fetchGitHubRelease();
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects = 10) {
   return new Promise((resolve, reject) => {
     if (maxRedirects <= 0) return reject(new Error('Too many redirects while downloading update'));

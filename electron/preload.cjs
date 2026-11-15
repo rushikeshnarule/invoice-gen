@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('invoiceDesktop', {
   print: () => ipcRenderer.invoke('desktop:print'),
   getMachineInfo: () => ipcRenderer.invoke('desktop:get-machine-info'),
   getOpenedFile: () => ipcRenderer.invoke('desktop:get-opened-file'),
+  checkUpdates: () => ipcRenderer.invoke('desktop:check-updates'),
   downloadUpdate: (options) => ipcRenderer.invoke('desktop:download-update', options),
   installUpdate: (options) => ipcRenderer.invoke('desktop:install-update', options),
   onUpdateProgress: (callback) => {
