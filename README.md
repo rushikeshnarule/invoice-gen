@@ -105,7 +105,7 @@ Choose your operating system to download the latest production build:
 ## 🛠️ Installation Guide
 
 ### 🪟 Windows Installation
-1. Download `Invoice-Gen-Setup-1.4.0.exe` or portable `Invoice Gen 1.4.0.exe`.
+1. Download `Invoice-Gen-Setup-1.4.2.exe` or portable `Invoice Gen 1.4.2.exe` from [Latest Releases](https://github.com/rushikeshnarule/invoice-gen/releases/latest).
 2. Run the installer and follow the on-screen steps.
 3. *Note*: If Microsoft SmartScreen shows "Windows protected your PC", click **More info** ➔ **Run anyway**.
 
@@ -113,7 +113,7 @@ Choose your operating system to download the latest production build:
 Invoice Gen provides both a native Apple Setup Wizard (`.pkg`) and a standard Disk Image (`.dmg`).
 
 #### Recommended: Native PKG Wizard
-1. Download `Invoice-Gen-Setup-1.4.0-arm64.pkg` (for Apple Silicon M1/M2/M3/M4) or `Invoice-Gen-Setup-1.4.0-x64.pkg` (for Intel Macs).
+1. Download `Invoice-Gen-Setup-1.4.2-arm64.pkg` (for Apple Silicon M1/M2/M3/M4) or `Invoice-Gen-Setup-1.4.2-x64.pkg` (for Intel Macs).
 2. Double-click the `.pkg` file to launch the macOS Installer Wizard.
 3. The app is automatically installed directly into `/Applications/Invoice Gen.app`.
 
@@ -125,7 +125,7 @@ xattr -cr "/Applications/Invoice Gen.app"
 Or right-click the app in Finder and choose **Open**.
 
 ### 🤖 Android Installation
-1. Download `Invoice-Gen-1.4.0.apk` onto your Android phone or tablet.
+1. Download `Invoice-Gen-1.4.2.apk` onto your Android phone or tablet.
 2. Open the downloaded file in your Files or Downloads app.
 3. Allow **Install from unknown sources** when prompted by Android, then tap **Install**.
 
@@ -239,6 +239,7 @@ All builds and releases are hosted directly on [GitHub Releases](https://github.
 
 | Version | Release Date | Highlights | Supported Platforms | Direct Links |
 | :--- | :--- | :--- | :--- | :--- |
+| **v1.4.2** | 2026-11-15 | Dynamic Versioning Engine, Resilient IPC Auto-Updater, CSP Resolution | Windows, macOS, Android, Web | [Release Notes](docs/releases/v1.4.2.md) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.4.2) |
 | **v1.4.1** | 2026-11-15 | In-App Auto-Updater, Live Progress Bar, Direct In-App Installation | Windows, macOS, Android, Web | [Release Notes](docs/releases/v1.4.1.md) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.4.1) |
 | **v1.4.0** | 2026-11-15 | Native macOS PKG Wizard, Android APK, Mobile UI/UX Overhaul | Windows, macOS, Android, Web | [Release Notes](docs/releases/v1.4.0.md) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.4.0) |
 | **v1.3.3** | 2026-11-12 | US Sales Tax Engine, US Edition builds, High-Density Preview | Windows, macOS, Web | [Release Notes](docs/releases/v1.3.3.md) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.3.3) |

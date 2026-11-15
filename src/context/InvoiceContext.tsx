@@ -98,13 +98,15 @@ interface InvoiceContextValue {
   restorePreviousSession: () => Promise<boolean>;
 }
 
+import { getAppVersion } from '@/services/updateService';
+
 export const InvoiceContext = createContext<InvoiceContextValue | null>(null);
 
 const STORAGE_INVOICES_KEY = 'offline-software-invoices-v2';
 const STORAGE_BUSINESS_KEY = 'offline-software-business-profile-v2';
 const STORAGE_CLIENTS_KEY = 'offline-software-clients-v2';
 const STORAGE_SETUP_KEY = 'offline-software-setup-completed-v1';
-export const CURRENT_APP_VERSION = '1.4.0';
+export const CURRENT_APP_VERSION = getAppVersion();
 export const STORAGE_APP_VERSION_KEY = 'offline-software-app-version';
 
 function loadFromStorage<T>(key: string, fallback: () => T): T {

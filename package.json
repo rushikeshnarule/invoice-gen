@@ -1,7 +1,7 @@
 {
   "name": "invoice-gen",
   "private": true,
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Commercial Invoice & Billing Workstation",
   "author": "Invoice Gen",
   "type": "module",

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   RiRefreshLine,
   RiCheckboxCircleFill,
@@ -16,7 +16,7 @@ import {
   checkForUpdates,
   getUpdatePreferences,
   saveUpdatePreferences,
-  CURRENT_APP_VERSION,
+  getAppVersion,
   detectPlatform,
   downloadUpdate,
   installUpdate,
@@ -26,6 +26,7 @@ import {
 } from "@/services/updateService";
 
 export const SettingsUpdatesTab: React.FC = () => {
+  const currentVersion = getAppVersion();
   const [checking, setChecking] = useState(false);
   const [lastCheckResult, setLastCheckResult] = useState<{
     status: "idle" | "up-to-date" | "update-available" | "error";
@@ -38,6 +39,57 @@ export const SettingsUpdatesTab: React.FC = () => {
   const [downloadError, setDownloadError] = useState("");
   const [autoCheck, setAutoCheck] = useState(() => getUpdatePreferences().autoCheckOnStartup);
   const { platform, arch } = detectPlatform();
+
+  useEffect(() => {
+    // Perform update check on mount so current status is immediately reflected
+    checkForUpdates(false)
+      .then((res) => {
+        if (!res.error && res.release) {
+          if (res.hasUpdate) {
+            setLastCheckResult({ status: "update-available", release: res.release });
+          } else {
+            setLastCheckResult({ status: "up-to-date", release: res.release });
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const targetVersion = lastCheckResult.release?.version || currentVersion;
+
+  const getPackageUrl = (type: 'win-installer' | 'win-portable' | 'mac-pkg-arm' | 'mac-pkg-intel' | 'android-apk') => {
+    const assets = lastCheckResult.release?.assets;
+    if (assets && assets.length > 0) {
+      if (type === 'win-installer') {
+        const a = assets.find(x => x.name.toLowerCase().includes('setup') && x.name.endsWith('.exe'));
+        if (a) return a.downloadUrl;
+      } else if (type === 'win-portable') {
+        const a = assets.find(x => !x.name.toLowerCase().includes('setup') && x.name.endsWith('.exe'));
+        if (a) return a.downloadUrl;
+      } else if (type === 'mac-pkg-arm') {
+        const a = assets.find(x => x.name.endsWith('.pkg') && x.name.includes('arm64'));
+        if (a) return a.downloadUrl;
+      } else if (type === 'mac-pkg-intel') {
+        const a = assets.find(x => x.name.endsWith('.pkg') && x.name.includes('x64'));
+        if (a) return a.downloadUrl;
+      } else if (type === 'android-apk') {
+        const a = assets.find(x => x.name.endsWith('.apk'));
+        if (a) return a.downloadUrl;
+      }
+    }
+    switch (type) {
+      case 'win-installer':
+        return `https://github.com/rushikeshnarule/invoice-gen/releases/download/v${targetVersion}/Invoice-Gen-Setup-${targetVersion}.exe`;
+      case 'win-portable':
+        return `https://github.com/rushikeshnarule/invoice-gen/releases/download/v${targetVersion}/Invoice%20Gen%20${targetVersion}.exe`;
+      case 'mac-pkg-arm':
+        return `https://github.com/rushikeshnarule/invoice-gen/releases/download/v${targetVersion}/Invoice-Gen-Setup-${targetVersion}-arm64.pkg`;
+      case 'mac-pkg-intel':
+        return `https://github.com/rushikeshnarule/invoice-gen/releases/download/v${targetVersion}/Invoice-Gen-Setup-${targetVersion}-x64.pkg`;
+      case 'android-apk':
+        return `https://github.com/rushikeshnarule/invoice-gen/releases/download/v${targetVersion}/Invoice-Gen-${targetVersion}.apk`;
+    }
+  };
 
   const handleToggleAutoCheck = (e: React.ChangeEvent<HTMLInputElement>) => {
     const enabled = e.target.checked;
@@ -118,7 +170,7 @@ export const SettingsUpdatesTab: React.FC = () => {
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-slate-900 text-base">Invoice Gen Workstation</h3>
               <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
-                v{CURRENT_APP_VERSION}
+                v{currentVersion}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5 capitalize">
@@ -144,7 +196,7 @@ export const SettingsUpdatesTab: React.FC = () => {
           <div>
             <h4 className="text-sm font-semibold text-emerald-900">You're up to date!</h4>
             <p className="text-xs text-emerald-700 mt-0.5">
-              Invoice Gen v{CURRENT_APP_VERSION} is currently the latest version released. No action needed.
+              Invoice Gen v{currentVersion} is currently the latest version released. No action needed.
             </p>
           </div>
         </div>
@@ -292,7 +344,7 @@ export const SettingsUpdatesTab: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100">
               <a
-                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-Setup-1.4.0.exe"
+                href={getPackageUrl('win-installer')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 text-center py-1.5 px-2 rounded-lg bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-xs font-medium transition-colors"
@@ -300,7 +352,7 @@ export const SettingsUpdatesTab: React.FC = () => {
                 Installer (.exe)
               </a>
               <a
-                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice%20Gen%201.4.0.exe"
+                href={getPackageUrl('win-portable')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 text-center py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
@@ -323,7 +375,7 @@ export const SettingsUpdatesTab: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100">
               <a
-                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-Setup-1.4.0-arm64.pkg"
+                href={getPackageUrl('mac-pkg-arm')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 text-center py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors"
@@ -331,7 +383,7 @@ export const SettingsUpdatesTab: React.FC = () => {
                 Apple Silicon (.pkg)
               </a>
               <a
-                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-Setup-1.4.0-x64.pkg"
+                href={getPackageUrl('mac-pkg-intel')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 text-center py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
@@ -354,7 +406,7 @@ export const SettingsUpdatesTab: React.FC = () => {
             </div>
             <div className="mt-2 pt-2 border-t border-slate-100">
               <a
-                href="https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-1.4.0.apk"
+                href={getPackageUrl('android-apk')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block text-center py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors"
@@ -372,7 +424,7 @@ export const SettingsUpdatesTab: React.FC = () => {
               </div>
               <div>
                 <h5 className="text-xs font-bold text-slate-900">All Releases Archive</h5>
-                <p className="text-[11px] text-slate-500">View v1.4.0, v1.3.3, v1.3.0, v1.2.0</p>
+                <p className="text-[11px] text-slate-500">View all version tags, change logs &amp; packages</p>
               </div>
             </div>
             <div className="mt-2 pt-2 border-t border-slate-100">

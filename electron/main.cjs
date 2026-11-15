@@ -836,6 +836,14 @@ ipcMain.handle('desktop:get-machine-info', async () => {
   };
 });
 
+ipcMain.on('desktop:get-app-version-sync', (event) => {
+  event.returnValue = app.getVersion();
+});
+
+ipcMain.handle('desktop:get-app-version', async () => {
+  return app.getVersion();
+});
+
 ipcMain.handle('desktop:get-opened-file', async () => {
   if (pendingOpenedFile && fs.existsSync(pendingOpenedFile)) {
     try {

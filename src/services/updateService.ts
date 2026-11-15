@@ -28,13 +28,34 @@ export interface UpdateCheckResult {
   error?: string;
 }
 
+declare const __APP_VERSION__: string | undefined;
+
 export interface UpdatePreferences {
   autoCheckOnStartup: boolean;
   lastCheckedAt?: string;
   dismissedVersion?: string;
 }
 
-export const CURRENT_APP_VERSION = "1.4.0";
+/**
+ * Returns the true current version of the application:
+ * 1. From Electron native runtime (window.invoiceDesktop.appVersion)
+ * 2. Injected by Vite at build time (__APP_VERSION__)
+ * 3. Default fallback
+ */
+export function getAppVersion(): string {
+  if (typeof window !== "undefined") {
+    const desktop = (window as unknown as { invoiceDesktop?: { appVersion?: string } }).invoiceDesktop;
+    if (desktop?.appVersion) {
+      return desktop.appVersion.replace(/^v/i, "").trim();
+    }
+  }
+  if (typeof __APP_VERSION__ !== "undefined" && __APP_VERSION__) {
+    return String(__APP_VERSION__).replace(/^v/i, "").trim();
+  }
+  return "1.4.2";
+}
+
+export const CURRENT_APP_VERSION = getAppVersion();
 const GITHUB_REPO = "rushikeshnarule/invoice-gen";
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 const UPDATE_PREFS_KEY = "invoice_gen_update_prefs";
@@ -203,8 +224,9 @@ export async function checkForUpdates(force = false): Promise<UpdateCheckResult>
       }
     }
 
+    const currentVersion = getAppVersion();
     const rawTag = (String(data.tag_name || "")).replace(/^v/i, "");
-    const latestVersion = rawTag || CURRENT_APP_VERSION;
+    const latestVersion = rawTag || currentVersion;
 
     const rawAssets = Array.isArray(data.assets) ? data.assets : [];
     const assets: ReleaseAsset[] = rawAssets.map((a: { name: string; size: number; browser_download_url: string; content_type: string }) => ({
@@ -227,14 +249,14 @@ export async function checkForUpdates(force = false): Promise<UpdateCheckResult>
 
     saveUpdatePreferences({ lastCheckedAt: new Date().toISOString() });
 
-    // Compare versions
-    const hasUpdate = compareSemver(latestVersion, CURRENT_APP_VERSION) > 0;
+    // Compare versions: ONLY notify update if latest on GitHub is strictly newer than current installed version
+    const hasUpdate = compareSemver(latestVersion, currentVersion) > 0;
 
     // Check if dismissed and not forced
     if (hasUpdate && !force && prefs.dismissedVersion === latestVersion) {
       return {
         hasUpdate: false,
-        currentVersion: CURRENT_APP_VERSION,
+        currentVersion,
         latestVersion,
         release,
       };
@@ -242,16 +264,17 @@ export async function checkForUpdates(force = false): Promise<UpdateCheckResult>
 
     return {
       hasUpdate,
-      currentVersion: CURRENT_APP_VERSION,
+      currentVersion,
       latestVersion,
       release,
     };
   } catch (err: unknown) {
+    const currentVersion = getAppVersion();
     const message = err instanceof Error ? err.message : "Failed to connect to update server";
     return {
       hasUpdate: false,
-      currentVersion: CURRENT_APP_VERSION,
-      latestVersion: CURRENT_APP_VERSION,
+      currentVersion,
+      latestVersion: currentVersion,
       error: message,
     };
   }

@@ -4,6 +4,27 @@ All notable changes to **Invoice Gen** are documented in this file.
 
 ---
 
+## [1.4.2] - 2026-11-15
+
+### 🚀 Resilient Auto-Update Architecture & Dynamic Version Resolution
+* **Eliminated Hardcoded Version Numbers**: Dynamic runtime resolution via Electron native IPC (`window.invoiceDesktop.appVersion`) with Vite build-time `__APP_VERSION__` injection.
+* **Native Desktop IPC Update Bridge**: Routed GitHub API update checks through Node.js secure `https` module (`desktop:check-updates`), resolving `TypeError: Failed to fetch` caused by Chromium CSP/CORS limitations.
+* **Content Security Policy Expansion**: Explicitly whitelisted GitHub API and artifact hosting domains in both `index.html` and the loopback Express server.
+* **Dynamic Direct Downloads**: Settings Software Updates tab dynamically reflects release assets without static version fallbacks.
+* **Instant Mount Sync**: Automatically queries update health upon opening the Updates tab.
+
+---
+
+## [1.4.1] - 2026-11-15
+
+### 🚀 In-App Seamless Auto-Updater Engine
+* **Native In-App Downloader**: Download update packages directly within the desktop interface.
+* **Real-time Download Telemetry**: Live progress bar showing percentage, transferred megabytes, and transfer speeds (MB/s).
+* **Automatic Installation**: Automatically launches the installer and restarts upon download completion.
+* **Settings & Command Palette Access**: Dedicated Updates tab in Settings and instant keyboard shortcut (`Ctrl+K` -> `U`).
+
+---
+
 ## [1.4.0] - 2026-11-15
 
 ### 🚀 Major Additions: Cross-Platform Native Installers & Mobile Overhaul

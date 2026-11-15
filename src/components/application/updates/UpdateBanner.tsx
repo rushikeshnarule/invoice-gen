@@ -7,12 +7,13 @@ import {
 import {
   checkForUpdates,
   getUpdatePreferences,
-  CURRENT_APP_VERSION,
+  getAppVersion,
   type ReleaseInfo,
 } from "@/services/updateService";
 import { UpdateModal } from "./UpdateModal";
 
 export const UpdateBanner: React.FC = () => {
+  const currentVersion = getAppVersion();
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [release, setRelease] = useState<ReleaseInfo | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,7 +44,7 @@ export const UpdateBanner: React.FC = () => {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         release={release}
-        currentVersion={CURRENT_APP_VERSION}
+        currentVersion={currentVersion}
       />
     );
   }
@@ -82,7 +83,7 @@ export const UpdateBanner: React.FC = () => {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         release={release}
-        currentVersion={CURRENT_APP_VERSION}
+        currentVersion={currentVersion}
       />
     </>
   );

@@ -65,7 +65,8 @@ jobs:
                       resized.save(os.path.join(d, 'ic_launcher_round.png'))
                       resized.save(os.path.join(d, 'ic_launcher_foreground.png'))
           "
-          sed -i 's/versionName "1.0"/versionName "1.4.0"/g' android/app/build.gradle
+          VERSION=$(node -p "require('./package.json').version")
+          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/g" android/app/build.gradle
 
       - name: Make Gradlew Executable
         run: chmod +x android/gradlew
@@ -77,12 +78,13 @@ jobs:
 
       - name: Prepare APK for Release
         run: |
+          VERSION=$(node -p "require('./package.json').version")
           mkdir -p release-apk
-          cp android/app/build/outputs/apk/debug/app-debug.apk release-apk/Invoice-Gen-1.4.0.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk release-apk/Invoice-Gen-$VERSION.apk
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: Invoice-Gen-Android-APK
-          path: release-apk/Invoice-Gen-1.4.0.apk
+          path: release-apk/Invoice-Gen-*.apk
           if-no-files-found: error

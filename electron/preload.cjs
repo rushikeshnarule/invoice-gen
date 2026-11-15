@@ -2,10 +2,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 let sessionToken = '';
+let appVersion = '';
 
 // 1. Secure synchronous IPC directly to main process
 try {
   sessionToken = ipcRenderer.sendSync('desktop:get-session-token-sync') || '';
+  appVersion = ipcRenderer.sendSync('desktop:get-app-version-sync') || '';
 } catch {}
 
 // 3. Process environment fallback
@@ -16,6 +18,8 @@ if (!sessionToken && typeof process !== 'undefined' && process.env && process.en
 contextBridge.exposeInMainWorld('invoiceDesktop', {
   isDesktop: true,
   platform: process.platform,
+  appVersion: appVersion,
+  getAppVersion: () => ipcRenderer.invoke('desktop:get-app-version'),
   sessionToken: sessionToken,
   getSessionToken: () => sessionToken,
   savePdf: (options) => ipcRenderer.invoke('desktop:save-pdf', options),

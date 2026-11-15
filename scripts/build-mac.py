@@ -13,12 +13,16 @@ import zipfile
 import plistlib
 import hashlib
 import urllib.request
+import json
 import pycdlib
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ELECTRON_VERSION = "45.2.2"
 APP_NAME = "Invoice Gen"
-APP_VERSION = "1.4.0"
+
+with open(os.path.join(PROJECT_ROOT, "package.json"), "r", encoding="utf-8") as f:
+    _pkg_data = json.load(f)
+APP_VERSION = _pkg_data.get("version", "1.4.2")
 BUNDLE_ID = "com.invoicegen.desktop"
 
 def get_electron_darwin_zip(arch):
