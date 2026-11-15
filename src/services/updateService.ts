@@ -154,18 +154,34 @@ export async function checkForUpdates(force = false): Promise<UpdateCheckResult>
   const prefs = getUpdatePreferences();
 
   try {
-    const response = await fetch(GITHUB_API_URL, {
+    let response = await fetch(GITHUB_API_URL, {
       headers: {
         Accept: "application/vnd.github.v3+json",
       },
     });
 
-    if (!response.ok) {
+    let data: Record<string, unknown> | null = null;
+    if (response.ok) {
+      data = await response.json() as Record<string, unknown>;
+    } else {
+      // Fallback to releases list in case /latest endpoint lags
+      const fallbackUrl = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
+      const fallbackRes = await fetch(fallbackUrl, {
+        headers: { Accept: "application/vnd.github.v3+json" },
+      });
+      if (fallbackRes.ok) {
+        const list = await fallbackRes.json() as Record<string, unknown>[];
+        if (Array.isArray(list) && list.length > 0) {
+          data = list[0];
+        }
+      }
+    }
+
+    if (!data) {
       throw new Error(`GitHub API returned status ${response.status}`);
     }
 
-    const data = await response.json();
-    const rawTag = (data.tag_name || "").replace(/^v/i, "");
+    const rawTag = (String(data.tag_name || "")).replace(/^v/i, "");
     const latestVersion = rawTag || CURRENT_APP_VERSION;
 
     const rawAssets = Array.isArray(data.assets) ? data.assets : [];
@@ -178,11 +194,11 @@ export async function checkForUpdates(force = false): Promise<UpdateCheckResult>
 
     const release: ReleaseInfo = {
       version: latestVersion,
-      tagName: data.tag_name,
-      name: data.name || `Version ${latestVersion}`,
-      body: data.body || "",
-      publishedAt: data.published_at || new Date().toISOString(),
-      htmlUrl: data.html_url,
+      tagName: String(data.tag_name || ""),
+      name: String(data.name || `Version ${latestVersion}`),
+      body: String(data.body || ""),
+      publishedAt: String(data.published_at || new Date().toISOString()),
+      htmlUrl: String(data.html_url || ""),
       assets,
       recommendedAsset: getRecommendedAsset(assets),
     };
