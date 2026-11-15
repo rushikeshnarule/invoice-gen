@@ -218,3 +218,72 @@ export async function checkForUpdates(force = false): Promise<UpdateCheckResult>
     };
   }
 }
+
+export interface DownloadProgress {
+  percent: number;
+  bytesReceived: number;
+  totalBytes: number;
+  speed: number;
+}
+
+export function isDesktopEnvironment(): boolean {
+  return typeof window !== "undefined" && Boolean((window as unknown as { invoiceDesktop?: { isDesktop?: boolean } }).invoiceDesktop?.isDesktop);
+}
+
+export async function downloadUpdate(
+  asset: ReleaseAsset,
+  onProgress?: (progress: DownloadProgress) => void
+): Promise<{ success: boolean; filePath?: string; error?: string }> {
+  const desktop = typeof window !== "undefined" ? (window as unknown as {
+    invoiceDesktop?: {
+      downloadUpdate?: (options: { downloadUrl: string; fileName: string }) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+      onUpdateProgress?: (cb: (p: DownloadProgress) => void) => () => void;
+    };
+  }).invoiceDesktop : undefined;
+
+  if (desktop?.downloadUpdate) {
+    let unsubscribe: (() => void) | undefined;
+    if (onProgress && desktop.onUpdateProgress) {
+      unsubscribe = desktop.onUpdateProgress(onProgress);
+    }
+
+    try {
+      const res = await desktop.downloadUpdate({
+        downloadUrl: asset.downloadUrl,
+        fileName: asset.name,
+      });
+      return res;
+    } finally {
+      if (unsubscribe) unsubscribe();
+    }
+  }
+
+  // Fallback for web / mobile environment: trigger browser download
+  if (typeof window !== "undefined") {
+    const a = document.createElement("a");
+    a.href = asset.downloadUrl;
+    a.download = asset.name;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return { success: true };
+  }
+
+  return { success: false, error: "Download is only supported in browser or desktop environment" };
+}
+
+export async function installUpdate(filePath: string): Promise<{ success: boolean; error?: string }> {
+  const desktop = typeof window !== "undefined" ? (window as unknown as {
+    invoiceDesktop?: {
+      installUpdate?: (options: { filePath: string }) => Promise<{ success: boolean; error?: string }>;
+    };
+  }).invoiceDesktop : undefined;
+
+  if (desktop?.installUpdate) {
+    return desktop.installUpdate({ filePath });
+  }
+
+  return { success: false, error: "Auto-install is available on Windows and macOS desktop editions" };
+}

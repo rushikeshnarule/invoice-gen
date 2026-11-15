@@ -10,6 +10,7 @@ import {
   RiAndroidFill,
   RiSparklingFill,
   RiShieldCheckLine,
+  RiArrowRightLine,
 } from "@remixicon/react";
 import {
   checkForUpdates,
@@ -17,7 +18,11 @@ import {
   saveUpdatePreferences,
   CURRENT_APP_VERSION,
   detectPlatform,
+  downloadUpdate,
+  installUpdate,
   type ReleaseInfo,
+  type ReleaseAsset,
+  type DownloadProgress,
 } from "@/services/updateService";
 
 export const SettingsUpdatesTab: React.FC = () => {
@@ -28,6 +33,9 @@ export const SettingsUpdatesTab: React.FC = () => {
     error?: string;
   }>({ status: "idle" });
 
+  const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "downloaded" | "installing" | "error">("idle");
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({ percent: 0, bytesReceived: 0, totalBytes: 0, speed: 0 });
+  const [downloadError, setDownloadError] = useState("");
   const [autoCheck, setAutoCheck] = useState(() => getUpdatePreferences().autoCheckOnStartup);
   const { platform, arch } = detectPlatform();
 
@@ -39,6 +47,7 @@ export const SettingsUpdatesTab: React.FC = () => {
 
   const handleCheckNow = async () => {
     setChecking(true);
+    setDownloadState("idle");
     try {
       const res = await checkForUpdates(true);
       if (res.error) {
@@ -56,10 +65,45 @@ export const SettingsUpdatesTab: React.FC = () => {
     }
   };
 
+  const handleStartInAppUpdate = async (asset: ReleaseAsset) => {
+    setDownloadState("downloading");
+    setDownloadError("");
+    setDownloadProgress({ percent: 0, bytesReceived: 0, totalBytes: asset.size || 0, speed: 0 });
+
+    try {
+      const result = await downloadUpdate(asset, (p) => {
+        setDownloadProgress(p);
+      });
+
+      if (!result.success) {
+        setDownloadState("error");
+        setDownloadError(result.error || "Failed to download update package");
+        return;
+      }
+
+      setDownloadState("downloaded");
+      if (result.filePath) {
+        setDownloadState("installing");
+        setTimeout(async () => {
+          await installUpdate(result.filePath!);
+        }, 1500);
+      }
+    } catch (err: unknown) {
+      setDownloadState("error");
+      setDownloadError(err instanceof Error ? err.message : "Download failed");
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (!bytes) return "";
     const mb = bytes / (1024 * 1024);
     return `${mb.toFixed(1)} MB`;
+  };
+
+  const formatSpeed = (bytesPerSec: number) => {
+    if (!bytesPerSec) return "";
+    const mb = bytesPerSec / (1024 * 1024);
+    return `${mb.toFixed(1)} MB/s`;
   };
 
   return (
@@ -122,20 +166,68 @@ export const SettingsUpdatesTab: React.FC = () => {
                 </p>
               </div>
             </div>
-            {lastCheckResult.release.recommendedAsset && (
-              <a
-                href={lastCheckResult.release.recommendedAsset.downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md transition-all shrink-0 cursor-pointer"
+
+            {lastCheckResult.release.recommendedAsset && downloadState === "idle" && (
+              <button
+                onClick={() => handleStartInAppUpdate(lastCheckResult.release!.recommendedAsset!)}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-all shrink-0 cursor-pointer"
               >
                 <RiDownload2Line className="size-4" />
-                <span>Download Now ({formatFileSize(lastCheckResult.release.recommendedAsset.size)})</span>
-              </a>
+                <span>Download &amp; Install ({formatFileSize(lastCheckResult.release.recommendedAsset.size)})</span>
+                <RiArrowRightLine className="size-3.5" />
+              </button>
             )}
           </div>
 
-          <div className="p-3.5 rounded-xl bg-white/80 border border-blue-100 text-xs text-slate-700 max-h-40 overflow-y-auto whitespace-pre-wrap">
+          {/* Download Progress Bar */}
+          {downloadState === "downloading" && (
+            <div className="p-3.5 rounded-xl bg-white border border-blue-200 space-y-2 animate-in fade-in">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
+                <span className="flex items-center gap-1.5">
+                  <RiRefreshLine className="size-3.5 animate-spin text-blue-600" />
+                  Downloading update directly within workstation...
+                </span>
+                <span className="font-mono text-blue-600">{downloadProgress.percent}%</span>
+              </div>
+              <div className="w-full bg-blue-100 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                  style={{ width: `${downloadProgress.percent}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span>{formatFileSize(downloadProgress.bytesReceived)} / {formatFileSize(downloadProgress.totalBytes)}</span>
+                {downloadProgress.speed > 0 && <span>Speed: {formatSpeed(downloadProgress.speed)}</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Installing status */}
+          {(downloadState === "downloaded" || downloadState === "installing") && (
+            <div className="p-3.5 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center gap-3 animate-in fade-in">
+              <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0" />
+              <div>
+                <h5 className="text-xs font-bold text-emerald-950">Download Complete! Installing automatically...</h5>
+                <p className="text-[11px] text-emerald-800">The application will restart with the latest update.</p>
+              </div>
+            </div>
+          )}
+
+          {downloadState === "error" && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800">
+              <p className="font-semibold">Update download failed: {downloadError}</p>
+              <a
+                href={lastCheckResult.release.recommendedAsset?.downloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline font-bold mt-1 inline-block"
+              >
+                Download via browser instead
+              </a>
+            </div>
+          )}
+
+          <div className="p-3.5 rounded-xl bg-white/80 border border-blue-100 text-xs text-slate-700 max-h-40 overflow-y-auto whitespace-pre-wrap font-sans">
             {lastCheckResult.release.body}
           </div>
         </div>

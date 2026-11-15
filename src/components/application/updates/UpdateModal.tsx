@@ -9,9 +9,18 @@ import {
   RiAppleFill,
   RiAndroidFill,
   RiArrowRightLine,
+  RiCheckboxCircleFill,
+  RiAlertFill,
+  RiRefreshLine,
 } from "@remixicon/react";
-import type { ReleaseInfo } from "@/services/updateService";
-import { detectPlatform, saveUpdatePreferences } from "@/services/updateService";
+import type { ReleaseInfo, ReleaseAsset, DownloadProgress } from "@/services/updateService";
+import {
+  detectPlatform,
+  saveUpdatePreferences,
+  downloadUpdate,
+  installUpdate,
+  isDesktopEnvironment,
+} from "@/services/updateService";
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -27,14 +36,15 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   currentVersion,
 }) => {
   const [showAllDownloads, setShowAllDownloads] = useState(false);
+  const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "downloaded" | "installing" | "error">("idle");
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({ percent: 0, bytesReceived: 0, totalBytes: 0, speed: 0 });
+  const [downloadedFilePath, setDownloadedFilePath] = useState<string>("");
+  const [downloadError, setDownloadError] = useState<string>("");
 
   if (!isOpen || !release) return null;
 
   const { platform } = detectPlatform();
-
-  const handleDownload = (assetUrl: string) => {
-    window.open(assetUrl, "_blank", "noopener,noreferrer");
-  };
+  const isDesktop = isDesktopEnvironment();
 
   const handleSkipVersion = () => {
     saveUpdatePreferences({ dismissedVersion: release.version });
@@ -47,12 +57,53 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     return `${mb.toFixed(1)} MB`;
   };
 
+  const formatSpeed = (bytesPerSec: number) => {
+    if (!bytesPerSec) return "";
+    const mb = bytesPerSec / (1024 * 1024);
+    return `${mb.toFixed(1)} MB/s`;
+  };
+
   const getAssetIcon = (assetName: string) => {
     const lower = assetName.toLowerCase();
     if (lower.endsWith(".exe")) return <RiWindowsFill className="size-4 text-blue-500" />;
     if (lower.endsWith(".pkg") || lower.endsWith(".dmg")) return <RiAppleFill className="size-4 text-slate-800" />;
     if (lower.endsWith(".apk")) return <RiAndroidFill className="size-4 text-emerald-500" />;
     return <RiDownload2Line className="size-4 text-slate-500" />;
+  };
+
+  const handleStartInAppUpdate = async (asset: ReleaseAsset) => {
+    setDownloadState("downloading");
+    setDownloadError("");
+    setDownloadProgress({ percent: 0, bytesReceived: 0, totalBytes: asset.size || 0, speed: 0 });
+
+    try {
+      const result = await downloadUpdate(asset, (p) => {
+        setDownloadProgress(p);
+      });
+
+      if (!result.success) {
+        setDownloadState("error");
+        setDownloadError(result.error || "Failed to download update package");
+        return;
+      }
+
+      setDownloadState("downloaded");
+      if (result.filePath) {
+        setDownloadedFilePath(result.filePath);
+        // Automatically proceed to launch installer after brief confirmation
+        setDownloadState("installing");
+        setTimeout(async () => {
+          await installUpdate(result.filePath!);
+        }, 1500);
+      }
+    } catch (err: unknown) {
+      setDownloadState("error");
+      setDownloadError(err instanceof Error ? err.message : "Download failed");
+    }
+  };
+
+  const handleManualBrowserDownload = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const recommendedAsset = release.recommendedAsset;
@@ -64,7 +115,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white p-6 pb-7">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white cursor-pointer"
             aria-label="Close"
           >
             <RiCloseLine className="size-5" />
@@ -89,49 +140,115 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Primary Recommendation Card */}
-          {recommendedAsset ? (
-            <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-blue-600 text-white shrink-0 mt-0.5">
-                  <RiDownload2Line className="size-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-900 text-sm">
-                      Recommended for Your Device
-                    </span>
-                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-800 capitalize">
-                      {platform}
-                    </span>
+          {/* In-App Direct Download & Auto-Install Card */}
+          {recommendedAsset && (
+            <div className="p-5 rounded-2xl bg-blue-50/70 border border-blue-200/80 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-blue-600 text-white shrink-0 mt-0.5 shadow-sm shadow-blue-500/30">
+                    <RiDownload2Line className="size-5" />
                   </div>
-                  <p className="text-xs text-slate-600 mt-0.5 line-clamp-1 font-mono">
-                    {recommendedAsset.name} {recommendedAsset.size ? `(${formatFileSize(recommendedAsset.size)})` : ""}
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">
+                        Direct In-App Upgrade
+                      </span>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-800 capitalize">
+                        {platform}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5 line-clamp-1 font-mono">
+                      {recommendedAsset.name} {recommendedAsset.size ? `(${formatFileSize(recommendedAsset.size)})` : ""}
+                    </p>
+                  </div>
                 </div>
+
+                {downloadState === "idle" && (
+                  <button
+                    onClick={() => handleStartInAppUpdate(recommendedAsset)}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all shrink-0 active:scale-95 cursor-pointer"
+                  >
+                    <span>Download &amp; Install</span>
+                    <RiArrowRightLine className="size-4" />
+                  </button>
+                )}
               </div>
 
-              <button
-                onClick={() => handleDownload(recommendedAsset.downloadUrl)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-600/20 transition-all shrink-0 active:scale-95 cursor-pointer"
-              >
-                <span>Download Now</span>
-                <RiArrowRightLine className="size-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-slate-900 text-sm">Download Update from GitHub</p>
-                <p className="text-xs text-slate-500">View release assets and binaries directly.</p>
-              </div>
-              <button
-                onClick={() => handleDownload(release.htmlUrl)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-medium hover:bg-slate-800"
-              >
-                <span>Open Release</span>
-                <RiExternalLinkLine className="size-3.5" />
-              </button>
+              {/* Downloading Progress Bar */}
+              {downloadState === "downloading" && (
+                <div className="space-y-2 pt-2 border-t border-blue-200/60 animate-in fade-in">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                    <span className="flex items-center gap-1.5">
+                      <RiRefreshLine className="size-3.5 animate-spin text-blue-600" />
+                      Downloading update package...
+                    </span>
+                    <span className="font-mono text-blue-600">{downloadProgress.percent}%</span>
+                  </div>
+
+                  <div className="w-full bg-blue-200/80 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${downloadProgress.percent}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                    <span>
+                      {formatFileSize(downloadProgress.bytesReceived)} / {formatFileSize(downloadProgress.totalBytes)}
+                    </span>
+                    {downloadProgress.speed > 0 && (
+                      <span>Speed: {formatSpeed(downloadProgress.speed)}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Downloaded / Installing State */}
+              {(downloadState === "downloaded" || downloadState === "installing") && (
+                <div className="p-3.5 rounded-xl bg-emerald-100/80 border border-emerald-300 flex items-center justify-between animate-in fade-in">
+                  <div className="flex items-center gap-2.5">
+                    <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0" />
+                    <div>
+                      <h5 className="text-xs font-bold text-emerald-950">
+                        {downloadState === "installing" ? "Launching installer & restarting app..." : "Download Complete!"}
+                      </h5>
+                      <p className="text-[11px] text-emerald-800">
+                        {downloadState === "installing" ? "The application will close and install automatically." : "Ready to install."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {downloadState === "downloaded" && downloadedFilePath && (
+                    <button
+                      onClick={() => {
+                        setDownloadState("installing");
+                        installUpdate(downloadedFilePath);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+                    >
+                      Install Now
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Error State */}
+              {downloadState === "error" && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2.5 text-xs text-red-800 animate-in fade-in">
+                  <RiAlertFill className="size-4 text-red-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-semibold">In-app update encountered an issue</p>
+                    <p className="text-[11px] text-red-600 mt-0.5">{downloadError}</p>
+                    <button
+                      onClick={() => handleManualBrowserDownload(recommendedAsset.downloadUrl)}
+                      className="inline-flex items-center gap-1 text-blue-700 underline font-semibold mt-1 cursor-pointer"
+                    >
+                      <span>Download directly from browser instead</span>
+                      <RiExternalLinkLine className="size-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -150,7 +267,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             <div className="border-t border-slate-100 pt-4">
               <button
                 onClick={() => setShowAllDownloads(!showAllDownloads)}
-                className="flex items-center justify-between w-full text-xs font-semibold text-slate-700 hover:text-blue-600 py-1"
+                className="flex items-center justify-between w-full text-xs font-semibold text-slate-700 hover:text-blue-600 py-1 cursor-pointer"
               >
                 <span>All Available Platform Packages ({release.assets.length})</span>
                 <span className="text-blue-600 text-xs">{showAllDownloads ? "Hide" : "Show All"}</span>
@@ -174,12 +291,22 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                           </span>
                         )}
                       </div>
-                      <button
-                        onClick={() => handleDownload(asset.downloadUrl)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 text-xs font-medium transition-colors shrink-0 cursor-pointer"
-                      >
-                        Download
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isDesktop && (
+                          <button
+                            onClick={() => handleStartInAppUpdate(asset)}
+                            className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors cursor-pointer"
+                          >
+                            Install
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleManualBrowserDownload(asset.downloadUrl)}
+                          className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          Browser
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -199,7 +326,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => handleDownload(release.htmlUrl)}
+              onClick={() => handleManualBrowserDownload(release.htmlUrl)}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
             >
               <span>View on GitHub</span>

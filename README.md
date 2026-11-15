@@ -35,21 +35,19 @@ Available as a native **Windows application**, **macOS PKG installer & DMG**, **
 
 ---
 
-## 📥 Downloads (Latest Release v1.4.0)
+## 📥 Downloads (Latest Release v1.4.1)
 
 Choose your operating system to download the latest production build:
 
 | Operating System | Architecture | Package Format | Download Link |
 | :--- | :--- | :--- | :--- |
-| **🪟 Windows** | x64 | **NSIS Setup Wizard** | [⬇️ Download `Invoice-Gen-Setup-1.4.0.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-Setup-1.4.0.exe) |
-| **🪟 Windows** | x64 | **Portable (Zero-Install)** | [⬇️ Download `Invoice Gen 1.4.0.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice%20Gen%201.4.0.exe) |
-| **🍏 macOS** | Apple Silicon (`arm64`) | **Native PKG Installer** | [⬇️ Download `Invoice-Gen-Setup-1.4.0-arm64.pkg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-Setup-1.4.0-arm64.pkg) |
-| **🍏 macOS** | Intel (`x64`) | **Native PKG Installer** | [⬇️ Download `Invoice-Gen-Setup-1.4.0-x64.pkg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-Setup-1.4.0-x64.pkg) |
-| **🍏 macOS** | Apple Silicon (`arm64`) | **DMG Disk Image** | [⬇️ Download `Invoice-Gen-1.4.0-mac-arm64.dmg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-1.4.0-mac-arm64.dmg) |
-| **🍏 macOS** | Intel (`x64`) | **DMG Disk Image** | [⬇️ Download `Invoice-Gen-1.4.0-mac-x64.dmg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-1.4.0-mac-x64.dmg) |
-| **🍏 macOS** | Apple Silicon (`arm64`) | **App Zip Archive** | [⬇️ Download `Invoice-Gen-1.4.0-mac-arm64.zip`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-1.4.0-mac-arm64.zip) |
-| **🍏 macOS** | Intel (`x64`) | **App Zip Archive** | [⬇️ Download `Invoice-Gen-1.4.0-mac-x64.zip`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-1.4.0-mac-x64.zip) |
-| **🤖 Android** | Universal | **Android APK** | [⬇️ Download `Invoice-Gen-1.4.0.apk`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.0/Invoice-Gen-1.4.0.apk) |
+| **🪟 Windows** | x64 | **NSIS Setup Wizard** | [⬇️ Download `Invoice-Gen-Setup-1.4.1.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.1/Invoice-Gen-Setup-1.4.1.exe) |
+| **🪟 Windows** | x64 | **Portable (Zero-Install)** | [⬇️ Download `Invoice Gen 1.4.1.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.1/Invoice%20Gen%201.4.1.exe) |
+| **🍏 macOS** | Apple Silicon (`arm64`) | **Native PKG Installer** | [⬇️ Download `Invoice-Gen-Setup-1.4.1-arm64.pkg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.1/Invoice-Gen-Setup-1.4.1-arm64.pkg) |
+| **🍏 macOS** | Intel (`x64`) | **Native PKG Installer** | [⬇️ Download `Invoice-Gen-Setup-1.4.1-x64.pkg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.1/Invoice-Gen-Setup-1.4.1-x64.pkg) |
+| **🍏 macOS** | Apple Silicon (`arm64`) | **DMG Disk Image** | [⬇️ Download `Invoice-Gen-1.4.1-mac-arm64.dmg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.1/Invoice-Gen-1.4.1-mac-arm64.dmg) |
+| **🍏 macOS** | Intel (`x64`) | **DMG Disk Image** | [⬇️ Download `Invoice-Gen-1.4.1-mac-x64.dmg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.1/Invoice-Gen-1.4.1-mac-x64.dmg) |
+| **🤖 Android** | Universal | **Android APK** | [⬇️ Download `Invoice-Gen-1.4.1.apk`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.1/Invoice-Gen-1.4.1.apk) |
 
 > 📁 Looking for previous releases? Check out the [All Releases Archive](#-releases--version-history) or visit [GitHub Releases](https://github.com/rushikeshnarule/invoice-gen/releases).
 
@@ -241,6 +239,7 @@ All builds and releases are hosted directly on [GitHub Releases](https://github.
 
 | Version | Release Date | Highlights | Supported Platforms | Direct Links |
 | :--- | :--- | :--- | :--- | :--- |
+| **v1.4.1** | 2026-11-15 | In-App Auto-Updater, Live Progress Bar, Direct In-App Installation | Windows, macOS, Android, Web | [Release Notes](docs/releases/v1.4.1.md) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.4.1) |
 | **v1.4.0** | 2026-11-15 | Native macOS PKG Wizard, Android APK, Mobile UI/UX Overhaul | Windows, macOS, Android, Web | [Release Notes](docs/releases/v1.4.0.md) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.4.0) |
 | **v1.3.3** | 2026-11-12 | US Sales Tax Engine, US Edition builds, High-Density Preview | Windows, macOS, Web | [Release Notes](docs/releases/v1.3.3.md) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.3.3) |
 | **v1.3.0** | 2026-11-05 | Live Template Customizer, Persistent Storage, Separated Print/PDF | Windows, macOS, Web | [Release Notes](docs/releases/v1.3.0.md) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.3.0) |

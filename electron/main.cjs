@@ -8,9 +8,10 @@ const { app, BrowserWindow, shell, Menu, ipcMain, dialog, nativeImage } = requir
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const https = require('https');
 const os = require('os');
 const crypto = require('crypto');
-const { execSync } = require('child_process');
+const { execSync, spawn } = require('child_process');
 
 // On Windows, explicitly register the Application User Model ID so the taskbar groups properly
 // and displays the correct application icon instead of generic electron
@@ -847,6 +848,159 @@ ipcMain.handle('desktop:get-opened-file', async () => {
     }
   }
   return { success: false };
+});
+
+// ─── Direct In-App Auto-Update & Installer Engine ───────────────────────
+function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects = 10) {
+  return new Promise((resolve, reject) => {
+    if (maxRedirects <= 0) return reject(new Error('Too many redirects while downloading update'));
+
+    const isHttps = fileUrl.startsWith('https');
+    const client = isHttps ? https : http;
+
+    const req = client.get(fileUrl, {
+      headers: {
+        'User-Agent': 'InvoiceGen-Workstation-AutoUpdater',
+        'Accept': 'application/octet-stream',
+      },
+    }, (res) => {
+      // Follow redirects (GitHub Releases redirect to AWS S3 / CloudFront storage)
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        let redirectUrl = res.headers.location;
+        if (!redirectUrl.startsWith('http')) {
+          const parsed = new URL(fileUrl);
+          redirectUrl = `${parsed.protocol}//${parsed.host}${redirectUrl}`;
+        }
+        res.resume();
+        return resolve(downloadFileWithRedirects(redirectUrl, destPath, onProgress, maxRedirects - 1));
+      }
+
+      if (res.statusCode !== 200) {
+        return reject(new Error(`Update server returned HTTP status ${res.statusCode}`));
+      }
+
+      const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
+      let bytesReceived = 0;
+      const startTime = Date.now();
+      let lastProgressDispatch = 0;
+
+      const fileStream = fs.createWriteStream(destPath);
+
+      res.on('data', (chunk) => {
+        bytesReceived += chunk.length;
+        const now = Date.now();
+        if (now - lastProgressDispatch > 150 || bytesReceived === totalBytes) {
+          lastProgressDispatch = now;
+          const elapsedSec = (now - startTime) / 1000 || 0.001;
+          const speed = bytesReceived / elapsedSec;
+          const percent = totalBytes > 0 ? Math.min(100, Math.round((bytesReceived / totalBytes) * 100)) : 0;
+          if (onProgress) {
+            onProgress({
+              percent,
+              bytesReceived,
+              totalBytes,
+              speed,
+            });
+          }
+        }
+      });
+
+      res.pipe(fileStream);
+
+      fileStream.on('finish', () => {
+        fileStream.close(() => resolve({ destPath, totalBytes: bytesReceived }));
+      });
+
+      fileStream.on('error', (err) => {
+        try { fs.unlinkSync(destPath); } catch {}
+        reject(err);
+      });
+    });
+
+    req.on('error', (err) => {
+      try { fs.unlinkSync(destPath); } catch {}
+      reject(err);
+    });
+  });
+}
+
+ipcMain.handle('desktop:download-update', async (_event, { downloadUrl, fileName }) => {
+  if (!downloadUrl) return { success: false, error: 'No download URL specified' };
+
+  try {
+    const tempDir = app.getPath('temp');
+    const safeName = (fileName || 'Invoice-Gen-Update.exe').replace(/[^a-zA-Z0-9.-]/g, '_');
+    const destPath = path.join(tempDir, safeName);
+
+    if (fs.existsSync(destPath)) {
+      try { fs.unlinkSync(destPath); } catch {}
+    }
+
+    await downloadFileWithRedirects(downloadUrl, destPath, (progress) => {
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+        mainWindow.webContents.send('desktop:update-progress', progress);
+      }
+    });
+
+    return { success: true, filePath: destPath };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('desktop:install-update', async (_event, { filePath }) => {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return { success: false, error: 'Update installer file not found on disk' };
+  }
+
+  try {
+    const isWin = process.platform === 'win32';
+    const isDarwin = process.platform === 'darwin';
+
+    if (isWin) {
+      const child = spawn(filePath, [], {
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+
+      if (server) {
+        try { server.close(); } catch {}
+        server = null;
+      }
+      setTimeout(() => {
+        app.quit();
+      }, 500);
+      return { success: true };
+    }
+
+    if (isDarwin) {
+      const child = spawn('open', [filePath], {
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+
+      if (server) {
+        try { server.close(); } catch {}
+        server = null;
+      }
+      setTimeout(() => {
+        app.quit();
+      }, 500);
+      return { success: true };
+    }
+
+    const child = spawn('xdg-open', [filePath], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+    app.quit();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
 app.whenReady().then(createWindow);
