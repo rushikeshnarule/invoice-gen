@@ -210,15 +210,34 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                     <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0" />
                     <div>
                       <h5 className="text-xs font-bold text-emerald-950">
-                        {downloadState === "installing" ? "Launching installer & restarting app..." : "Download Complete!"}
+                        {downloadState === "installing"
+                          ? "Launching installer & restarting app..."
+                          : platform === "android"
+                          ? "APK Package Downloaded!"
+                          : "Download Complete!"}
                       </h5>
                       <p className="text-[11px] text-emerald-800">
-                        {downloadState === "installing" ? "The application will close and install automatically." : "Ready to install."}
+                        {downloadState === "installing"
+                          ? "The application will close and install automatically."
+                          : platform === "android"
+                          ? "Tap Install APK below or check your notifications to finish installing."
+                          : "Ready to install."}
                       </p>
                     </div>
                   </div>
 
-                  {downloadState === "downloaded" && downloadedFilePath && (
+                  {platform === "android" && recommendedAsset && (
+                    <a
+                      href={recommendedAsset.downloadUrl}
+                      target="_system"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+                    >
+                      Install APK
+                    </a>
+                  )}
+
+                  {downloadState === "downloaded" && downloadedFilePath && platform !== "android" && (
                     <button
                       onClick={() => {
                         setDownloadState("installing");

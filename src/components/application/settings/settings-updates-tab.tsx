@@ -173,8 +173,8 @@ export const SettingsUpdatesTab: React.FC = () => {
                 v{currentVersion}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 capitalize">
-              Platform: {platform} {arch ? `(${arch})` : ""} • Commercial Edition
+            <p className="text-xs text-slate-500 mt-0.5">
+              Platform: {platform === 'macos' ? `macOS ${arch === 'arm64' ? '(Apple Silicon M-Series)' : '(Intel x64)'}` : platform === 'android' ? 'Android (Touch Mobile Edition)' : `Windows (${arch || 'x64'})`} • Commercial Edition
             </p>
           </div>
         </div>
@@ -254,14 +254,36 @@ export const SettingsUpdatesTab: React.FC = () => {
             </div>
           )}
 
-          {/* Installing status */}
+          {/* Installing / Downloaded status */}
           {(downloadState === "downloaded" || downloadState === "installing") && (
-            <div className="p-3.5 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center gap-3 animate-in fade-in">
-              <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0" />
-              <div>
-                <h5 className="text-xs font-bold text-emerald-950">Download Complete! Installing automatically...</h5>
-                <p className="text-[11px] text-emerald-800">The application will restart with the latest update.</p>
+            <div className="p-3.5 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0" />
+                <div>
+                  <h5 className="text-xs font-bold text-emerald-950">
+                    {platform === "android"
+                      ? "APK Download Started!"
+                      : downloadState === "installing"
+                      ? "Download Complete! Launching installer..."
+                      : "Download Complete! Installing automatically..."}
+                  </h5>
+                  <p className="text-[11px] text-emerald-800">
+                    {platform === "android"
+                      ? "Check your notifications or tap Install APK below to install the update."
+                      : "The application will restart with the latest update."}
+                  </p>
+                </div>
               </div>
+              {platform === "android" && lastCheckResult.release.recommendedAsset && (
+                <a
+                  href={lastCheckResult.release.recommendedAsset.downloadUrl}
+                  target="_system"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shrink-0 shadow-sm cursor-pointer"
+                >
+                  Install APK
+                </a>
+              )}
             </div>
           )}
 

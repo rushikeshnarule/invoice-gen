@@ -755,6 +755,25 @@ export async function exportInvoiceToExcel(invoice: InvoiceRenderData): Promise<
     }
   }
 
+  // Mobile / Android direct Web Share fallback if files can be shared
+  if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && typeof File !== 'undefined') {
+    try {
+      const file = new File([buffer], defaultFilename, {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: defaultFilename,
+          files: [file],
+        });
+        toast.success(`Shared Excel workbook: ${defaultFilename}`);
+        return;
+      }
+    } catch (shareErr: unknown) {
+      if ((shareErr as { name?: string })?.name === 'AbortError') return;
+    }
+  }
+
   // Browser download fallback
   const blob = new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -961,6 +980,25 @@ export async function exportInvoicesLedgerToExcel(
       }
     } catch {
       // fallback
+    }
+  }
+
+  // Mobile / Android direct Web Share fallback if files can be shared
+  if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && typeof File !== 'undefined') {
+    try {
+      const file = new File([buffer], filename, {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: filename,
+          files: [file],
+        });
+        toast.success(`Shared Ledger Excel: ${filename}`);
+        return;
+      }
+    } catch (shareErr: unknown) {
+      if ((shareErr as { name?: string })?.name === 'AbortError') return;
     }
   }
 

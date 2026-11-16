@@ -321,6 +321,10 @@ export async function downloadUpdate(
 
   // Fallback for web / mobile environment: trigger browser download
   if (typeof window !== "undefined") {
+    try {
+      // In Android WebView / Capacitor, use _system to invoke Android DownloadManager
+      window.open(asset.downloadUrl, "_system");
+    } catch {}
     const a = document.createElement("a");
     a.href = asset.downloadUrl;
     a.download = asset.name;

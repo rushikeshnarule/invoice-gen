@@ -100,6 +100,11 @@ export const PrintInvoice: React.FC = () => {
     if (data?.invoiceNumber) {
       document.title = data.invoiceNumber.trim().replace(/[\\/:*?"<>|]/g, '-');
     }
+    const android = (window as unknown as { invoiceAndroid?: { printDocument?: (name: string) => void } }).invoiceAndroid;
+    if (android && typeof android.printDocument === 'function') {
+      android.printDocument(data?.invoiceNumber || 'Invoice');
+      return;
+    }
     window.print();
   };
 
@@ -126,6 +131,12 @@ export const PrintInvoice: React.FC = () => {
         setIsSavingPdf(false);
       }
     } else {
+      const android = (window as unknown as { invoiceAndroid?: { printDocument?: (name: string) => void } }).invoiceAndroid;
+      if (android && typeof android.printDocument === 'function') {
+        toast.info('Opening Android Print Spooler. Choose "Save as PDF".');
+        android.printDocument(data.invoiceNumber || 'Invoice');
+        return;
+      }
       // In web browser fallback: set title to exact filename and open print dialog
       document.title = safeTitle;
       toast.info('Choose "Save as PDF" in the printer destination dropdown.');
