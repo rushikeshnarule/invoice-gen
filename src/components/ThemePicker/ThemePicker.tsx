@@ -240,8 +240,9 @@ export const ThemePicker: React.FC = () => {
     'real' | 'standard' | 'multipage' | 'single' | 'devanagari' | 'igst' | 'nogst'
   >(() => (invoices.length > 0 ? 'real' : 'standard'));
 
-  // Canvas Zoom control
-  const [zoomLevel, setZoomLevel] = useState<number>(0.85);
+  // Canvas Zoom control - defaults to 'auto' for responsive screen adaptation
+  const [zoomLevel, setZoomLevel] = useState<number | 'auto'>('auto');
+  const [mobileTab, setMobileTab] = useState<'preview' | 'options'>('preview');
 
   // Compute preview data based on selection
   const sampleData: InvoiceRenderData = React.useMemo(() => {
@@ -384,27 +385,42 @@ export const ThemePicker: React.FC = () => {
             <div className="hidden lg:flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 shrink-0">
               <button
                 type="button"
-                onClick={() => setZoomLevel((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
-                className="p-0.5 hover:text-slate-900 text-slate-500 rounded"
+                onClick={() =>
+                  setZoomLevel((z) => {
+                    const current = typeof z === 'number' ? z : 0.85;
+                    return Math.max(0.4, Number((current - 0.1).toFixed(2)));
+                  })
+                }
+                className="p-0.5 hover:text-slate-900 text-slate-500 rounded cursor-pointer"
                 title="Zoom Out"
               >
                 <RiZoomOutLine className="size-3.5" />
               </button>
-              <span className="text-xs font-mono font-medium min-w-10 text-center text-slate-700">
-                {Math.round(zoomLevel * 100)}%
+              <span className="text-xs font-mono font-medium min-w-12 text-center text-slate-700">
+                {typeof zoomLevel === 'number' ? `${Math.round(zoomLevel * 100)}%` : 'Auto'}
               </span>
               <button
                 type="button"
-                onClick={() => setZoomLevel((z) => Math.min(1.5, Number((z + 0.1).toFixed(2))))}
-                className="p-0.5 hover:text-slate-900 text-slate-500 rounded"
+                onClick={() =>
+                  setZoomLevel((z) => {
+                    const current = typeof z === 'number' ? z : 0.85;
+                    return Math.min(1.5, Number((current + 0.1).toFixed(2)));
+                  })
+                }
+                className="p-0.5 hover:text-slate-900 text-slate-500 rounded cursor-pointer"
                 title="Zoom In"
               >
                 <RiZoomInLine className="size-3.5" />
               </button>
               <button
                 type="button"
-                onClick={() => setZoomLevel(activeTheme.paper.includes('80mm') ? 1.0 : 0.85)}
-                className="text-xs text-slate-500 hover:text-slate-900 px-1 font-semibold"
+                onClick={() => setZoomLevel('auto')}
+                className={`text-xs px-1.5 py-0.5 rounded font-semibold cursor-pointer transition-colors ${
+                  zoomLevel === 'auto'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+                title="Auto-adapt to screen size"
               >
                 Fit
               </button>
@@ -432,25 +448,56 @@ export const ThemePicker: React.FC = () => {
           </div>
         </div>
 
+        {/* Mobile & Tablet Toggle Bar: Live Canvas vs Customize Options */}
+        <div className="lg:hidden px-3 py-2 bg-slate-100 border-b border-slate-200 flex items-center justify-center shrink-0">
+          <div className="inline-flex rounded-xl bg-slate-200/80 p-1 w-full max-w-sm shadow-inner">
+            <button
+              type="button"
+              onClick={() => setMobileTab('preview')}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                mobileTab === 'preview' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Live Canvas
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('options')}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                mobileTab === 'options' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Customize Options
+            </button>
+          </div>
+        </div>
+
         {/* 2-Pane Workstation: Center Canvas + Right Theme Inspector */}
-        <div className="flex-1 overflow-hidden flex">
+        <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
           {/* Live Preview Canvas */}
-          <div className="flex-1 bg-slate-100 overflow-auto p-8 relative">
+          <div
+            className={`flex-1 bg-slate-100 overflow-auto p-2 sm:p-4 lg:p-6 xl:p-8 relative ${
+              mobileTab === 'preview' ? 'flex flex-col items-center' : 'hidden lg:flex'
+            }`}
+          >
             <ThemePreview
               themeId={currentThemeId}
               data={sampleData}
               options={options}
               scale={zoomLevel}
+              showControls={false}
             />
           </div>
 
           {/* Right Inspector Panel */}
-          <ThemeOptionsPanel
-            themeId={currentThemeId}
-            options={options}
-            onChange={setOptions}
-            onReset={resetOptions}
-          />
+          <div className={`${mobileTab === 'options' ? 'flex flex-1 lg:flex-initial' : 'hidden lg:flex'}`}>
+            <ThemeOptionsPanel
+              themeId={currentThemeId}
+              options={options}
+              onChange={setOptions}
+              onReset={resetOptions}
+            />
+          </div>
         </div>
       </div>
     );

@@ -121,9 +121,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             <RiCloseLine className="size-5" />
           </button>
 
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-semibold uppercase tracking-wider text-white">
               <RiSparklingFill className="size-3 text-amber-300" /> New Update Available
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-400/30 backdrop-blur-md text-white text-[11px] font-semibold border border-emerald-300/40">
+              <span className="size-1.5 rounded-full bg-emerald-300 animate-pulse" />
+              Pushed to GitHub now
             </span>
             <span className="text-xs text-blue-100">
               Current: v{currentVersion}
@@ -134,7 +138,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             {release.name || `Invoice Gen v${release.version}`}
           </h2>
           <p className="text-sm text-blue-100/90">
-            Released on {new Date(release.publishedAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+            Pushed to GitHub on {new Date(release.publishedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
           </p>
         </div>
 

@@ -167,10 +167,14 @@ export const SettingsUpdatesTab: React.FC = () => {
             <RiShieldCheckLine className="size-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-bold text-slate-900 text-base">Invoice Gen Workstation</h3>
               <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
                 v{currentVersion}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-semibold border border-emerald-200">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Pushed to GitHub now
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -193,11 +197,34 @@ export const SettingsUpdatesTab: React.FC = () => {
       {lastCheckResult.status === "up-to-date" && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start gap-3 animate-in fade-in">
           <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-sm font-semibold text-emerald-900">You're up to date!</h4>
-            <p className="text-xs text-emerald-700 mt-0.5">
-              Invoice Gen v{currentVersion} is currently the latest version released. No action needed.
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h4 className="text-sm font-semibold text-emerald-900 flex items-center gap-2">
+                <span>You're up to date!</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-200/80 text-emerald-900 text-[10px] font-bold tracking-wide uppercase">
+                  Pushed to GitHub now
+                </span>
+              </h4>
+              {lastCheckResult.release?.htmlUrl && (
+                <a
+                  href={lastCheckResult.release.htmlUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 inline-flex items-center gap-1 underline"
+                >
+                  <span>View on GitHub</span>
+                  <RiExternalLinkLine className="size-3" />
+                </a>
+              )}
+            </div>
+            <p className="text-xs text-emerald-700 mt-1">
+              Invoice Gen v{currentVersion} is verified and pushed to GitHub now. All platform packages (Windows, macOS, Android) are live and synchronized.
             </p>
+            {lastCheckResult.release?.publishedAt && (
+              <p className="text-[11px] text-emerald-600 mt-1 font-mono">
+                Pushed to GitHub: {new Date(lastCheckResult.release.publishedAt).toLocaleString()}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -210,11 +237,16 @@ export const SettingsUpdatesTab: React.FC = () => {
                 <RiSparklingFill className="size-4 text-amber-300" />
               </span>
               <div>
-                <h4 className="text-sm font-bold text-slate-900">
-                  New Version Available: v{lastCheckResult.release.version}
-                </h4>
-                <p className="text-xs text-slate-600">
-                  Released on {new Date(lastCheckResult.release.publishedAt).toLocaleDateString()}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-sm font-bold text-slate-900">
+                    New Version Available: v{lastCheckResult.release.version}
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold uppercase">
+                    Pushed to GitHub now
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Pushed to GitHub on {new Date(lastCheckResult.release.publishedAt).toLocaleString()}
                 </p>
               </div>
             </div>

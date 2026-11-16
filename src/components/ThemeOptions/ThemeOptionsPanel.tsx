@@ -94,16 +94,16 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
   const isThermal = themeId === 'thermal' || (Array.isArray(theme.paper) && theme.paper.includes('80mm') && !theme.paper.includes('A4'));
 
   return (
-    <div className="flex flex-col h-full bg-white text-slate-800 border-l border-slate-200 w-[380px] shrink-0">
+    <div className="flex flex-col h-full bg-white text-slate-800 border-l border-slate-200 w-full lg:w-[380px] xl:w-[440px] 2xl:w-[500px] 3xl:w-[560px] shrink-0 transition-all duration-200">
       {/* Panel Header */}
-      <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-white">
+      <div className="px-4 sm:px-5 xl:px-6 py-3.5 xl:py-4 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
         <div>
-          <span className="text-xs font-medium text-slate-500 block">
+          <span className="text-xs xl:text-sm font-medium text-slate-500 block">
             Theme customization
           </span>
-          <h3 className="text-base font-bold text-slate-900 tracking-tight mt-0.5 flex items-center gap-2">
+          <h3 className="text-base xl:text-lg font-bold text-slate-900 tracking-tight mt-0.5 flex items-center gap-2">
             <span>{theme.name}</span>
-            <span className="text-xs font-normal px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="text-xs xl:text-sm font-normal px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
               {theme.paper.join(' / ')}
             </span>
           </h3>
@@ -114,14 +114,14 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
           variant="secondary"
           leadingIcon={RiRefreshLine}
           onClick={onReset}
-          className="text-xs font-medium"
+          className="text-xs xl:text-sm font-medium"
         >
           Reset
         </Button>
       </div>
 
       {/* BoardUI Tab Bar */}
-      <div className="px-5 pt-3 pb-2.5 border-b border-slate-100 bg-slate-50/50">
+      <div className="px-4 sm:px-5 xl:px-6 pt-3 xl:pt-4 pb-2.5 xl:pb-3 border-b border-slate-100 bg-slate-50/50 shrink-0">
         <SegmentedControl
           aria-label="Theme Customization Tabs"
           selectedKeys={new Set([activeTab])}
@@ -131,26 +131,26 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
           }}
           className="w-full bg-slate-200/70 p-0.5"
         >
-          <SegmentedControlItem id="styling" className="text-xs font-medium">
+          <SegmentedControlItem id="styling" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
             Styling
           </SegmentedControlItem>
-          <SegmentedControlItem id="columns" className="text-xs font-medium">
+          <SegmentedControlItem id="columns" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
             Columns
           </SegmentedControlItem>
-          <SegmentedControlItem id="footer" className="text-xs font-medium">
+          <SegmentedControlItem id="footer" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
             Payment
           </SegmentedControlItem>
-          <SegmentedControlItem id="presets" className="text-xs font-medium">
+          <SegmentedControlItem id="presets" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
             Presets
           </SegmentedControlItem>
         </SegmentedControl>
       </div>
 
       {/* Inspector Scroll Area */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 text-xs">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-5 xl:px-6 py-4 xl:py-6 space-y-4 xl:space-y-6 text-xs xl:text-sm">
         {/* ─── TAB 1: STYLING ─── */}
         {activeTab === 'styling' && (
-          <div className="space-y-4">
+          <div className="space-y-4 xl:space-y-5">
             {/* Accent Color Palette */}
             <ColorPickerField
               value={options.accentColor}
@@ -159,7 +159,7 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
 
             {/* Typography Family */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs xl:text-sm font-semibold text-slate-700 mb-1.5">
                 Font Family
               </label>
               <SegmentedControl
@@ -171,16 +171,16 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
                 }}
                 className="w-full bg-slate-100 p-0.5"
               >
-                <SegmentedControlItem id="system" className="text-xs">
+                <SegmentedControlItem id="system" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   System
                 </SegmentedControlItem>
-                <SegmentedControlItem id="inter" className="text-xs">
+                <SegmentedControlItem id="inter" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   Inter
                 </SegmentedControlItem>
-                <SegmentedControlItem id="serif" className="text-xs">
+                <SegmentedControlItem id="serif" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   Serif
                 </SegmentedControlItem>
-                <SegmentedControlItem id="mono" className="text-xs">
+                <SegmentedControlItem id="mono" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   Mono
                 </SegmentedControlItem>
               </SegmentedControl>
@@ -188,7 +188,7 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
 
             {/* Font Size Tier */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs xl:text-sm font-semibold text-slate-700 mb-1.5">
                 Base Font Size
               </label>
               <SegmentedControl
@@ -200,13 +200,13 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
                 }}
                 className="w-full bg-slate-100 p-0.5"
               >
-                <SegmentedControlItem id="small" className="text-xs">
+                <SegmentedControlItem id="small" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   Small (9pt)
                 </SegmentedControlItem>
-                <SegmentedControlItem id="normal" className="text-xs">
+                <SegmentedControlItem id="normal" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   Normal (11pt)
                 </SegmentedControlItem>
-                <SegmentedControlItem id="large" className="text-xs">
+                <SegmentedControlItem id="large" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   Large (13pt)
                 </SegmentedControlItem>
               </SegmentedControl>
@@ -215,7 +215,7 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
             {/* Paper Size (if supported) */}
             {!isThermal && (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <label className="block text-xs xl:text-sm font-semibold text-slate-700 mb-1.5">
                   Paper Format
                 </label>
                 <SegmentedControl
@@ -227,10 +227,10 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
                   }}
                   className="w-full bg-slate-100 p-0.5"
                 >
-                  <SegmentedControlItem id="A4" className="text-xs">
+                  <SegmentedControlItem id="A4" className="text-xs xl:text-sm py-1 xl:py-1.5">
                     A4 (210 × 297 mm)
                   </SegmentedControlItem>
-                  <SegmentedControlItem id="A5" className="text-xs">
+                  <SegmentedControlItem id="A5" className="text-xs xl:text-sm py-1 xl:py-1.5">
                     A5 (148 × 210 mm)
                   </SegmentedControlItem>
                 </SegmentedControl>
@@ -250,7 +250,7 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
 
               {options.showLogo && (
                 <div className="pl-1 pt-1">
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  <label className="block text-xs xl:text-sm font-semibold text-slate-600 mb-1">
                     Logo Placement
                   </label>
                   <SegmentedControl
@@ -262,13 +262,13 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
                     }}
                     className="w-full bg-slate-100 p-0.5"
                   >
-                    <SegmentedControlItem id="left" className="text-xs">
+                    <SegmentedControlItem id="left" className="text-xs xl:text-sm py-1 xl:py-1.5">
                       Left
                     </SegmentedControlItem>
-                    <SegmentedControlItem id="center" className="text-xs">
+                    <SegmentedControlItem id="center" className="text-xs xl:text-sm py-1 xl:py-1.5">
                       Center
                     </SegmentedControlItem>
-                    <SegmentedControlItem id="right" className="text-xs">
+                    <SegmentedControlItem id="right" className="text-xs xl:text-sm py-1 xl:py-1.5">
                       Right
                     </SegmentedControlItem>
                   </SegmentedControl>
@@ -278,7 +278,7 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
 
             {/* Watermark Controls */}
             <div className="pt-2 border-t border-slate-100 space-y-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs xl:text-sm font-semibold text-slate-700 mb-1">
                 Document Watermark
               </label>
               <SegmentedControl
@@ -290,16 +290,16 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
                 }}
                 className="w-full bg-slate-100 p-0.5"
               >
-                <SegmentedControlItem id="none" className="text-xs">
+                <SegmentedControlItem id="none" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   None
                 </SegmentedControlItem>
-                <SegmentedControlItem id="PAID" className="text-xs">
+                <SegmentedControlItem id="PAID" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   PAID
                 </SegmentedControlItem>
-                <SegmentedControlItem id="DRAFT" className="text-xs">
+                <SegmentedControlItem id="DRAFT" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   DRAFT
                 </SegmentedControlItem>
-                <SegmentedControlItem id="custom" className="text-xs">
+                <SegmentedControlItem id="custom" className="text-xs xl:text-sm py-1 xl:py-1.5">
                   Custom
                 </SegmentedControlItem>
               </SegmentedControl>
@@ -310,7 +310,7 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
                   value={options.watermarkCustomText}
                   onChange={(e) => onChange({ watermarkCustomText: e.target.value })}
                   placeholder="e.g. CONFIDENTIAL / SPECIMEN"
-                  className="w-full px-3 py-2 rounded-lg bg-white text-slate-900 border border-slate-300 text-xs outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                  className="w-full px-3 xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl bg-white text-slate-900 border border-slate-300 text-xs xl:text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                 />
               )}
             </div>
@@ -319,8 +319,8 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
 
         {/* ─── TAB 2: COLUMNS & GST ─── */}
         {activeTab === 'columns' && (
-          <div className="space-y-3">
-            <span className="text-xs font-medium text-slate-500 block">
+          <div className="space-y-3 xl:space-y-4">
+            <span className="text-xs xl:text-sm font-medium text-slate-500 block">
               Table structure
             </span>
 
@@ -342,7 +342,7 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
             />
 
             <div className="pt-2 border-t border-slate-100">
-              <span className="text-xs font-medium text-slate-500 block mb-2">
+              <span className="text-xs xl:text-sm font-medium text-slate-500 block mb-2">
                 Tax &amp; amount breakdown
               </span>
 
@@ -368,26 +368,26 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
             </div>
 
             <div className="pt-2 border-t border-slate-100 space-y-2">
-              <span className="text-xs font-semibold text-slate-700 block">
+              <span className="text-xs xl:text-sm font-semibold text-slate-700 block">
                 Currency &amp; Number Format
               </span>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <span className="text-[11px] text-slate-500 block mb-1">Currency Symbol</span>
+                  <span className="text-xs text-slate-500 block mb-1">Currency Symbol</span>
                   <input
                     type="text"
                     value={options.currencySymbol}
                     onChange={(e) => onChange({ currencySymbol: e.target.value })}
-                    className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs font-mono outline-none focus:border-blue-600"
+                    className="w-full px-3 py-1.5 xl:py-2 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs xl:text-sm font-mono outline-none focus:border-blue-600"
                   />
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-500 block mb-1">Locale</span>
+                  <span className="text-xs text-slate-500 block mb-1">Locale</span>
                   <select
                     value={options.numberFormat}
                     onChange={(e) => onChange({ numberFormat: e.target.value })}
-                    className="w-full px-2 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs outline-none focus:border-blue-600"
+                    className="w-full px-2 py-1.5 xl:py-2 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs xl:text-sm outline-none focus:border-blue-600"
                   >
                     <option value="en-IN">en-IN (Lakhs)</option>
                     <option value="en-US">en-US (Millions)</option>
@@ -400,8 +400,8 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
 
         {/* ─── TAB 3: PAYMENT & LEGAL ─── */}
         {activeTab === 'footer' && (
-          <div className="space-y-3">
-            <span className="text-xs font-medium text-slate-500 block">
+          <div className="space-y-3 xl:space-y-4">
+            <span className="text-xs xl:text-sm font-medium text-slate-500 block">
               Remittance information
             </span>
 
@@ -440,7 +440,7 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
             />
 
             <div className="pt-2 border-t border-slate-100 space-y-2">
-              <span className="text-xs font-medium text-slate-500 block mb-1">
+              <span className="text-xs xl:text-sm font-medium text-slate-500 block mb-1">
                 Notes &amp; policies
               </span>
 
@@ -468,13 +468,13 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
               />
 
               <div>
-                <span className="text-[11px] text-slate-600 block mb-1">Custom Legal Footer</span>
+                <span className="text-xs text-slate-600 block mb-1">Custom Legal Footer</span>
                 <input
                   type="text"
                   value={options.footerText}
                   onChange={(e) => onChange({ footerText: e.target.value })}
                   placeholder="e.g. Registered with MSME / Subject to Mumbai Jurisdiction"
-                  className="w-full px-3 py-1.5 rounded-lg bg-white text-slate-900 border border-slate-300 text-xs outline-none focus:border-blue-600"
+                  className="w-full px-3 py-2 xl:py-2.5 rounded-lg xl:rounded-xl bg-white text-slate-900 border border-slate-300 text-xs xl:text-sm outline-none focus:border-blue-600"
                 />
               </div>
             </div>
@@ -483,12 +483,12 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
 
         {/* ─── TAB 4: PRESETS ─── */}
         {activeTab === 'presets' && (
-          <div className="space-y-4">
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-              <span className="font-semibold text-slate-900 block mb-1 text-xs">
+          <div className="space-y-4 xl:space-y-5">
+            <div className="p-3.5 xl:p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <span className="font-semibold text-slate-900 block mb-1 text-xs xl:text-sm">
                 Save Current Styling
               </span>
-              <p className="text-[11px] text-slate-500 mb-2.5">
+              <p className="text-[11px] xl:text-xs text-slate-500 mb-2.5">
                 Save your customized options as a named preset template.
               </p>
 
@@ -498,14 +498,14 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
                   placeholder="e.g. Wholesale Compact"
                   value={newPresetName}
                   onChange={(e) => setNewPresetName(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs outline-none focus:border-blue-600"
+                  className="flex-1 px-3 py-1.5 xl:py-2 rounded-lg bg-white border border-slate-300 text-slate-900 text-xs xl:text-sm outline-none focus:border-blue-600"
                 />
                 <Button
                   size="small"
                   variant="primary"
                   type="submit"
                   leadingIcon={RiSave3Line}
-                  className="text-xs"
+                  className="text-xs xl:text-sm shrink-0"
                 >
                   Save
                 </Button>
@@ -513,45 +513,54 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
             </div>
 
             <div>
-              <span className="text-xs font-medium text-slate-500 block mb-2">
+              <span className="text-xs xl:text-sm font-medium text-slate-500 block mb-2">
                 Saved presets ({presets.length})
               </span>
 
               {presets.length === 0 ? (
-                <div className="text-center py-6 text-slate-400 italic bg-slate-50 rounded-lg border border-slate-200 text-xs">
-                  No custom presets saved yet.
+                <div className="text-center py-6 text-slate-400 text-xs xl:text-sm border border-dashed border-slate-200 rounded-xl">
+                  No saved presets yet
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {presets.map((preset) => (
+                  {presets.map((p) => (
                     <div
-                      key={preset.id}
-                      className="p-2.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between shadow-2xs"
+                      key={p.id}
+                      className="flex items-center justify-between p-2.5 xl:p-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors"
                     >
-                      <div>
-                        <div className="font-semibold text-slate-900 text-xs">{preset.name}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">Theme: {preset.themeId}</div>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          loadPreset(p.id);
+                          toast.success(`Loaded preset "${p.name}"`);
+                        }}
+                        className="text-left font-medium text-slate-800 text-xs xl:text-sm hover:text-blue-600 flex-1 truncate mr-2 cursor-pointer"
+                      >
+                        {p.name}
+                      </button>
 
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          size="xs"
-                          variant="secondary"
-                          onClick={() => loadPreset(preset.id)}
-                          className="text-[11px]"
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            loadPreset(p.id);
+                            toast.success(`Loaded preset "${p.name}"`);
+                          }}
+                          className="px-2 py-1 text-[11px] xl:text-xs font-semibold rounded bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
                         >
                           Apply
-                        </Button>
-                        <Button
-                          size="xs"
-                          variant="secondary"
-                          leadingIcon={RiDeleteBinLine}
-                          aria-label={`Delete ${preset.name} preset`}
-                          onClick={() => deletePreset(preset.id)}
-                          className="text-[11px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            deletePreset(p.id);
+                            toast.info(`Deleted preset "${p.name}"`);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 cursor-pointer"
+                          title="Delete preset"
                         >
-                          Delete
-                        </Button>
+                          <RiDeleteBinLine className="size-3.5 xl:size-4" />
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -559,14 +568,14 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
               )}
             </div>
 
-            {/* Export & Import JSON */}
-            <div className="pt-2 border-t border-slate-100 flex gap-2">
+            {/* Export & Import buttons */}
+            <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
               <Button
                 size="small"
                 variant="secondary"
                 leadingIcon={RiDownload2Line}
                 onClick={handleExport}
-                className="flex-1 text-xs"
+                className="flex-1 text-xs xl:text-sm"
               >
                 Export JSON
               </Button>
@@ -575,48 +584,47 @@ export const ThemeOptionsPanel: React.FC<ThemeOptionsPanelProps> = ({
                 variant="secondary"
                 leadingIcon={RiUpload2Line}
                 onClick={() => setShowImportModal(true)}
-                className="flex-1 text-xs"
+                className="flex-1 text-xs xl:text-sm"
               >
                 Import JSON
               </Button>
             </div>
-
-            <Modal
-              isOpen={showImportModal}
-              onOpenChange={setShowImportModal}
-            >
-              <ModalHeader
-                title="Import Theme Presets"
-                description="Paste a valid JSON array exported from Invoice Gen to restore your presets."
-              />
-              <ModalBody className="space-y-3">
-                <textarea
-                  value={importJsonText}
-                  onChange={(e) => setImportJsonText(e.target.value)}
-                  placeholder="Paste preset JSON here..."
-                  className="w-full h-36 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-900 outline-none focus:bg-white focus:border-blue-600 transition-colors"
-                />
-              </ModalBody>
-              <ModalFooter>
-                <Button
-                  size="small"
-                  variant="secondary"
-                  onClick={() => setShowImportModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="small"
-                  variant="primary"
-                  onClick={handleImportSubmit}
-                >
-                  Import Presets
-                </Button>
-              </ModalFooter>
-            </Modal>
           </div>
         )}
       </div>
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <Modal isOpen={showImportModal} onOpenChange={setShowImportModal}>
+          <ModalHeader
+            title="Import Presets JSON"
+            description="Paste exported presets JSON code here to restore them."
+          />
+          <ModalBody>
+            <textarea
+              value={importJsonText}
+              onChange={(e) => setImportJsonText(e.target.value)}
+              rows={8}
+              placeholder='[{"id":"...","name":"...","options":{...}}]'
+              className="w-full p-3 rounded-lg border border-slate-300 font-mono text-xs xl:text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 resize-none"
+            />
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowImportModal(false);
+                setImportJsonText('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleImportSubmit}>
+              Import Presets
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
     </div>
   );
 };

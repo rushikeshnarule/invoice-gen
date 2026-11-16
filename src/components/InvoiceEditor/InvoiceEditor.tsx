@@ -99,9 +99,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   const [activeTab, setActiveTab] = useState<'items' | 'parties' | 'branding' | 'payment' | 'styling'>('items');
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
   const [themeId, setThemeId] = useState<string>(() => record?.themeId || currentThemeId);
-  const [zoomLevel, setZoomLevel] = useState<number>(() =>
-    themeId === 'thermal' ? 1.0 : 0.82
-  );
+  const [zoomLevel, setZoomLevel] = useState<number | 'auto'>('auto');
   const [newPresetName, setNewPresetName] = useState('');
 
   // Share Invoice Modal
@@ -692,23 +690,35 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
               icon={RiZoomOutLine}
               aria-label="Zoom Out"
               title="Zoom Out"
-              onClick={() => setZoomLevel((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
+              onClick={() =>
+                setZoomLevel((z) => {
+                  const current = typeof z === 'number' ? z : 0.85;
+                  return Math.max(0.4, Number((current - 0.1).toFixed(2)));
+                })
+              }
             />
-            <span className="text-xs font-mono font-medium min-w-9 text-center text-slate-700 tabular-nums">
-              {Math.round(zoomLevel * 100)}%
+            <span className="text-xs font-mono font-medium min-w-10 text-center text-slate-700 tabular-nums">
+              {typeof zoomLevel === 'number' ? `${Math.round(zoomLevel * 100)}%` : 'Auto'}
             </span>
             <IconButton
               size="small"
               icon={RiZoomInLine}
               aria-label="Zoom In"
               title="Zoom In"
-              onClick={() => setZoomLevel((z) => Math.min(1.5, Number((z + 0.1).toFixed(2))))}
+              onClick={() =>
+                setZoomLevel((z) => {
+                  const current = typeof z === 'number' ? z : 0.85;
+                  return Math.min(1.5, Number((current + 0.1).toFixed(2)));
+                })
+              }
             />
             <Button
               size="xs"
               variant="ghost"
-              onClick={() => setZoomLevel(themeId === 'thermal' ? 1.0 : 0.82)}
-              className="text-xs text-slate-600 font-semibold"
+              onClick={() => setZoomLevel('auto')}
+              className={`text-xs font-semibold ${
+                zoomLevel === 'auto' ? 'text-blue-600 bg-white shadow-2xs' : 'text-slate-600'
+              }`}
             >
               Fit
             </Button>
@@ -797,9 +807,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
         </div>
 
         {/* LEFT PANE: HIGH-DENSITY EDITING FORM */}
-        <div className={`w-full lg:w-[520px] bg-white border-r border-slate-200 flex-col shrink-0 overflow-hidden ${mobileTab === 'editor' ? 'flex flex-1 lg:flex-initial' : 'hidden lg:flex'}`}>
+        <div className={`w-full lg:w-[480px] xl:w-[560px] 2xl:w-[640px] 3xl:w-[700px] bg-white border-r border-slate-200 flex-col shrink-0 overflow-hidden transition-all duration-200 ${mobileTab === 'editor' ? 'flex flex-1 lg:flex-initial' : 'hidden lg:flex'}`}>
           {/* Form Tabs */}
-          <div className="px-4 pt-3 pb-2.5 border-b border-slate-200 bg-slate-50/70">
+          <div className="px-4 xl:px-6 pt-3 xl:pt-4 pb-2.5 xl:pb-3 border-b border-slate-200 bg-slate-50/70 shrink-0">
             <SegmentedControl
               aria-label="Editor Form Tabs"
               selectedKeys={new Set([activeTab])}
@@ -809,26 +819,26 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
               }}
               className="w-full bg-slate-200/70 p-0.5"
             >
-              <SegmentedControlItem id="items" className="text-xs font-medium">
+              <SegmentedControlItem id="items" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
                 Items ({invoiceData.items.length})
               </SegmentedControlItem>
-              <SegmentedControlItem id="parties" className="text-xs font-medium">
+              <SegmentedControlItem id="parties" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
                 Buyer &amp; Dates
               </SegmentedControlItem>
-              <SegmentedControlItem id="branding" className="text-xs font-medium">
+              <SegmentedControlItem id="branding" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
                 Logo &amp; Stamp
               </SegmentedControlItem>
-              <SegmentedControlItem id="payment" className="text-xs font-medium">
+              <SegmentedControlItem id="payment" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
                 Pay &amp; Terms
               </SegmentedControlItem>
-              <SegmentedControlItem id="styling" className="text-xs font-medium">
+              <SegmentedControlItem id="styling" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
                 Style &amp; Theme
               </SegmentedControlItem>
             </SegmentedControl>
           </div>
 
           {/* Tab Content Form Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+          <div className="flex-1 overflow-y-auto p-4 xl:p-6 space-y-4 xl:space-y-6 text-xs xl:text-sm">
             {/* ══════════ TAB 1: LINE ITEMS & AMOUNTS ══════════ */}
             {activeTab === 'items' && (
               <div className="space-y-4">
@@ -2474,7 +2484,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
         </div>
 
         {/* RIGHT PANE: REAL-TIME LIVE PREVIEW CANVAS */}
-        <div className={`flex-1 bg-slate-100 overflow-auto p-3 sm:p-6 relative ${mobileTab === 'preview' ? 'flex flex-col items-center' : 'hidden lg:flex'}`}>
+        <div className={`flex-1 bg-slate-100 overflow-auto p-2 sm:p-4 lg:p-6 relative ${mobileTab === 'preview' ? 'flex flex-col items-center' : 'hidden lg:flex'}`}>
           <ThemePreview
             themeId={themeId}
             data={calculatedData}

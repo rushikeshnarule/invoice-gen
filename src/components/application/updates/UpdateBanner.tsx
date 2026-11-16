@@ -56,8 +56,12 @@ export const UpdateBanner: React.FC = () => {
           <span className="p-1 rounded-md bg-white/20 shrink-0">
             <RiSparklingFill className="size-3.5 text-amber-300" />
           </span>
-          <p className="truncate">
-            <span className="font-bold">Invoice Gen v{release.version}</span> is available! Upgrade for new features and improvements.
+          <p className="truncate flex items-center gap-1.5">
+            <span className="font-bold">Invoice Gen v{release.version}</span>
+            <span className="bg-white/20 text-white font-semibold text-[10px] px-1.5 py-0.5 rounded tracking-wide uppercase">
+              Pushed to GitHub now
+            </span>
+            <span className="hidden sm:inline text-white/90">Upgrade for new features and improvements.</span>
           </p>
         </div>
 

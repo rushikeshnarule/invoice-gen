@@ -37,10 +37,10 @@ export const ColorPickerField: React.FC<ColorPickerFieldProps> = ({
   }, []);
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-2 xl:space-y-3 ${className}`}>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-700">Accent Colour</span>
-        <span className="font-mono text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+        <span className="text-xs xl:text-sm font-semibold text-slate-700">Accent Colour</span>
+        <span className="font-mono text-xs xl:text-sm text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
           {localColor.toUpperCase()}
         </span>
       </div>
@@ -54,7 +54,7 @@ export const ColorPickerField: React.FC<ColorPickerFieldProps> = ({
               key={hex}
               type="button"
               onClick={() => commitColor(hex)}
-              className={`h-8 rounded-lg transition-colors duration-150 relative flex items-center justify-center cursor-pointer ${
+              className={`h-8 xl:h-10 rounded-lg transition-colors duration-150 relative flex items-center justify-center cursor-pointer ${
                 isSelected
                   ? 'ring-2 ring-slate-900 ring-offset-1 shadow-2xs'
                   : 'hover:opacity-90 border border-black/10'
@@ -69,12 +69,12 @@ export const ColorPickerField: React.FC<ColorPickerFieldProps> = ({
       </div>
 
       {/* Custom Color Input */}
-      <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+      <div className="flex items-center gap-2 bg-slate-50 p-1.5 xl:p-2 rounded-lg xl:rounded-xl border border-slate-200">
         <input
           type="color"
           value={localColor.startsWith('#') && localColor.length === 7 ? localColor : '#2563eb'}
           onChange={(e) => commitColor(e.target.value)}
-          className="size-7 rounded border border-slate-300 bg-transparent cursor-pointer p-0"
+          className="size-7 xl:size-8 rounded border border-slate-300 bg-transparent cursor-pointer p-0"
         />
         <input
           type="text"
@@ -97,7 +97,7 @@ export const ColorPickerField: React.FC<ColorPickerFieldProps> = ({
           }}
           placeholder="#2563EB"
           maxLength={7}
-          className="flex-1 bg-transparent text-slate-900 font-mono text-xs outline-none"
+          className="flex-1 bg-transparent text-slate-900 font-mono text-xs xl:text-sm outline-none"
         />
       </div>
     </div>
