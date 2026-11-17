@@ -184,7 +184,7 @@ export const DEFAULT_CLIENTS: ClientInfo[] = [
 export function getInitialInvoices(): InvoiceRecord[] {
   // Invoice 1: Enterprise IT Services (Classic theme)
   const raw1: InvoiceRenderData = {
-    invoiceNumber: 'INV-2026-089',
+    invoiceNumber: 'INV-001',
     invoiceDate: '2026-11-01',
     dueDate: '2026-11-30',
     placeOfSupply: 'Maharashtra (27)',
@@ -263,7 +263,7 @@ export function getInitialInvoices(): InvoiceRecord[] {
 
   // Invoice 2: Wholesale & Hardware Network Equipment (Modern theme)
   const raw2: InvoiceRenderData = {
-    invoiceNumber: 'INV-2026-090',
+    invoiceNumber: 'INV-002',
     invoiceDate: '2026-11-02',
     dueDate: '2026-11-17',
     placeOfSupply: 'Maharashtra (27)',
@@ -342,7 +342,7 @@ export function getInitialInvoices(): InvoiceRecord[] {
 
   // Invoice 3: Inter-State Cloud Architecture (IGST, Corporate theme)
   const raw3: InvoiceRenderData = {
-    invoiceNumber: 'INV-2026-091',
+    invoiceNumber: 'INV-003',
     invoiceDate: '2026-11-03',
     dueDate: '2026-12-03',
     placeOfSupply: 'Karnataka (29)',
@@ -406,7 +406,7 @@ export function getInitialInvoices(): InvoiceRecord[] {
 
   // Invoice 4: Devanagari Bilingual Hardware Supply (Compact theme)
   const raw4: InvoiceRenderData = {
-    invoiceNumber: 'INV-2026-092',
+    invoiceNumber: 'INV-004',
     invoiceDate: '2026-11-04',
     dueDate: '2026-11-19',
     placeOfSupply: 'Maharashtra (27)',
@@ -468,7 +468,7 @@ export function getInitialInvoices(): InvoiceRecord[] {
 
   // Invoice 5: POS Quick Retail Thermal Receipt (Thermal 80mm theme)
   const raw5: InvoiceRenderData = {
-    invoiceNumber: 'POS-2026-093',
+    invoiceNumber: 'POS-001',
     invoiceDate: '2026-11-04',
     placeOfSupply: 'Maharashtra (27)',
     status: 'paid',
@@ -531,7 +531,7 @@ export function getInitialInvoices(): InvoiceRecord[] {
   return [
     {
       id: 'inv-089',
-      invoiceNumber: 'INV-2026-089',
+      invoiceNumber: 'INV-001',
       clientName: 'Sunrise Enterprises',
       clientId: getClientId('Sunrise Enterprises'),
       date: '01 Nov 2026',
@@ -544,7 +544,7 @@ export function getInitialInvoices(): InvoiceRecord[] {
     },
     {
       id: 'inv-090',
-      invoiceNumber: 'INV-2026-090',
+      invoiceNumber: 'INV-002',
       clientName: 'Apex Global Logistics Pvt. Ltd.',
       clientId: getClientId('Apex Global Logistics Pvt. Ltd.'),
       date: '02 Nov 2026',
@@ -557,7 +557,7 @@ export function getInitialInvoices(): InvoiceRecord[] {
     },
     {
       id: 'inv-091',
-      invoiceNumber: 'INV-2026-091',
+      invoiceNumber: 'INV-003',
       clientName: 'Vertex Tech Labs (Inter-State SEZ)',
       clientId: getClientId('Vertex Tech Labs (Inter-State SEZ)'),
       date: '03 Nov 2026',
@@ -570,7 +570,7 @@ export function getInitialInvoices(): InvoiceRecord[] {
     },
     {
       id: 'inv-092',
-      invoiceNumber: 'INV-2026-092',
+      invoiceNumber: 'INV-004',
       clientName: 'Patil Hardware & Industrial Traders (Devanagari)',
       clientId: getClientId('Patil Hardware & Industrial Traders (Devanagari)'),
       date: '04 Nov 2026',
@@ -583,7 +583,7 @@ export function getInitialInvoices(): InvoiceRecord[] {
     },
     {
       id: 'inv-093',
-      invoiceNumber: 'POS-2026-093',
+      invoiceNumber: 'POS-001',
       clientName: 'Quick Stop Retail Counter',
       clientId: getClientId('Quick Stop Retail Counter'),
       date: '04 Nov 2026',

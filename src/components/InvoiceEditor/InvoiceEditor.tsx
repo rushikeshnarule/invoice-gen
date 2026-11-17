@@ -168,7 +168,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
     return recalculate({
       region: isAppUS ? 'US' : 'IN',
       taxType: isAppUS ? 'sales_tax' : 'gst',
-      invoiceNumber: 'INV-2026-001',
+      invoiceNumber: 'INV-001',
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: new Date().toISOString().split('T')[0],
       placeOfSupply: isAppUS ? (businessProfile.state || 'California (CA)') : (businessProfile.state || 'Maharashtra (27)'),

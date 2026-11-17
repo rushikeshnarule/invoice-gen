@@ -322,7 +322,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const passedTheme = isOptions ? typeOrOptions.themeId : themeIdArg;
 
       const timestamp = Date.now();
-      const prefix = type === 'retail' ? 'POS-2026-' : 'INV-2026-';
+      const prefix = type === 'retail' ? 'POS-' : 'INV-';
       const today = new Date().toISOString().split('T')[0];
 
       const isUS =
@@ -388,9 +388,20 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             },
           ];
 
-      let counter = invoices.length + 101;
+      let maxNum = 0;
+      for (const inv of invoices) {
+        const numStr = inv.invoiceNumber || inv.data?.invoiceNumber || '';
+        const match = numStr.match(new RegExp(`^${prefix}(\\d+)$`));
+        if (match) {
+          const parsed = parseInt(match[1], 10);
+          if (!isNaN(parsed) && parsed > maxNum) {
+            maxNum = parsed;
+          }
+        }
+      }
+      let counter = Math.max(1, maxNum + 1);
       let invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
-      while (invoices.some((inv) => inv.invoiceNumber === invoiceNumber)) {
+      while (invoices.some((inv) => inv.invoiceNumber === invoiceNumber || inv.data?.invoiceNumber === invoiceNumber)) {
         counter++;
         invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
       }
@@ -653,12 +664,23 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const timestamp = Date.now();
       const isRetail = source.data.invoiceNumber.startsWith('POS');
-      const prefix = isRetail ? 'POS-2026-' : 'INV-2026-';
+      const prefix = isRetail ? 'POS-' : 'INV-';
       const today = new Date().toISOString().split('T')[0];
 
-      let counter = invoices.length + 101;
+      let maxNum = 0;
+      for (const inv of invoices) {
+        const numStr = inv.invoiceNumber || inv.data?.invoiceNumber || '';
+        const match = numStr.match(new RegExp(`^${prefix}(\\d+)$`));
+        if (match) {
+          const parsed = parseInt(match[1], 10);
+          if (!isNaN(parsed) && parsed > maxNum) {
+            maxNum = parsed;
+          }
+        }
+      }
+      let counter = Math.max(1, maxNum + 1);
       let invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
-      while (invoices.some((inv) => inv.invoiceNumber === invoiceNumber)) {
+      while (invoices.some((inv) => inv.invoiceNumber === invoiceNumber || inv.data?.invoiceNumber === invoiceNumber)) {
         counter++;
         invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
       }
