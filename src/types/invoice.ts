@@ -94,6 +94,7 @@ export interface BankDetails {
   upiId?: string;           // Indian UPI ID
   zelleId?: string;         // US Zelle phone or email
   paymentLink?: string;     // US / Global online payment link
+  swiftCode?: string;       // International SWIFT/BIC code
 }
 
 export interface InvoiceRenderData {

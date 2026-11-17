@@ -182,15 +182,15 @@ function StatHint({ label, hint }: { label: string; hint: string }) {
 function PlainStatCard({ stat }: { stat: Stat }) {
   const localize = useTemplateCopy();
   return localize((
-    <section className="flex h-[132px] min-w-0 flex-col items-start justify-between rounded-2xl bg-background-secondary-default p-4">
-      <span className="flex items-center rounded-md bg-stat-card-icon-background p-1.5">
+    <section className="flex min-h-[132px] h-full min-w-0 flex-col items-start justify-between rounded-2xl bg-background-secondary-default p-3 sm:p-4 transition-all">
+      <span className="flex items-center rounded-md bg-stat-card-icon-background p-1.5 shrink-0">
         <stat.icon className="size-5 shrink-0 text-foreground-icon-primary" aria-hidden />
       </span>
-      <div className="flex w-full flex-col gap-0.5">
-        <p className="w-full text-body-medium text-text-secondary">{stat.label}</p>
-        <div className="flex w-full flex-wrap items-center gap-2">
-          <p className="text-title-1-medium whitespace-nowrap text-text-primary">{stat.value}</p>
-          <Chip variant="bold" color={stat.deltaColor}>
+      <div className="flex w-full flex-col gap-1 mt-2">
+        <p className="w-full text-xs sm:text-body-medium text-text-secondary leading-snug">{stat.label}</p>
+        <div className="flex w-full flex-wrap items-center justify-between gap-1.5 pt-0.5">
+          <p className="text-sm sm:text-title-1-medium whitespace-nowrap text-text-primary font-bold tabular-nums">{stat.value}</p>
+          <Chip variant="bold" color={stat.deltaColor} className="text-[10px] shrink-0 font-medium">
             {stat.delta}
           </Chip>
         </div>

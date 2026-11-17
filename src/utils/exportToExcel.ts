@@ -10,6 +10,7 @@ import type { InvoiceRenderData } from '../types';
 import type { InvoiceRecord } from '../utils/initialOfflineData';
 import { formatDate } from './numberFormat';
 import { toast } from '@/components/base/toast/toast';
+import { exportAndSaveFile } from '../services/fileExportService';
 
 // ─── Style Tokens & Palettes ────────────────────────────────────────────────
 
@@ -217,7 +218,7 @@ function setCell(
   if (style?.numFmt) cell.numFmt = style.numFmt;
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
+export function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
   if (typeof Buffer !== 'undefined') {
     return Buffer.from(buffer as any).toString('base64');
   }
@@ -733,60 +734,13 @@ export async function exportInvoiceToExcel(invoice: InvoiceRenderData): Promise<
   const defaultFilename = `${cleanNum}.xlsx`;
 
   const buffer = await wb.xlsx.writeBuffer();
-  const base64 = arrayBufferToBase64(buffer);
-
-  // Desktop native save dialog fallback to browser download
-  if (typeof window !== 'undefined' && (window as any).invoiceDesktop?.saveExcel) {
-    try {
-      const res = await (window as any).invoiceDesktop.saveExcel({
-        defaultFilename,
-        base64,
-      });
-      if (res.success && res.filePath) {
-        toast.success(`Saved Excel to: ${res.filePath}`);
-        return;
-      } else if (res.canceled) {
-        return;
-      } else if (res.error) {
-        console.warn('Native desktop save dialog error, falling back:', res.error);
-      }
-    } catch (e) {
-      console.warn('Native saveExcel failed:', e);
-    }
-  }
-
-  // Mobile / Android direct Web Share fallback if files can be shared
-  if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && typeof File !== 'undefined') {
-    try {
-      const file = new File([buffer], defaultFilename, {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: defaultFilename,
-          files: [file],
-        });
-        toast.success(`Shared Excel workbook: ${defaultFilename}`);
-        return;
-      }
-    } catch (shareErr: unknown) {
-      if ((shareErr as { name?: string })?.name === 'AbortError') return;
-    }
-  }
-
-  // Browser download fallback
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  await exportAndSaveFile({
+    fileName: defaultFilename,
+    data: buffer,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    dialogTitle: `Share Invoice ${invoice.invoiceNumber} Excel`,
+    successMessage: `Exported Excel: ${defaultFilename}`,
   });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = defaultFilename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast.success(`Exported Excel: ${defaultFilename}`);
 }
 
 /**
@@ -966,52 +920,11 @@ export async function exportInvoicesLedgerToExcel(
 
   const filename = `invoices-ledger-${Date.now()}.xlsx`;
   const buffer = await wb.xlsx.writeBuffer();
-  const base64 = arrayBufferToBase64(buffer);
-
-  if (typeof window !== 'undefined' && (window as any).invoiceDesktop?.saveExcel) {
-    try {
-      const res = await (window as any).invoiceDesktop.saveExcel({
-        defaultFilename: filename,
-        base64,
-      });
-      if (res.success && res.filePath) {
-        toast.success(`Saved Ledger Excel to: ${res.filePath}`);
-        return;
-      }
-    } catch {
-      // fallback
-    }
-  }
-
-  // Mobile / Android direct Web Share fallback if files can be shared
-  if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && typeof File !== 'undefined') {
-    try {
-      const file = new File([buffer], filename, {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: filename,
-          files: [file],
-        });
-        toast.success(`Shared Ledger Excel: ${filename}`);
-        return;
-      }
-    } catch (shareErr: unknown) {
-      if ((shareErr as { name?: string })?.name === 'AbortError') return;
-    }
-  }
-
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  await exportAndSaveFile({
+    fileName: filename,
+    data: buffer,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    dialogTitle: `Share Invoices Ledger Excel`,
+    successMessage: `Exported Ledger: ${filename}`,
   });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast.success(`Exported Excel: ${filename}`);
 }

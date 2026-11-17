@@ -11,6 +11,8 @@ import type { BusinessInfo, BankDetails, AppRegion } from '../../types';
 import { InvoiceContext } from '../../context/InvoiceContext';
 import { getSystemMemoryInfo, loadSystemMemory, type SystemMemoryInfo } from '../../services/systemStorage';
 import { US_STATES_LIST, formatEIN, formatRoutingNumber, formatUSZip } from '../../utils/usTax';
+import { useNativeBackButton } from '../../hooks/useNativeBackButton';
+import { haptics } from '../../services/nativeMobileService';
 import { Input } from '@/components/base/input/input';
 import { Button } from '@/components/base/buttons/button';
 import { Chip } from '@/components/base/badges/chip';
@@ -216,6 +218,24 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     onComplete(finalProfile, { cleanLedger: true, isSkip: true });
   };
 
+  // Native Android hardware back button integration
+  useNativeBackButton(
+    'setup-screen-nav',
+    () => {
+      if (activeTab === 'restore') {
+        setActiveTab('wizard');
+        return true;
+      }
+      if (currentStep > 1) {
+        setCurrentStep((prev) => (prev - 1) as 1 | 2);
+        return true;
+      }
+      return false;
+    },
+    currentStep > 1 || activeTab === 'restore',
+    150
+  );
+
   // Restore session from PC system storage (Documents/Invoice Gen Data)
   const handleRestoreSavedSession = async () => {
     setIsRestoring(true);
@@ -317,12 +337,12 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   }, [isInitializing, formData, isUS, onComplete, stepDelayMs]);
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // LOADING / INITIALIZATION SCREEN VIEW (Clean Desktop Workstation)
+  // LOADING / INITIALIZATION SCREEN VIEW (Clean Mobile & Desktop Workstation)
   // ─────────────────────────────────────────────────────────────────────────────
   if (isInitializing) {
     return (
-      <div className="flex min-h-dvh w-screen items-center justify-center bg-slate-100/70 p-6 font-sans relative overflow-hidden">
-        <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-xl relative z-10">
+      <div className="flex h-dvh w-full sm:min-h-dvh items-center justify-center bg-slate-50 sm:bg-slate-100/70 p-4 sm:p-6 font-sans relative overflow-hidden safe-area-top safe-area-bottom">
+        <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xl relative z-10">
           {/* Header */}
           <div className="text-center">
             <div className="mx-auto size-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100 shadow-2xs">
@@ -392,196 +412,228 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   // MAIN SETUP ONBOARDING VIEW
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-dvh w-screen items-center justify-center bg-slate-100/70 p-4 sm:p-6 font-sans">
-      <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col">
-        {/* Workstation Hero Banner */}
-        <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <img
-              src="/app-icon.png"
-              alt="Invoice Gen"
-              className="size-10 object-contain shrink-0 rounded-xl shadow-xs"
-            />
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight text-white">
-                  Invoice Gen Workstation
-                </h1>
-                <Chip color="blue" variant="caption">
-                  Business Setup • Commercial Mode {isUS ? '(US Edition)' : ''}
-                </Chip>
+    <div className="flex h-dvh w-full sm:min-h-dvh sm:items-center sm:justify-center sm:bg-slate-100/70 sm:p-6 font-sans overflow-hidden bg-white">
+      <div className="w-full h-full sm:h-auto sm:max-w-2xl sm:rounded-2xl sm:border sm:border-slate-200 bg-white sm:shadow-xl overflow-hidden flex flex-col">
+        {/* Workstation Hero Banner - Mobile Safe Area Aware */}
+        <div className="shrink-0 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-3 sm:py-5 px-4 sm:px-8 bg-slate-900 text-white border-b border-slate-800">
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <img
+                src="/app-icon.png"
+                alt="Invoice Gen"
+                className="size-8 sm:size-10 object-contain shrink-0 rounded-xl shadow-xs"
+              />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <h1 className="text-sm sm:text-lg font-bold tracking-tight text-white truncate">
+                    Invoice Gen Workstation
+                  </h1>
+                  <Chip color="blue" variant="caption" className="text-[10px] sm:text-xs shrink-0">
+                    <span className="sm:hidden">Commercial</span>
+                    <span className="hidden sm:inline">Business Setup • Commercial Mode {isUS ? '(US Edition)' : ''}</span>
+                  </Chip>
+                </div>
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 leading-snug sm:leading-normal">
+                  Local-first commercial billing, tax calculation, and financial accounting workstation.
+                </p>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Local-first commercial billing, tax calculation, and financial accounting workstation.
-              </p>
             </div>
-          </div>
 
-          {/* Quick Skip to Dashboard */}
-          <Button
-            size="small"
-            variant="ghost"
-            onClick={handleSkip}
-            className="text-xs text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer"
-          >
-            Skip to Dashboard →
-          </Button>
+            {/* Quick Skip to Dashboard */}
+            <Button
+              size="small"
+              variant="ghost"
+              aria-label="Skip to Dashboard"
+              onClick={() => {
+                haptics.light();
+                handleSkip();
+              }}
+              className="text-xs text-slate-300 hover:text-white hover:bg-slate-800 shrink-0 cursor-pointer px-2 sm:px-3 py-1.5"
+            >
+              <span className="sm:hidden">Skip →</span>
+              <span className="hidden sm:inline">Skip to Dashboard →</span>
+            </Button>
+          </div>
         </div>
 
         {/* Tab Switcher: Setup Wizard vs Load Memory */}
-        <div className="border-b border-slate-200 bg-slate-50/60 px-8 py-2.5 flex items-center justify-between">
+        <div className="shrink-0 border-b border-slate-200 bg-slate-50/60 px-3 sm:px-8 py-2 flex items-center justify-between gap-2">
           <SegmentedControl
             aria-label="Setup Mode"
             selectedKeys={new Set([activeTab])}
             onSelectionChange={(keys) => {
+              haptics.selection();
               const val = Array.from(keys)[0];
               if (val === 'wizard' || val === 'restore') setActiveTab(val);
             }}
-            className="bg-slate-100 p-0.5"
+            className="bg-slate-100 p-0.5 w-full sm:w-auto"
           >
-            <SegmentedControlItem id="wizard" className="text-xs px-3 py-1 font-semibold">
-              1. Configure Business Profile
+            <SegmentedControlItem id="wizard" aria-label="1. Configure Business Profile" className="text-xs px-2.5 sm:px-3 py-1.5 font-semibold flex-1 sm:flex-initial text-center justify-center">
+              <span className="sm:hidden">1. Profile</span>
+              <span className="hidden sm:inline">1. Configure Business Profile</span>
             </SegmentedControlItem>
-            <SegmentedControlItem id="restore" className="text-xs px-3 py-1 font-semibold">
-              <span className="flex items-center gap-1.5">
-                <RiFolder2Line className="size-3.5 text-blue-600" />
-                <span>2. Load From Previous Session / Memory</span>
+            <SegmentedControlItem id="restore" aria-label="2. Load From Previous Session / Memory" className="text-xs px-2.5 sm:px-3 py-1.5 font-semibold flex-1 sm:flex-initial text-center justify-center">
+              <span className="flex items-center justify-center gap-1 sm:gap-1.5">
+                <RiFolder2Line className="size-3.5 text-blue-600 shrink-0" />
+                <span className="sm:hidden">2. Restore</span>
+                <span className="hidden sm:inline">2. Load From Previous Session / Memory</span>
                 {memoryInfo?.exists && (
-                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
                 )}
               </span>
             </SegmentedControlItem>
           </SegmentedControl>
 
-          <div className="text-[11px] text-slate-400 font-mono hidden sm:block">
+          <div className="text-[11px] text-slate-400 font-mono hidden md:block shrink-0">
             Zero Cloud Dependency · 100% On-Device
           </div>
         </div>
 
         {/* ─── OPTION 2: RESTORE PREVIOUS SESSION VIEW ─── */}
         {activeTab === 'restore' && (
-          <div className="p-8 sm:p-10 space-y-6">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                Load Saved Business Memory
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Restore your previous profile, clients, and invoice database from this computer or a JSON backup file.
-              </p>
-            </div>
-
-            {restoreError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
-                {restoreError}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8 space-y-6 overscroll-contain">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  Load Saved Business Memory
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Restore your previous profile, clients, and invoice database from this computer or a JSON backup file.
+                </p>
               </div>
-            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Option A: Restore from machine Documents folder */}
-              <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/60 flex flex-col justify-between space-y-4">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                      <RiDatabase2Line className="size-4 text-blue-600" />
-                      Saved machine memory
-                    </span>
-                    {memoryInfo?.exists ? (
-                      <Chip color="lime" variant="caption">
-                        Found on Machine
-                      </Chip>
-                    ) : (
-                      <Chip color="neutral" variant="caption">
-                        Not Found
-                      </Chip>
-                    )}
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 mt-2">
-                    Restore From Local Documents
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Invoice Gen saves all memory to your Documents folder so data remains safe across uninstalls and updates.
-                  </p>
+              {restoreError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+                  {restoreError}
+                </div>
+              )}
 
-                  {memoryInfo?.exists ? (
-                    <div className="mt-4 p-3.5 bg-white rounded-xl border border-slate-200 space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Business:</span>
-                        <span className="font-semibold text-slate-900">{memoryInfo.businessName || 'Saved Profile'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Invoices:</span>
-                        <span className="font-semibold text-slate-900">{memoryInfo.invoiceCount} commercial bills</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Storage Location:</span>
-                        <span className="font-mono text-[11px] text-slate-600 truncate max-w-[160px]">{memoryInfo.path || 'Documents/Invoice Gen Data'}</span>
-                      </div>
-                      {memoryInfo.lastModified && (
-                        <div className="flex justify-between">
-                          <span className="text-slate-500">Last Modified:</span>
-                          <span className="text-slate-600 font-mono text-[11px]">{new Date(memoryInfo.lastModified).toLocaleDateString()}</span>
-                        </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Option A: Restore from machine Documents folder */}
+                <div className="border border-slate-200 rounded-2xl p-5 sm:p-6 bg-slate-50/60 flex flex-col justify-between space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                        <RiDatabase2Line className="size-4 text-blue-600" />
+                        Saved machine memory
+                      </span>
+                      {memoryInfo?.exists ? (
+                        <Chip color="lime" variant="caption">
+                          Found on Machine
+                        </Chip>
+                      ) : (
+                        <Chip color="neutral" variant="caption">
+                          Not Found
+                        </Chip>
                       )}
                     </div>
-                  ) : (
-                    <div className="mt-4 p-4 bg-white rounded-xl border border-slate-200 text-xs text-slate-500">
-                      No automated database found in Documents. You can configure a new business or upload a .json backup file.
+                    <h3 className="text-base font-bold text-slate-900 mt-2">
+                      Restore From Local Documents
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Invoice Gen saves all memory to your Documents folder so data remains safe across uninstalls and updates.
+                    </p>
+
+                    {memoryInfo?.exists ? (
+                      <div className="mt-4 p-3.5 bg-white rounded-xl border border-slate-200 space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Business:</span>
+                          <span className="font-semibold text-slate-900">{memoryInfo.businessName || 'Saved Profile'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Invoices:</span>
+                          <span className="font-semibold text-slate-900">{memoryInfo.invoiceCount} commercial bills</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Storage Location:</span>
+                          <span className="font-mono text-[11px] text-slate-600 truncate max-w-[160px]">{memoryInfo.path || 'Documents/Invoice Gen Data'}</span>
+                        </div>
+                        {memoryInfo.lastModified && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Last Modified:</span>
+                            <span className="text-slate-600 font-mono text-[11px]">{new Date(memoryInfo.lastModified).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-4 p-4 bg-white rounded-xl border border-slate-200 text-xs text-slate-500">
+                        No automated database found in Documents. You can configure a new business or upload a .json backup file.
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    size="medium"
+                    variant="primary"
+                    leadingIcon={isRestoring ? RiLoader4Line : RiDatabase2Line}
+                    disabled={!memoryInfo?.exists || isRestoring}
+                    onClick={() => {
+                      haptics.light();
+                      handleRestoreSavedSession();
+                    }}
+                    className="w-full justify-center shadow-xs min-h-[44px] touch-target-48 font-semibold"
+                  >
+                    {isRestoring ? 'Restoring Session...' : 'Restore Saved Memory'}
+                  </Button>
+                </div>
+
+                {/* Option B: Upload Backup File */}
+                <div className="border border-slate-200 rounded-2xl p-5 sm:p-6 bg-slate-50/60 flex flex-col justify-between space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                        <RiShieldCheckLine className="size-4 text-emerald-600" />
+                        Backup file
+                      </span>
+                      <Chip color="blue" variant="caption">
+                        .JSON
+                      </Chip>
                     </div>
-                  )}
-                </div>
+                    <h3 className="text-base font-bold text-slate-900 mt-2">
+                      Import JSON Backup
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Drag and drop or browse any previously exported offline JSON backup from your computer.
+                    </p>
 
-                <Button
-                  size="medium"
-                  variant="primary"
-                  leadingIcon={isRestoring ? RiLoader4Line : RiDatabase2Line}
-                  disabled={!memoryInfo?.exists || isRestoring}
-                  onClick={handleRestoreSavedSession}
-                  className="w-full justify-center shadow-xs"
-                >
-                  {isRestoring ? 'Restoring Session...' : 'Restore Saved Memory'}
-                </Button>
-              </div>
-
-              {/* Option B: Upload Backup File */}
-              <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/60 flex flex-col justify-between space-y-4">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                      <RiShieldCheckLine className="size-4 text-emerald-600" />
-                      Backup file
-                    </span>
-                    <Chip color="blue" variant="caption">
-                      .JSON
-                    </Chip>
+                    <div className="mt-4">
+                      <FileUpload
+                        allowedExtensions={['json']}
+                        onUploadComplete={handleFileUpload}
+                        className="border-slate-300"
+                      />
+                    </div>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mt-2">
-                    Import JSON Backup
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Drag and drop or browse any previously exported offline JSON backup from your computer.
-                  </p>
 
-                  <div className="mt-4">
-                    <FileUpload
-                      allowedExtensions={['json']}
-                      onUploadComplete={handleFileUpload}
-                      className="border-slate-300"
-                    />
+                  <div className="text-[11px] text-slate-400 text-center font-mono">
+                    Supported format: Official Invoice Gen Export (.json)
                   </div>
-                </div>
-
-                <div className="text-[11px] text-slate-400 text-center font-mono">
-                  Supported format: Official Invoice Gen Export (.json)
                 </div>
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="shrink-0 px-4 sm:px-8 py-3 sm:py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between safe-area-bottom pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
               <Button
                 variant="ghost"
                 size="small"
+                leadingIcon={RiArrowLeftLine}
+                onClick={() => {
+                  haptics.light();
+                  setActiveTab('wizard');
+                }}
+                className="text-xs min-h-[44px]"
+              >
+                Back to Wizard
+              </Button>
+              <Button
+                variant="secondary"
+                size="small"
                 trailingIcon={RiArrowRightLine}
-                onClick={() => setActiveTab('wizard')}
+                onClick={() => {
+                  haptics.light();
+                  setActiveTab('wizard');
+                }}
+                className="text-xs min-h-[44px] touch-target-48"
               >
                 Or Start Setup Wizard Instead
               </Button>
@@ -591,80 +643,101 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
 
         {/* ─── OPTION 1: SETUP WIZARD VIEW ─── */}
         {activeTab === 'wizard' && (
-          <>
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Optional Banner if memory was detected */}
             {memoryInfo?.exists && (
-              <div className="px-8 py-3 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 text-blue-900">
-                  <span className="size-2 rounded-full bg-emerald-500" />
-                  <span>
+              <div className="shrink-0 px-4 sm:px-8 py-2.5 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between text-xs gap-2">
+                <div className="flex items-center gap-2 text-blue-900 min-w-0">
+                  <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="truncate">
                     Existing database detected on this machine: <strong>{memoryInfo.businessName || 'Business Profile'}</strong> ({memoryInfo.invoiceCount} invoices).
                   </span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('restore')}
-                  className="text-blue-700 hover:text-blue-900 font-bold underline cursor-pointer"
+                  onClick={() => {
+                    haptics.light();
+                    setActiveTab('restore');
+                  }}
+                  className="text-blue-700 hover:text-blue-900 font-bold underline cursor-pointer shrink-0"
                 >
                   Restore Previous Session →
                 </button>
               </div>
             )}
 
-            {/* Step Indicator Bar */}
-            <div className="grid grid-cols-3 border-b border-slate-200 bg-slate-50/90 text-xs font-semibold">
+            {/* Step Indicator Bar - Native Touch Friendly */}
+            <div className="shrink-0 grid grid-cols-3 border-b border-slate-200 bg-slate-50/90 text-xs font-semibold">
               <button
                 type="button"
-                onClick={() => setCurrentStep(1)}
-                className={`flex items-center justify-center gap-2.5 py-4 px-4 border-b-2 transition-colors cursor-pointer ${
+                onClick={() => {
+                  haptics.selection();
+                  setCurrentStep(1);
+                }}
+                className={`flex items-center justify-center gap-1.5 sm:gap-2.5 py-3 sm:py-4 px-2 sm:px-4 border-b-2 transition-colors cursor-pointer min-h-[44px] ${
                   currentStep === 1
                     ? 'border-blue-600 text-blue-700 font-bold bg-white shadow-2xs'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span className={`size-6 rounded-full flex items-center justify-center text-xs font-mono ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                <span className={`size-5 sm:size-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-mono shrink-0 ${currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
                   1
                 </span>
-                <span className="truncate">1. Identity</span>
+                <span className="text-xs">
+                  <span className="sm:hidden font-medium">Identity</span>
+                  <span className="hidden sm:inline">1. Identity</span>
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  if (formData.name.trim()) setCurrentStep(2);
+                  if (formData.name.trim()) {
+                    haptics.selection();
+                    setCurrentStep(2);
+                  }
                 }}
-                className={`flex items-center justify-center gap-2.5 py-4 px-4 border-b-2 transition-colors cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 sm:gap-2.5 py-3 sm:py-4 px-2 sm:px-4 border-b-2 transition-colors cursor-pointer min-h-[44px] ${
                   currentStep === 2
                     ? 'border-blue-600 text-blue-700 font-bold bg-white shadow-2xs'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span className={`size-6 rounded-full flex items-center justify-center text-xs font-mono ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                <span className={`size-5 sm:size-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-mono shrink-0 ${currentStep === 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
                   2
                 </span>
-                <span className="truncate">2. Taxes &amp; Region</span>
+                <span className="text-xs">
+                  <span className="sm:hidden font-medium">Taxes</span>
+                  <span className="hidden sm:inline">2. Taxes &amp; Region</span>
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  if (formData.name.trim()) setCurrentStep(3);
+                  if (formData.name.trim()) {
+                    haptics.selection();
+                    setCurrentStep(3);
+                  }
                 }}
-                className={`flex items-center justify-center gap-2.5 py-4 px-4 border-b-2 transition-colors cursor-pointer ${
+                className={`flex items-center justify-center gap-1.5 sm:gap-2.5 py-3 sm:py-4 px-2 sm:px-4 border-b-2 transition-colors cursor-pointer min-h-[44px] ${
                   currentStep === 3
                     ? 'border-blue-600 text-blue-700 font-bold bg-white shadow-2xs'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span className={`size-6 rounded-full flex items-center justify-center text-xs font-mono ${currentStep === 3 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                <span className={`size-5 sm:size-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-mono shrink-0 ${currentStep === 3 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
                   3
                 </span>
-                <span className="truncate">3. Payment Details</span>
+                <span className="text-xs">
+                  <span className="sm:hidden font-medium">Payment</span>
+                  <span className="hidden sm:inline">3. Payment Details</span>
+                </span>
               </button>
             </div>
 
             {/* Wizard Step Content Body */}
-            <div className="p-8 sm:p-10 space-y-6">
+            <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8 space-y-6 overscroll-contain">
               {/* STEP 1: IDENTITY & PROFILE */}
               {currentStep === 1 && (
                 <div className="space-y-6">
@@ -750,13 +823,14 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                        <label htmlFor="industry-select" className="block text-xs font-medium text-slate-700 mb-1.5">
                           Industry / Business Type
                         </label>
                         <select
+                          id="industry-select"
                           value={formData.category}
                           onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                          className="w-full h-9 rounded-xl border border-slate-300 bg-white px-3 text-xs text-slate-900 shadow-2xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                          className="w-full min-h-[44px] sm:min-h-[38px] rounded-xl border border-slate-300 bg-white px-3 text-xs sm:text-sm text-slate-900 shadow-2xs outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
                         >
                           <option value="Services">Consulting &amp; Professional Services</option>
                           <option value="Goods">Manufacturing, Supply &amp; Trading</option>
@@ -988,53 +1062,66 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               )}
             </div>
 
-            {/* Executive Navigation Footer */}
-            <div className="px-8 py-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            {/* Executive Navigation Footer - Pinned Bottom Safe Area */}
+            <div className="shrink-0 px-4 sm:px-8 py-3 sm:py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between safe-area-bottom pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
               {currentStep > 1 ? (
                 <Button
-                  size="small"
+                  size="medium"
                   variant="secondary"
                   leadingIcon={RiArrowLeftLine}
-                  onClick={() => setCurrentStep((prev) => (prev - 1) as 1 | 2)}
-                  className="text-xs"
+                  onClick={() => {
+                    haptics.light();
+                    setCurrentStep((prev) => (prev - 1) as 1 | 2);
+                  }}
+                  className="text-xs min-h-[44px] touch-target-48"
                 >
                   Previous Step
                 </Button>
               ) : (
                 <Button
-                  size="small"
+                  size="medium"
                   variant="ghost"
                   leadingIcon={RiRefreshLine}
-                  onClick={() => setActiveTab('restore')}
-                  className="text-xs"
+                  onClick={() => {
+                    haptics.light();
+                    setActiveTab('restore');
+                  }}
+                  className="text-xs min-h-[44px]"
                 >
-                  Load Previous Memory
+                  <span className="sm:hidden">Restore</span>
+                  <span className="hidden sm:inline">Load Previous Memory</span>
                 </Button>
               )}
 
               {currentStep < 3 ? (
                 <Button
-                  size="small"
+                  size="medium"
                   variant="primary"
                   trailingIcon={RiArrowRightLine}
-                  onClick={handleNext}
-                  className="text-xs shadow-xs"
+                  onClick={() => {
+                    haptics.light();
+                    handleNext();
+                  }}
+                  className="text-xs shadow-xs min-h-[44px] touch-target-48 font-semibold"
                 >
                   Next Step
                 </Button>
               ) : (
                 <Button
-                  size="small"
+                  size="medium"
                   variant="primary"
                   leadingIcon={RiCheckLine}
-                  onClick={handleStartInitialization}
-                  className="text-xs shadow-xs"
+                  onClick={() => {
+                    haptics.success();
+                    handleStartInitialization();
+                  }}
+                  className="text-xs shadow-xs min-h-[44px] touch-target-48 font-semibold bg-blue-600 hover:bg-blue-700"
                 >
                   Finish &amp; Start Software
                 </Button>
               )}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

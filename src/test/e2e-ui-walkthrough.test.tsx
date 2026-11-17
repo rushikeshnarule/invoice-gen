@@ -152,7 +152,7 @@ describe('E2E UI Walkthrough & Full Interaction Bug Hunter', () => {
     // Test search filter
     const searchInput = screen.getByPlaceholderText(/Search invoice # or client/i);
     fireEvent.change(searchInput, { target: { value: 'Sunrise' } });
-    expect(screen.getByText(/Sunrise Enterprises/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Sunrise Enterprises/i)[0]).toBeInTheDocument();
     fireEvent.change(searchInput, { target: { value: '' } });
   }, 25000);
 

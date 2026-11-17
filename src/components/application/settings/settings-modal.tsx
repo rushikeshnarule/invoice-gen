@@ -28,8 +28,11 @@ import { cx } from "@/utils/cx";
 import { useInvoices } from "@/context/InvoiceContext";
 import { useLicense } from "@/context/LicenseContext";
 import { toast } from "@/components/base/toast/toast";
+import { exportAndSaveFile } from "@/services/fileExportService";
 import { Button } from "@/components/base/buttons/button";
 import { ImageUploadCard } from "@/components/base/image-upload/image-upload";
+import { useNativeBackButton } from "@/hooks/useNativeBackButton";
+import { haptics } from "@/services/nativeMobileService";
 import {
   US_STATES_LIST,
   formatEIN,
@@ -216,6 +219,17 @@ export function SettingsModal({
     }
   };
 
+  // Native Android hardware back button handler
+  useNativeBackButton(
+    'settings-modal-back',
+    () => {
+      onClose();
+      return true;
+    },
+    isOpen,
+    250
+  );
+
   // Remote Cloud template sync state
   const [remoteServerUrlState, setRemoteServerUrlState] = useState(() => getRemoteServerUrl());
   const [autoSyncState, setAutoSyncState] = useState(() => isAutoSyncEnabled());
@@ -381,16 +395,16 @@ export function SettingsModal({
     toast.success("Business profile & settings saved offline");
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const json = exportOfflineBackup();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `offline-business-backup-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Complete offline database exported");
+    const fileName = `offline-business-backup-${Date.now()}.json`;
+    await exportAndSaveFile({
+      fileName,
+      data: json,
+      mimeType: "application/json",
+      dialogTitle: "Share / Backup Offline Business Database",
+      successMessage: `Database exported: ${fileName}`,
+    });
   };
 
   const handleImport = () => {
@@ -430,8 +444,8 @@ export function SettingsModal({
     <div
       role="presentation"
       className={cx(
-        "fixed inset-0 z-50 flex items-center justify-center p-4",
-        "bg-black/30 backdrop-blur-xs transition-opacity duration-300 ease-out",
+        "fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4",
+        "bg-black/40 backdrop-blur-xs transition-opacity duration-300 ease-out",
         visible ? "opacity-100" : "opacity-0",
       )}
       onClick={(e) => {
@@ -440,22 +454,22 @@ export function SettingsModal({
     >
       <div
         className={cx(
-          "relative transform-gpu transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "relative transform-gpu transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] w-full h-full md:w-auto md:h-auto flex items-center justify-center",
           visible ? "scale-100 opacity-100 blur-0" : "scale-[0.88] opacity-0 blur-[3px]",
         )}
       >
-        {/* Main Panel Shell */}
+        {/* Main Panel Shell - Mobile Full Screen + Desktop Floating Card */}
         <div
           ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-label="Business Profile & Settings"
-          className="flex h-[600px] max-h-[calc(100dvh-32px)] w-[860px] max-w-[calc(100vw-32px)] overflow-hidden rounded-3xl bg-white shadow-xl border border-slate-200 outline-none"
+          className="flex flex-col md:flex-row h-dvh w-screen md:h-[85vh] md:max-h-[720px] md:min-h-[480px] md:w-[880px] md:max-w-[calc(100vw-32px)] overflow-hidden rounded-none md:rounded-3xl bg-white shadow-xl border-0 md:border md:border-slate-200 outline-none safe-area-top safe-area-bottom"
         >
-          {/* Left Navigation Rail */}
+          {/* Desktop Left Navigation Rail */}
           <nav
             aria-label="Settings categories"
-            className="w-56 shrink-0 border-r border-slate-200 bg-slate-50/70 p-3.5 flex flex-col justify-between"
+            className="w-56 shrink-0 border-r border-slate-200 bg-slate-50/70 p-3.5 hidden md:flex flex-col justify-between overflow-y-auto"
           >
             <div className="space-y-4">
               {/* Profile Header */}
@@ -486,9 +500,12 @@ export function SettingsModal({
                     <button
                       key={tab.id}
                       type="button"
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => {
+                        haptics.selection();
+                        setActiveTab(tab.id);
+                      }}
                       className={cx(
-                        "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors duration-150",
+                        "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors duration-150 cursor-pointer",
                         isSelected
                           ? "bg-white text-blue-700 shadow-2xs border border-slate-200/80"
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70",
@@ -513,12 +530,57 @@ export function SettingsModal({
             </div>
           </nav>
 
+          {/* Mobile Horizontal Tab Row */}
+          <div className="md:hidden shrink-0 border-b border-slate-200 bg-slate-50/90 px-3 py-2 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] scroll-smooth">
+            {TABS.map((tab) => {
+              const isSelected = activeTab === tab.id;
+              const Icon = tab.icon;
+              const label =
+                tab.id === "identity"
+                  ? "Profile"
+                  : tab.id === "branding"
+                  ? "Logo"
+                  : tab.id === "address"
+                  ? formData.region === "US" ? "Tax & State" : "GST & Address"
+                  : tab.id === "banking"
+                  ? formData.region === "US" ? "Remittance" : "Bank & UPI"
+                  : tab.id === "terms"
+                  ? "Terms"
+                  : tab.id === "cloud_templates"
+                  ? "Templates"
+                  : tab.id === "license"
+                  ? "License"
+                  : tab.id === "backup"
+                  ? "Data & Backup"
+                  : "Updates";
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    haptics.selection();
+                    setActiveTab(tab.id);
+                  }}
+                  className={cx(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors duration-150 min-h-[34px] touch-target-48",
+                    isSelected
+                      ? "bg-blue-600 text-white shadow-2xs font-bold"
+                      : "bg-white text-slate-600 border border-slate-200 hover:text-slate-900"
+                  )}
+                >
+                  <Icon className="size-3.5 shrink-0" />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Right Content Form Pane */}
-          <div className="flex-1 flex flex-col min-w-0 bg-white">
+          <form onSubmit={handleSaveSubmit} className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
             {/* Header Bar */}
-            <div className="h-14 px-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
+            <div className="py-2.5 sm:py-3.5 px-4 sm:px-6 border-b border-slate-100 flex items-center justify-between gap-3 shrink-0">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm sm:text-base font-bold text-slate-900 truncate">
                   {activeTab === "identity" && "Business Identity & Contacts"}
                   {activeTab === "branding" && "Company Logo, Stamp & Signatures"}
                   {activeTab === "address" && (formData.region === "US" ? "Tax Jurisdiction & Address" : "Registered Address & GSTIN")}
@@ -529,7 +591,7 @@ export function SettingsModal({
                   {activeTab === "backup" && "Offline PC Database & Backup"}
                   {activeTab === "updates" && "Software Updates & Releases"}
                 </h2>
-                <span className="text-xs text-slate-400">
+                <p className="text-[11px] sm:text-xs text-slate-400 text-pretty mt-0.5 leading-snug">
                   {activeTab === "identity" && "Official legal company name and public contact channels"}
                   {activeTab === "branding" && "Visual branding assets rendered on invoices and PDF downloads"}
                   {activeTab === "address" && (formData.region === "US" ? "State sales tax registration, Federal EIN, and business office" : "State tax jurisdiction, GST registration and physical office")}
@@ -539,21 +601,24 @@ export function SettingsModal({
                   {activeTab === "license" && "Verify commercial subscription status & cloud license key"}
                   {activeTab === "backup" && "JSON export/import and offline local database management"}
                   {activeTab === "updates" && "Check for newer builds and download packages directly from GitHub"}
-                </span>
+                </p>
               </div>
 
               <button
                 type="button"
                 aria-label="Close"
-                onClick={onClose}
-                className="size-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors"
+                onClick={() => {
+                  haptics.light();
+                  onClose();
+                }}
+                className="size-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer shrink-0 touch-target-48"
               >
-                <RiCloseLine className="size-4" />
+                <RiCloseLine className="size-5" />
               </button>
             </div>
 
             {/* Form Scroll Area */}
-            <form onSubmit={handleSaveSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+            <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 text-xs">
               {/* ══════════ TAB 1: IDENTITY ══════════ */}
               {activeTab === "identity" && (
                 <div className="space-y-4 max-w-lg">
@@ -1406,14 +1471,15 @@ export function SettingsModal({
                   </div>
 
                   <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-200/80 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900 block text-xs">Setup & Restore Wizard</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <span className="font-bold text-slate-900 block text-xs">Setup &amp; Restore Wizard</span>
                       <Button
                         type="button"
                         size="small"
                         variant="secondary"
                         leadingIcon={RiRefreshLine}
                         onClick={handleReopenSetup}
+                        className="w-full sm:w-auto justify-center shrink-0"
                       >
                         Launch Setup Wizard
                       </Button>
@@ -1423,15 +1489,16 @@ export function SettingsModal({
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-2">
                     <Button
                       type="button"
                       size="small"
                       variant="primary"
                       leadingIcon={RiDownload2Line}
                       onClick={handleExport}
+                      className="w-full sm:w-auto justify-center"
                     >
-                      Export Full Backup (JSON)
+                      Export JSON Backup
                     </Button>
 
                     <Button
@@ -1440,6 +1507,7 @@ export function SettingsModal({
                       variant="secondary"
                       leadingIcon={RiRefreshLine}
                       onClick={handleReset}
+                      className="w-full sm:w-auto justify-center text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-slate-200"
                     >
                       Factory Reset Data
                     </Button>
@@ -1472,24 +1540,50 @@ export function SettingsModal({
               {/* ══════════ TAB 9: SOFTWARE UPDATES ══════════ */}
               {activeTab === "updates" && <SettingsUpdatesTab />}
 
-              {/* Save Footer Button */}
-              {activeTab !== "backup" && activeTab !== "license" && activeTab !== "updates" && (
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">
-                    Changes apply immediately to newly generated invoices and QR codes.
+            </div>
+
+            {/* Sticky Pinned Footer Bar - Permanently Visible on Laptops, Mobile & Desktop Apps */}
+            <div className="shrink-0 px-4 sm:px-6 py-3 bg-slate-50/95 border-t border-slate-200 flex items-center justify-between gap-3 safe-area-bottom">
+              <div className="min-w-0 flex-1">
+                {activeTab !== "backup" && activeTab !== "license" && activeTab !== "updates" ? (
+                  <span className="text-[11px] text-slate-500 font-medium truncate block">
+                    Changes apply immediately to newly generated invoices &amp; QR codes.
                   </span>
+                ) : (
+                  <span className="text-[11px] text-slate-400 font-mono truncate block">
+                    Invoice Gen Commercial Workstation • 100% On-Device
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  type="button"
+                  size="small"
+                  variant="secondary"
+                  onClick={() => {
+                    haptics.light();
+                    onClose();
+                  }}
+                  className="text-xs"
+                >
+                  Close
+                </Button>
+
+                {activeTab !== "backup" && activeTab !== "license" && activeTab !== "updates" && (
                   <Button
                     type="submit"
                     size="small"
                     variant="primary"
                     leadingIcon={RiCheckboxCircleFill}
+                    className="text-xs font-semibold shadow-xs"
                   >
                     Save Changes
                   </Button>
-                </div>
-              )}
-            </form>
-          </div>
+                )}
+              </div>
+            </div>
+          </form>
         </div>
 
         {/* Floating Saved Toast Indicator */}

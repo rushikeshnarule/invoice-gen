@@ -5,6 +5,8 @@ import { useInvoices } from '../context/InvoiceContext';
 import { getAllThemes, getTheme } from '../themes';
 import { getClientId, formatCurrency, formatDate, exportInvoiceToExcel, exportInvoicesLedgerToExcel } from '../utils';
 import { ConsolidatedMonthlyModal } from '../components/ConsolidatedMonthlyModal/ConsolidatedMonthlyModal';
+import { useNativeBackButton } from '../hooks/useNativeBackButton';
+import { haptics } from '../services/nativeMobileService';
 import type { ClientInfo } from '../types';
 
 // BoardUI Components
@@ -95,6 +97,39 @@ export const ClientsView: React.FC = () => {
 
   // ── Delete Client Modal State ─────────────────────────────────────────────
   const [deletingClient, setDeletingClient] = useState<ClientInfo | null>(null);
+
+  // ── Android Hardware Back Button Handling ──────────────────────────────────
+  const hasActiveModal = Boolean(
+    deletingClient || editingClient || showAddModal || monthlyModalClient || expandedClientId
+  );
+  useNativeBackButton(
+    'clients-view-modals',
+    () => {
+      if (deletingClient) {
+        setDeletingClient(null);
+        return true;
+      }
+      if (editingClient) {
+        setEditingClient(null);
+        return true;
+      }
+      if (showAddModal) {
+        setShowAddModal(false);
+        return true;
+      }
+      if (monthlyModalClient) {
+        setMonthlyModalClient(null);
+        return true;
+      }
+      if (expandedClientId) {
+        setExpandedClientId(null);
+        return true;
+      }
+      return false;
+    },
+    hasActiveModal,
+    200
+  );
 
   // ── Top Portfolio Metrics Across All Clients (Excludes cancelled invoices) ─
   const totalClients = clients.length;
@@ -287,7 +322,7 @@ export const ClientsView: React.FC = () => {
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-y-auto p-3 sm:p-6 lg:p-8">
+    <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-y-auto p-3 sm:p-6 lg:p-8 pb-28 sm:pb-6 lg:pb-8">
       {/* Indian States Datalist for fast auto-complete */}
       <datalist id="indian-states-list">
         <option value="Andhra Pradesh" />
@@ -326,19 +361,19 @@ export const ClientsView: React.FC = () => {
       </datalist>
 
       {/* Header */}
-      <div className="max-w-5xl mx-auto w-full space-y-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <img src="/app-icon.png" alt="Invoice Gen" className="size-7 object-contain shrink-0" />
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight text-balance">
+      <div className="max-w-5xl mx-auto w-full space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <img src="/app-icon.png" alt="Invoice Gen" className="size-6 sm:size-7 object-contain shrink-0 hidden sm:block" />
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
                 Clients &amp; Commercial Accounts
               </h1>
               <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200 tabular-nums">
                 {clients.length} accounts
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 max-w-xl text-pretty">
+            <p className="text-xs text-slate-500 mt-1 max-w-xl text-pretty hidden sm:block">
               Client portfolio metrics, transaction history, daily delivery logs, and monthly consolidated invoice generation.
             </p>
           </div>
@@ -347,8 +382,11 @@ export const ClientsView: React.FC = () => {
             size="small"
             variant="primary"
             leadingIcon={RiAddLine}
-            onClick={() => setShowAddModal(true)}
-            className="text-xs shadow-xs"
+            onClick={() => {
+              haptics.light();
+              setShowAddModal(true);
+            }}
+            className="text-xs shadow-xs hidden sm:inline-flex shrink-0"
           >
             Add Client
           </Button>
@@ -407,8 +445,8 @@ export const ClientsView: React.FC = () => {
 
         {/* Client Accounts Table Card */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4">
-            <div className="w-72">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+            <div className="w-full sm:w-72">
               <SearchField
                 aria-label="Filter client accounts"
                 placeholder="Search clients, location, GSTIN or phone..."
@@ -417,7 +455,7 @@ export const ClientsView: React.FC = () => {
                 size="small"
               />
             </div>
-            <span className="text-[11px] font-mono text-slate-500">
+            <span className="text-[11px] font-mono text-slate-500 shrink-0">
               Showing {filteredClients.length} of {clients.length} clients
             </span>
           </div>
@@ -488,14 +526,17 @@ export const ClientsView: React.FC = () => {
                       </div>
 
                       {/* Right Action Buttons */}
-                      <div className="flex items-center gap-2 self-start sm:self-center shrink-0 flex-wrap">
+                      <div className="flex items-center gap-1.5 sm:gap-2 self-start sm:self-center shrink-0 flex-wrap">
                         {/* View Invoices Ledger Toggle */}
                         <Button
                           size="small"
                           variant="secondary"
                           trailingIcon={isExpanded ? RiArrowUpSLine : RiArrowDownSLine}
-                          onClick={() => setExpandedClientId(isExpanded ? null : clientId)}
-                          className="text-xs font-semibold"
+                          onClick={() => {
+                            haptics.selection();
+                            setExpandedClientId(isExpanded ? null : clientId);
+                          }}
+                          className="text-xs font-semibold min-h-[36px] sm:min-h-0 touch-target-48"
                         >
                           Invoices ({metrics.invoiceCount})
                         </Button>
@@ -505,9 +546,12 @@ export const ClientsView: React.FC = () => {
                           size="small"
                           variant="secondary"
                           leadingIcon={RiCalendarLine}
-                          onClick={() => handleOpenMonthlyModal(client)}
+                          onClick={() => {
+                            haptics.light();
+                            handleOpenMonthlyModal(client);
+                          }}
                           title="Generate a consolidated monthly bill for this client"
-                          className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/70"
+                          className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/70 min-h-[36px] sm:min-h-0 touch-target-48"
                         >
                           Monthly Bill
                         </Button>
@@ -517,9 +561,12 @@ export const ClientsView: React.FC = () => {
                           size="small"
                           variant="primary"
                           leadingIcon={RiAddLine}
-                          onClick={() => handleCreateDailyBill(client)}
+                          onClick={() => {
+                            haptics.light();
+                            handleCreateDailyBill(client);
+                          }}
                           title="Create a regular daily invoice for this client"
-                          className="text-xs font-semibold shadow-xs"
+                          className="text-xs font-semibold shadow-xs min-h-[36px] sm:min-h-0 touch-target-48"
                         >
                           New Bill
                         </Button>
@@ -529,9 +576,12 @@ export const ClientsView: React.FC = () => {
                           size="small"
                           variant="secondary"
                           leadingIcon={RiEditLine}
-                          onClick={() => handleStartEdit(client)}
+                          onClick={() => {
+                            haptics.light();
+                            handleStartEdit(client);
+                          }}
                           title="Edit Client"
-                          className="text-xs font-semibold"
+                          className="text-xs font-semibold min-h-[36px] sm:min-h-0 touch-target-48"
                         >
                           Edit
                         </Button>
@@ -542,8 +592,11 @@ export const ClientsView: React.FC = () => {
                           size="small"
                           aria-label={`Delete ${client.name}`}
                           title={`Delete ${client.name}`}
-                          onClick={() => setDeletingClient(client)}
-                          className="text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50"
+                          onClick={() => {
+                            haptics.light();
+                            setDeletingClient(client);
+                          }}
+                          className="text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 touch-target-48"
                         />
                       </div>
                     </div>
@@ -735,8 +788,8 @@ export const ClientsView: React.FC = () => {
                             </div>
                           </div>
                         ) : (
-                          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
-                            <table className="w-full text-left text-xs">
+                          <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-2xs [scrollbar-width:thin]">
+                            <table className="w-full min-w-[680px] text-left text-xs">
                               <thead className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-semibold">
                                 <tr>
                                   <th className="py-2 px-3 w-28">Date</th>
@@ -787,7 +840,7 @@ export const ClientsView: React.FC = () => {
                                             <span key={idx2} className="inline-block mr-2">
                                               <strong className="text-slate-800">{it.description}</strong>
                                               <span className="text-slate-500 ml-1">
-                                                ({it.quantity} {it.unit} @ ₹{it.rate})
+                                                ({it.quantity} {it.unit} @ {inv.data?.currencySymbol || currencySymbol}{it.rate})
                                               </span>
                                               {it.date && (
                                                 <span className="text-[10px] text-blue-600 ml-1 font-mono">
@@ -873,6 +926,21 @@ export const ClientsView: React.FC = () => {
         </div>
       </div>
 
+      {/* ─── MOBILE FLOATING ACTION BUTTON (FAB) ─── */}
+      <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-30 sm:hidden">
+        <button
+          type="button"
+          onClick={() => {
+            haptics.light();
+            setShowAddModal(true);
+          }}
+          className="flex items-center gap-2 bg-blue-600 active:bg-blue-700 text-white font-bold text-xs px-4 py-3 rounded-full shadow-lg shadow-blue-500/25 active:scale-95 transition-all touch-target-48 border border-blue-500"
+        >
+          <RiAddLine className="size-5" />
+          <span>New Client</span>
+        </button>
+      </div>
+
       {/* ─── Add Client Modal ─── */}
       <Modal isOpen={showAddModal} onOpenChange={setShowAddModal} size="lg" className="max-h-[92vh] flex flex-col">
         <ModalHeader
@@ -905,7 +973,7 @@ export const ClientsView: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">City</label>
                   <input
@@ -939,7 +1007,7 @@ export const ClientsView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                     {isUS ? 'Federal EIN / Tax ID (Optional)' : 'GSTIN (Optional)'}
@@ -1050,7 +1118,7 @@ export const ClientsView: React.FC = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">City</label>
                     <input
@@ -1099,7 +1167,7 @@ export const ClientsView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                       {isUS ? 'Federal EIN / Tax ID (Optional)' : 'GSTIN (Optional)'}

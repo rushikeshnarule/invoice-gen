@@ -18,9 +18,13 @@ import { useTheme } from '../../context/ThemeContext';
 import { getAllThemes, resolveOptions } from '../../themes';
 import { ThemePreview } from '../ThemePreview/ThemePreview';
 import { ShareInvoiceModal } from '../ShareInvoiceModal/ShareInvoiceModal';
+import { generateInvoicePdf } from '../../services/pdfGeneratorService';
+import { exportAndSaveFile } from '../../services/fileExportService';
 import { ColorPickerField } from '../ThemeOptions/ColorPickerField';
 import { recalculate } from '../../utils/buildRenderData';
 import { formatCurrency, formatNumber, exportInvoiceToExcel } from '../../utils';
+import { useNativeBackButton } from '../../hooks/useNativeBackButton';
+import { haptics } from '../../services/nativeMobileService';
 import {
   US_TAX_PRESETS,
   US_STATES_LIST,
@@ -111,6 +115,25 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   const [newPaymentMethod, setNewPaymentMethod] = useState<'UPI' | 'NEFT' | 'Cash' | 'Cheque' | 'Card'>('UPI');
   const [newPaymentDate, setNewPaymentDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [newPaymentRef, setNewPaymentRef] = useState('');
+
+  // Android hardware back button handler
+  useNativeBackButton(
+    'invoice-editor-screen',
+    () => {
+      if (showShareModal) {
+        setShowShareModal(false);
+        return true;
+      }
+      if (showPaymentForm) {
+        setShowPaymentForm(false);
+        return true;
+      }
+      onBack();
+      return true;
+    },
+    true,
+    100
+  );
 
   const handleSaveImagesToProfile = () => {
     updateBusinessProfile({
@@ -235,6 +258,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
   // Handle saving to offline storage
   const handleSave = () => {
+    haptics.success();
     updateInvoice(invoiceId, calculatedData, themeId);
     toast.success(`Invoice ${calculatedData.invoiceNumber} saved offline`);
   };
@@ -316,14 +340,23 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
     }
   };
 
-  // Direct Save as PDF
-  const handleSavePdf = () => {
+  // Direct Save as PDF (Vector Engine)
+  const handleSavePdf = async () => {
     updateInvoice(invoiceId, calculatedData, themeId);
-    toast.info('Opening Save as PDF...');
-    const url = `/print/${invoiceId}?theme=${themeId}&action=save-pdf`;
-    const win = window.open(url, '_blank');
-    if (!win) {
-      window.location.href = url;
+    try {
+      const cleanNum = (calculatedData.invoiceNumber || 'INV-001').trim().replace(/[\\/:*?"<>|]/g, '-');
+      const fileName = `Invoice-${cleanNum}.pdf`;
+      const { buffer } = generateInvoicePdf(calculatedData);
+      await exportAndSaveFile({
+        fileName,
+        data: buffer,
+        mimeType: 'application/pdf',
+        dialogTitle: `Share Invoice ${calculatedData.invoiceNumber} PDF`,
+        successMessage: `Saved PDF: ${fileName}`,
+      });
+    } catch (err: any) {
+      console.error('PDF export failed:', err);
+      toast.error(`Could not generate PDF: ${err?.message || err}`);
     }
   };
 
@@ -815,23 +848,26 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
               selectedKeys={new Set([activeTab])}
               onSelectionChange={(keys) => {
                 const val = Array.from(keys)[0];
-                if (val) setActiveTab(val as any);
+                if (val) {
+                  haptics.selection();
+                  setActiveTab(val as any);
+                }
               }}
               className="w-full bg-slate-200/70 p-0.5"
             >
-              <SegmentedControlItem id="items" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
+              <SegmentedControlItem id="items" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
                 Items ({invoiceData.items.length})
               </SegmentedControlItem>
-              <SegmentedControlItem id="parties" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
+              <SegmentedControlItem id="parties" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
                 Buyer &amp; Dates
               </SegmentedControlItem>
-              <SegmentedControlItem id="branding" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
+              <SegmentedControlItem id="branding" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
                 Logo &amp; Stamp
               </SegmentedControlItem>
-              <SegmentedControlItem id="payment" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
+              <SegmentedControlItem id="payment" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
                 Pay &amp; Terms
               </SegmentedControlItem>
-              <SegmentedControlItem id="styling" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5">
+              <SegmentedControlItem id="styling" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
                 Style &amp; Theme
               </SegmentedControlItem>
             </SegmentedControl>
@@ -2480,6 +2516,41 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                 </div>
               </div>
             )}
+          </div>
+
+          {/* ─── MOBILE STICKY BOTTOM ACTION BAR (TOUCH-FIRST) ─── */}
+          <div className="lg:hidden p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-between gap-3 shrink-0 shadow-lg safe-area-bottom">
+            <div>
+              <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Total</span>
+              <span className="text-base font-bold font-mono text-slate-900 tabular-nums">
+                {formatCurrency(calculatedData.grandTotalRounded, currencySymbol)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="small"
+                variant="secondary"
+                leadingIcon={RiSave3Line}
+                onClick={handleSave}
+                className="text-xs font-semibold py-2 px-3 touch-target-48"
+              >
+                Save
+              </Button>
+
+              <Button
+                size="small"
+                variant="primary"
+                leadingIcon={RiShareForwardLine}
+                onClick={() => {
+                  updateInvoice(invoiceId, calculatedData, themeId);
+                  setShowShareModal(true);
+                }}
+                className="text-xs font-semibold py-2 px-3 touch-target-48"
+              >
+                Share
+              </Button>
+            </div>
           </div>
         </div>
 

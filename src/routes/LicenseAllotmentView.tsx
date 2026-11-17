@@ -13,6 +13,8 @@ import {
   type DeviceAllotment,
 } from '@/services/licenseAllotmentService';
 import { getRealMachineInfo, type MachineInfo } from '@/services/machineDetector';
+import { useNativeBackButton } from '@/hooks/useNativeBackButton';
+import { haptics } from '@/services/nativeMobileService';
 
 // Official BoardUI Components
 import { Button } from '@/components/base/buttons/button';
@@ -249,8 +251,30 @@ export const LicenseAllotmentView: React.FC = () => {
     }
   };
 
+  useNativeBackButton(
+    'license-allotment-modal',
+    () => {
+      if (revokingDevice) {
+        setRevokingDevice(null);
+        return true;
+      }
+      if (allotDeviceModalKey) {
+        setAllotDeviceModalKey(null);
+        return true;
+      }
+      if (allotKeyModalOpen) {
+        setAllotKeyModalOpen(false);
+        return true;
+      }
+      navigate('/invoices');
+      return true;
+    },
+    true,
+    110
+  );
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-y-auto p-6 lg:p-8">
+    <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-y-auto p-3 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto w-full space-y-5">
         {/* Header Bar */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -260,7 +284,10 @@ export const LicenseAllotmentView: React.FC = () => {
                 size="small"
                 variant="ghost"
                 leadingIcon={RiArrowLeftLine}
-                onClick={() => navigate('/invoices')}
+                onClick={() => {
+                  haptics.light();
+                  navigate('/invoices');
+                }}
                 className="mr-1 text-slate-500 hover:text-slate-900"
               >
                 Back
@@ -285,7 +312,10 @@ export const LicenseAllotmentView: React.FC = () => {
               size="small"
               variant="secondary"
               leadingIcon={RiRefreshLine}
-              onClick={() => loadData()}
+              onClick={() => {
+                haptics.light();
+                loadData();
+              }}
               disabled={isLoading}
               className="text-xs font-medium"
             >
@@ -296,7 +326,10 @@ export const LicenseAllotmentView: React.FC = () => {
               size="small"
               variant="primary"
               leadingIcon={RiAddLine}
-              onClick={() => setAllotKeyModalOpen(true)}
+              onClick={() => {
+                haptics.light();
+                setAllotKeyModalOpen(true);
+              }}
               className="text-xs shadow-xs font-semibold"
             >
               Allot License Key

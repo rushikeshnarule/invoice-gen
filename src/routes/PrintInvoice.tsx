@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { buildRenderData, type RenderDataWithTheme } from '../utils/buildRenderData';
 import { getTheme, resolveOptions } from '../themes';
@@ -8,6 +8,11 @@ import { Button } from '@/components/base/buttons/button';
 import { toast } from '@/components/base/toast/toast';
 import { RiPrinterLine, RiArrowLeftLine, RiShareForwardLine, RiDownload2Line, RiFileExcel2Line } from '@remixicon/react';
 import { ShareInvoiceModal } from '../components/ShareInvoiceModal/ShareInvoiceModal';
+import { useNativeBackButton } from '../hooks/useNativeBackButton';
+import { haptics } from '../services/nativeMobileService';
+import { Capacitor } from '@capacitor/core';
+import { generateInvoicePdf } from '../services/pdfGeneratorService';
+import { exportAndSaveFile } from '../services/fileExportService';
 
 declare global {
   interface Window {
@@ -42,6 +47,29 @@ export const PrintInvoice: React.FC = () => {
   const [isSavingPdf, setIsSavingPdf] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const isMountedRef = useRef(true);
+
+  const handleBack = useCallback(() => {
+    haptics.light();
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      navigate('/invoices');
+    }
+  }, [navigate]);
+
+  useNativeBackButton(
+    'print-invoice-screen',
+    () => {
+      if (showShareModal) {
+        setShowShareModal(false);
+        return true;
+      }
+      handleBack();
+      return true;
+    },
+    true,
+    120
+  );
 
   // Theme override from query param, loaded record, or context
   const themeParam = searchParams.get('theme');
@@ -130,6 +158,22 @@ export const PrintInvoice: React.FC = () => {
       } finally {
         setIsSavingPdf(false);
       }
+    } else if (Capacitor.isNativePlatform()) {
+      setIsSavingPdf(true);
+      try {
+        const { buffer } = generateInvoicePdf(data);
+        await exportAndSaveFile({
+          fileName: defaultFilename,
+          data: buffer,
+          mimeType: 'application/pdf',
+          dialogTitle: `Share ${defaultFilename}`,
+          successMessage: `Saved PDF to Documents: ${defaultFilename}`,
+        });
+      } catch (err: any) {
+        toast.error(`Error saving PDF: ${err?.message || err}`);
+      } finally {
+        setIsSavingPdf(false);
+      }
     } else {
       const android = (window as unknown as { invoiceAndroid?: { printDocument?: (name: string) => void } }).invoiceAndroid;
       if (android && typeof android.printDocument === 'function') {
@@ -181,18 +225,12 @@ export const PrintInvoice: React.FC = () => {
     );
   }
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      navigate('/invoices');
-    }
-  };
+
 
   return (
     <div className="print-page-container min-h-dvh bg-slate-100/70" style={{ margin: 0, padding: 0 }}>
       {/* Floating no-print desktop control bar */}
-      <div className="no-print sticky top-0 z-50 flex flex-wrap sm:flex-nowrap items-center justify-between border-b border-slate-200 bg-white/95 px-4 sm:px-6 py-2.5 shadow-xs backdrop-blur-sm select-none gap-2 min-w-0">
+      <div className="no-print sticky top-0 z-50 flex flex-wrap sm:flex-nowrap items-center justify-between border-b border-slate-200 bg-white/95 px-3 sm:px-6 pt-[max(0.625rem,env(safe-area-inset-top,0px))] pb-2.5 shadow-xs backdrop-blur-sm select-none gap-2 min-w-0">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Button
             size="small"
@@ -202,7 +240,8 @@ export const PrintInvoice: React.FC = () => {
             aria-label="Back to Invoices"
             className="text-xs shrink-0"
           >
-            Back to Invoices
+            <span className="sm:hidden">Back</span>
+            <span className="hidden sm:inline">Back to Invoices</span>
           </Button>
           <div className="h-4 w-px bg-slate-200 hidden sm:block shrink-0" />
           <span className="font-mono text-xs font-bold text-slate-800 shrink-0">
@@ -213,7 +252,7 @@ export const PrintInvoice: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
           {/* Export Excel Button */}
           <Button
             size="small"
@@ -221,18 +260,22 @@ export const PrintInvoice: React.FC = () => {
             leadingIcon={RiFileExcel2Line}
             onClick={handleExportExcel}
             aria-label="Export to Excel"
-            className="text-xs font-semibold shrink-0 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200"
+            className="text-xs font-semibold shrink-0 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200 px-2 sm:px-3"
           >
-            Export Excel
+            <span className="sm:hidden">Excel</span>
+            <span className="hidden sm:inline">Export Excel</span>
           </Button>
 
           <Button
             size="small"
             variant="secondary"
             leadingIcon={RiShareForwardLine}
-            onClick={() => setShowShareModal(true)}
+            onClick={() => {
+              haptics.selection();
+              setShowShareModal(true);
+            }}
             aria-label="Share Invoice"
-            className="text-xs font-semibold shrink-0"
+            className="text-xs font-semibold shrink-0 px-2 sm:px-3"
           >
             Share
           </Button>
@@ -243,8 +286,11 @@ export const PrintInvoice: React.FC = () => {
             variant="secondary"
             leadingIcon={RiPrinterLine}
             aria-label="Print Invoice"
-            onClick={handlePrint}
-            className="text-xs font-semibold shrink-0"
+            onClick={() => {
+              haptics.light();
+              handlePrint();
+            }}
+            className="text-xs font-semibold shrink-0 px-2 sm:px-3"
           >
             Print
           </Button>
@@ -255,11 +301,15 @@ export const PrintInvoice: React.FC = () => {
             variant="primary"
             leadingIcon={RiDownload2Line}
             aria-label="Save as PDF"
-            onClick={handleSavePdf}
+            onClick={() => {
+              haptics.light();
+              handleSavePdf();
+            }}
             disabled={isSavingPdf}
-            className="text-xs shadow-xs font-semibold shrink-0"
+            className="text-xs shadow-xs font-semibold shrink-0 px-2.5 sm:px-3"
           >
-            {isSavingPdf ? 'Saving PDF...' : 'Save PDF'}
+            <span className="sm:hidden">{isSavingPdf ? 'Saving...' : 'PDF'}</span>
+            <span className="hidden sm:inline">{isSavingPdf ? 'Saving PDF...' : 'Save PDF'}</span>
           </Button>
         </div>
       </div>

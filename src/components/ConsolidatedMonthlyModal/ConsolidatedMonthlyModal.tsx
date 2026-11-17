@@ -16,6 +16,7 @@ import {
 } from '@/components/base/modal/modal';
 import { Button } from '@/components/base/buttons/button';
 import { toast } from '@/components/base/toast/toast';
+import { useNativeBackButton } from '../../hooks/useNativeBackButton';
 import {
   RiCalendarLine,
   RiCheckDoubleLine,
@@ -107,6 +108,17 @@ export const ConsolidatedMonthlyModal: React.FC<ConsolidatedMonthlyModalProps> =
   const currencySymbol = isUS ? '$' : '₹';
 
   // Selected Client
+  // Close modal on Android hardware back button
+  useNativeBackButton(
+    'consolidated-monthly-modal',
+    () => {
+      onClose();
+      return true;
+    },
+    isOpen,
+    250
+  );
+
   const [selectedClientName, setSelectedClientName] = useState<string>('');
 
   // Date Range & Month state

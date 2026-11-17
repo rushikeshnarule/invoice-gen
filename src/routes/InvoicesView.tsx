@@ -8,8 +8,12 @@ import { getTheme } from '../themes';
 import { InvoiceEditor } from '../components/InvoiceEditor/InvoiceEditor';
 import { ShareInvoiceModal } from '../components/ShareInvoiceModal/ShareInvoiceModal';
 import { ConsolidatedMonthlyModal } from '../components/ConsolidatedMonthlyModal/ConsolidatedMonthlyModal';
+import { generateInvoicePdf } from '../services/pdfGeneratorService';
+import { exportAndSaveFile } from '../services/fileExportService';
 import type { InvoiceRenderData } from '../types';
 import { formatCurrency, getClientId, exportInvoiceToExcel, exportInvoicesLedgerToExcel } from '../utils';
+import { useNativeBackButton } from '../hooks/useNativeBackButton';
+import { haptics } from '../services/nativeMobileService';
 
 // BoardUI Components
 import { Button } from '@/components/base/buttons/button';
@@ -89,6 +93,44 @@ export const InvoicesView: React.FC = () => {
   // Consolidated Monthly Invoice Builder Modal
   const [showMonthlyModal, setShowMonthlyModal] = useState(false);
 
+  // Android Hardware Back button handlers
+  const hasActiveModal = Boolean(deletingInvoice || sharingInvoice || showImportModal || showMonthlyModal);
+  useNativeBackButton(
+    'invoices-view-modal',
+    () => {
+      if (deletingInvoice) {
+        setDeletingInvoice(null);
+        return true;
+      }
+      if (sharingInvoice) {
+        setSharingInvoice(null);
+        return true;
+      }
+      if (showImportModal) {
+        setShowImportModal(false);
+        return true;
+      }
+      if (showMonthlyModal) {
+        setShowMonthlyModal(false);
+        return true;
+      }
+      return false;
+    },
+    hasActiveModal,
+    200
+  );
+
+  useNativeBackButton(
+    'invoices-view-editor',
+    () => {
+      setEditingInvoiceId(null);
+      setActiveInvoiceId(null);
+      return true;
+    },
+    Boolean(editingInvoiceId) && !hasActiveModal,
+    100
+  );
+
   // Compact metrics calculations (Excludes cancelled invoices for strict accounting accuracy)
   const activeInvoices = invoices.filter((inv) => inv?.status !== 'cancelled');
   const grossInvoiced = activeInvoices.reduce((s, inv) => s + (inv?.total || 0), 0);
@@ -131,6 +173,7 @@ export const InvoicesView: React.FC = () => {
   };
 
   const handleCreateDaily = () => {
+    haptics.light();
     const created = createInvoice({ type: 'goods', invoiceType: 'daily', themeId: currentThemeId });
     setEditingInvoiceId(created.id);
     setActiveInvoiceId(created.id);
@@ -138,6 +181,7 @@ export const InvoicesView: React.FC = () => {
   };
 
   const handleCreateMonthly = () => {
+    haptics.light();
     setShowMonthlyModal(true);
   };
 
@@ -166,12 +210,24 @@ export const InvoicesView: React.FC = () => {
     }
   };
 
-  const handleSavePdf = (invoiceId: string, themeId: string) => {
-    toast.info('Opening Save as PDF...');
-    const pdfUrl = `/print/${invoiceId}?theme=${themeId}&action=save-pdf`;
-    const win = window.open(pdfUrl, '_blank');
-    if (!win) {
-      window.location.href = pdfUrl;
+  const handleSavePdf = async (invoiceId: string, _themeId: string) => {
+    const inv = invoices.find((i) => i.id === invoiceId);
+    if (!inv?.data) return;
+    haptics.selection();
+    try {
+      const cleanNum = (inv.invoiceNumber || 'INV-001').trim().replace(/[\\/:*?"<>|]/g, '-');
+      const fileName = `Invoice-${cleanNum}.pdf`;
+      const { buffer } = generateInvoicePdf(inv.data);
+      await exportAndSaveFile({
+        fileName,
+        data: buffer,
+        mimeType: 'application/pdf',
+        dialogTitle: `Share Invoice ${inv.invoiceNumber} PDF`,
+        successMessage: `Saved PDF: ${fileName}`,
+      });
+    } catch (err: any) {
+      console.error('PDF export failed:', err);
+      toast.error(`Could not generate PDF: ${err?.message || err}`);
     }
   };
 
@@ -270,7 +326,7 @@ export const InvoicesView: React.FC = () => {
   // MAIN INVOICES DASHBOARD & HIGH-DENSITY DIRECTORY
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-y-auto p-3 sm:p-6">
+    <div className="flex-1 flex flex-col h-full bg-slate-50/50 overflow-y-auto p-3 sm:p-6 pb-28 sm:pb-6">
       <div className="max-w-6xl mx-auto w-full space-y-4">
         {/* Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -297,7 +353,7 @@ export const InvoicesView: React.FC = () => {
               leadingIcon={RiDownload2Line}
               onClick={handleExportBackup}
               title="Download offline JSON backup"
-              className="text-xs font-medium"
+              className="text-xs font-medium hidden sm:inline-flex"
             >
               Backup
             </Button>
@@ -308,7 +364,7 @@ export const InvoicesView: React.FC = () => {
               leadingIcon={RiUpload2Line}
               onClick={() => setShowImportModal(true)}
               title="Restore from JSON backup"
-              className="text-xs font-medium"
+              className="text-xs font-medium hidden sm:inline-flex"
             >
               Restore
             </Button>
@@ -390,8 +446,8 @@ export const InvoicesView: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
           {/* Filter & Search Bar */}
           <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="w-56">
+            <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto">
+              <div className="w-full sm:w-56">
                 <SearchField
                   aria-label="Filter customer invoices"
                   placeholder="Search invoice # or client..."
@@ -513,108 +569,81 @@ export const InvoicesView: React.FC = () => {
                 return (
                   <div
                     key={inv.id}
-                    className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors group"
+                    className="hover:bg-slate-50/70 transition-colors group"
                   >
-                    {/* Left: Invoice Info */}
-                    <div
-                      onClick={() => {
-                        setEditingInvoiceId(inv.id);
-                        setActiveInvoiceId(inv.id);
-                      }}
-                      className="flex items-center gap-3.5 cursor-pointer flex-1 min-w-0 mr-0 sm:mr-4"
-                    >
-                      <Avatar
-                        size="md"
-                        color={isMonthly ? "blue" : "neutral"}
-                        initials={clientDisplayName.slice(0, 2).toUpperCase()}
-                        className="shrink-0 font-bold shadow-2xs"
-                      />
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors font-mono tracking-tight">
-                            {inv.invoiceNumber}
-                          </span>
-                          {renderStatusChip(inv.status)}
-
-                          {isMonthly ? (
-                            <Chip color="blue" variant="caption" className="inline-flex items-center gap-1 font-medium">
-                              <RiCalendarLine className="size-3" />
-                              Monthly {inv.data.billingPeriod ? `• ${inv.data.billingPeriod}` : ''}
-                            </Chip>
-                          ) : (
-                            <Chip color="neutral" variant="caption">
-                              Daily
-                            </Chip>
-                          )}
-
-                          <Chip color="soft" variant="caption" className="font-medium text-slate-500">
-                            {theme.name}
-                          </Chip>
-                        </div>
-
-                        <div className="text-xs text-slate-500 flex items-center gap-2 mt-1 truncate">
-                          <strong className="text-slate-800 font-semibold truncate">{clientDisplayName}</strong>
-                          <span className="text-slate-300">•</span>
-                          <span className="font-mono text-[11px] text-slate-500">{inv.date}</span>
-                          <span className="text-slate-300">•</span>
-                          <span className="font-medium text-slate-600">{itemPlural}</span>
-                          {itemsSnippet && (
-                            <>
-                              <span className="text-slate-300">•</span>
-                              <span
-                                className="text-slate-500 truncate max-w-[280px]"
-                                title={itemDescriptions.join(', ')}
-                              >
-                                {itemsSnippet}
+                    {/* ─── MOBILE CARD VIEW (< sm) ─── */}
+                    <div className="p-3.5 flex flex-col gap-3 sm:hidden">
+                      <div
+                        onClick={() => {
+                          haptics.light();
+                          setEditingInvoiceId(inv.id);
+                          setActiveInvoiceId(inv.id);
+                        }}
+                        className="flex items-start justify-between gap-2.5 cursor-pointer active:opacity-75 transition-opacity"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Avatar
+                            size="md"
+                            color={isMonthly ? "blue" : "neutral"}
+                            initials={clientDisplayName.slice(0, 2).toUpperCase()}
+                            className="shrink-0 font-bold shadow-2xs"
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-sm text-slate-900 font-mono">
+                                {inv.invoiceNumber}
                               </span>
-                            </>
-                          )}
+                              {renderStatusChip(inv.status)}
+                            </div>
+                            <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
+                              {clientDisplayName}
+                            </p>
+                            <p className="text-[11px] text-slate-400 font-mono">
+                              {inv.date} • {itemPlural}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Middle / Right: Financials & Action Buttons */}
-                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
-                      <div className="text-left sm:text-right min-w-[90px] sm:min-w-[110px]">
-                        <div className="font-bold font-mono text-base text-slate-900 tabular-nums tracking-tight">
-                          {formatCurrency(inv.total, inv.data?.currencySymbol || currencySymbol)}
-                        </div>
-                        <div className="text-[11px] font-mono mt-0.5">
-                          {inv.status === 'paid' || (inv.data?.balanceDue ?? 0) <= 0 ? (
-                            <Chip color="lime" variant="caption" className="inline-flex items-center gap-1 font-medium">
-                              <StatusDot color="green" /> Settled
-                            </Chip>
-                          ) : (
-                            <Chip color="rose" variant="caption" className="inline-flex items-center gap-1 font-medium">
-                              <StatusDot color="yellow" /> Due: {formatCurrency(inv.data?.balanceDue ?? 0, inv.data?.currencySymbol || currencySymbol)}
-                            </Chip>
+                        <div className="text-right shrink-0">
+                          <div className="font-bold font-mono text-base text-slate-900 tabular-nums">
+                            {formatCurrency(inv.total, inv.data?.currencySymbol || currencySymbol)}
+                          </div>
+                          {inv.status !== 'paid' && (inv.data?.balanceDue ?? 0) > 0 && (
+                            <div className="text-[10px] text-rose-600 font-semibold font-mono">
+                              Due: {formatCurrency(inv.data?.balanceDue ?? 0, inv.data?.currencySymbol || currencySymbol)}
+                            </div>
                           )}
                         </div>
                       </div>
 
-                      {/* BoardUI Row Actions */}
-                      <div className="flex items-center gap-1 sm:gap-1.5 bg-slate-50/80 p-1 rounded-xl border border-slate-200/60 shadow-2xs">
+                      {/* Mobile Card Action Buttons */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                         <Button
                           size="small"
                           variant="secondary"
                           leadingIcon={RiEditLine}
-                          onClick={() => setEditingInvoiceId(inv.id)}
-                          className="text-xs font-semibold px-2 py-1"
+                          onClick={() => {
+                            haptics.light();
+                            setEditingInvoiceId(inv.id);
+                          }}
+                          className="flex-1 text-xs font-semibold justify-center py-2 h-9 touch-target-48"
                         >
                           Edit
                         </Button>
 
-                        <IconButton
-                          icon={RiShareForwardLine}
+                        <Button
                           size="small"
-                          aria-label="Share Invoice"
-                          title="Share Invoice"
+                          variant="secondary"
+                          leadingIcon={RiShareForwardLine}
                           onClick={() => {
+                            haptics.light();
                             setSharingInvoice(inv.data);
                             setSharingThemeId(effectiveThemeId);
                           }}
-                        />
+                          className="flex-1 text-xs font-semibold justify-center py-2 h-9 text-blue-700 bg-blue-50/50 border-blue-200 touch-target-48"
+                        >
+                          Share
+                        </Button>
 
                         <IconButton
                           icon={RiDownload2Line}
@@ -622,24 +651,7 @@ export const InvoicesView: React.FC = () => {
                           aria-label="Save as PDF"
                           title="Save as PDF"
                           onClick={() => handleSavePdf(inv.id, effectiveThemeId)}
-                        />
-
-                        <IconButton
-                          icon={RiPrinterLine}
-                          size="small"
-                          aria-label="Print Invoice"
-                          title="Print Invoice"
-                          onClick={() => handlePrint(inv.id, effectiveThemeId)}
-                          className="hidden sm:inline-flex"
-                        />
-
-                        <IconButton
-                          icon={RiFileExcel2Line}
-                          size="small"
-                          aria-label="Export to Excel"
-                          title="Export to Excel (.xlsx)"
-                          onClick={() => handleExportExcel(inv.data)}
-                          className="text-emerald-700 hover:text-emerald-800 hidden sm:inline-flex"
+                          className="size-9 shrink-0 touch-target-48"
                         />
 
                         <IconButton
@@ -648,7 +660,7 @@ export const InvoicesView: React.FC = () => {
                           aria-label="Duplicate Invoice"
                           title="Duplicate Invoice"
                           onClick={() => handleDuplicate(inv.id)}
-                          className="hidden sm:inline-flex"
+                          className="size-9 shrink-0 touch-target-48"
                         />
 
                         <IconButton
@@ -657,15 +669,178 @@ export const InvoicesView: React.FC = () => {
                           aria-label="Delete Invoice"
                           title="Delete Invoice"
                           onClick={() => handleDelete(inv.id, inv.invoiceNumber)}
-                          className="text-slate-400 hover:text-rose-600 hover:border-rose-200"
+                          className="size-9 shrink-0 text-slate-400 hover:text-rose-600 hover:border-rose-200 touch-target-48"
                         />
+                      </div>
+                    </div>
+
+                    {/* ─── DESKTOP ROW VIEW (>= sm) ─── */}
+                    <div className="p-3 sm:p-4 hidden sm:flex sm:flex-row sm:items-center justify-between gap-3">
+                      {/* Left: Invoice Info */}
+                      <div
+                        onClick={() => {
+                          setEditingInvoiceId(inv.id);
+                          setActiveInvoiceId(inv.id);
+                        }}
+                        className="flex items-center gap-3.5 cursor-pointer flex-1 min-w-0 mr-0 sm:mr-4"
+                      >
+                        <Avatar
+                          size="md"
+                          color={isMonthly ? "blue" : "neutral"}
+                          initials={clientDisplayName.slice(0, 2).toUpperCase()}
+                          className="shrink-0 font-bold shadow-2xs"
+                        />
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors font-mono tracking-tight">
+                              {inv.invoiceNumber}
+                            </span>
+                            {renderStatusChip(inv.status)}
+
+                            {isMonthly ? (
+                              <Chip color="blue" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                                <RiCalendarLine className="size-3" />
+                                Monthly {inv.data.billingPeriod ? `• ${inv.data.billingPeriod}` : ''}
+                              </Chip>
+                            ) : (
+                              <Chip color="neutral" variant="caption">
+                                Daily
+                              </Chip>
+                            )}
+
+                            <Chip color="soft" variant="caption" className="font-medium text-slate-500">
+                              {theme.name}
+                            </Chip>
+                          </div>
+
+                          <div className="text-xs text-slate-500 flex items-center gap-2 mt-1 truncate">
+                            <strong className="text-slate-800 font-semibold truncate">{clientDisplayName}</strong>
+                            <span className="text-slate-300">•</span>
+                            <span className="font-mono text-[11px] text-slate-500">{inv.date}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="font-medium text-slate-600">{itemPlural}</span>
+                            {itemsSnippet && (
+                              <>
+                                <span className="text-slate-300">•</span>
+                                <span
+                                  className="text-slate-500 truncate max-w-[280px]"
+                                  title={itemDescriptions.join(', ')}
+                                >
+                                  {itemsSnippet}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Middle / Right: Financials & Action Buttons */}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
+                        <div className="text-left sm:text-right min-w-[90px] sm:min-w-[110px]">
+                          <div className="font-bold font-mono text-base text-slate-900 tabular-nums tracking-tight">
+                            {formatCurrency(inv.total, inv.data?.currencySymbol || currencySymbol)}
+                          </div>
+                          <div className="text-[11px] font-mono mt-0.5">
+                            {inv.status === 'paid' || (inv.data?.balanceDue ?? 0) <= 0 ? (
+                              <Chip color="lime" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                                <StatusDot color="green" /> Settled
+                              </Chip>
+                            ) : (
+                              <Chip color="rose" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                                <StatusDot color="yellow" /> Due: {formatCurrency(inv.data?.balanceDue ?? 0, inv.data?.currencySymbol || currencySymbol)}
+                              </Chip>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* BoardUI Row Actions */}
+                        <div className="flex items-center gap-1 sm:gap-1.5 bg-slate-50/80 p-1 rounded-xl border border-slate-200/60 shadow-2xs">
+                          <Button
+                            size="small"
+                            variant="secondary"
+                            leadingIcon={RiEditLine}
+                            onClick={() => setEditingInvoiceId(inv.id)}
+                            className="text-xs font-semibold px-2 py-1"
+                          >
+                            Edit
+                          </Button>
+
+                          <IconButton
+                            icon={RiShareForwardLine}
+                            size="small"
+                            aria-label="Share Invoice"
+                            title="Share Invoice"
+                            onClick={() => {
+                              setSharingInvoice(inv.data);
+                              setSharingThemeId(effectiveThemeId);
+                            }}
+                          />
+
+                          <IconButton
+                            icon={RiDownload2Line}
+                            size="small"
+                            aria-label="Save as PDF"
+                            title="Save as PDF"
+                            onClick={() => handleSavePdf(inv.id, effectiveThemeId)}
+                          />
+
+                          <IconButton
+                            icon={RiPrinterLine}
+                            size="small"
+                            aria-label="Print Invoice"
+                            title="Print Invoice"
+                            onClick={() => handlePrint(inv.id, effectiveThemeId)}
+                            className="hidden sm:inline-flex"
+                          />
+
+                          <IconButton
+                            icon={RiFileExcel2Line}
+                            size="small"
+                            aria-label="Export to Excel"
+                            title="Export to Excel (.xlsx)"
+                            onClick={() => handleExportExcel(inv.data)}
+                            className="text-emerald-700 hover:text-emerald-800 hidden sm:inline-flex"
+                          />
+
+                          <IconButton
+                            icon={RiFileCopyLine}
+                            size="small"
+                            aria-label="Duplicate Invoice"
+                            title="Duplicate Invoice"
+                            onClick={() => handleDuplicate(inv.id)}
+                            className="hidden sm:inline-flex"
+                          />
+
+                          <IconButton
+                            icon={RiDeleteBinLine}
+                            size="small"
+                            aria-label="Delete Invoice"
+                            title="Delete Invoice"
+                            onClick={() => handleDelete(inv.id, inv.invoiceNumber)}
+                            className="text-slate-400 hover:text-rose-600 hover:border-rose-200"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 );
-              }))}
+              })
+            )}
           </div>
         </div>
+      </div>
+
+      {/* ─── MOBILE FLOATING ACTION BUTTON (FAB) ─── */}
+      <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-30 sm:hidden">
+        <button
+          type="button"
+          onClick={handleCreateDaily}
+          className="flex items-center gap-2 bg-blue-600 active:bg-blue-700 text-white font-bold text-xs px-4 py-3 rounded-full shadow-lg shadow-blue-500/25 active:scale-95 transition-all touch-target-48 border border-blue-500"
+        >
+          <RiAddLine className="size-5" />
+          <span>New Bill</span>
+        </button>
       </div>
 
       {/* ─── RESTORE BACKUP MODAL ─── */}

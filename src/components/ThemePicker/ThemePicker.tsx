@@ -38,6 +38,8 @@ import {
   deleteRemoteTemplate,
   REMOTE_TEMPLATES_UPDATED_EVENT,
 } from '@/services/templateSyncService';
+import { useNativeBackButton } from '@/hooks/useNativeBackButton';
+import { haptics } from '@/services/nativeMobileService';
 
 interface TemplateCardProps {
   theme: any;
@@ -231,6 +233,20 @@ export const ThemePicker: React.FC = () => {
   // View mode: 'gallery' (Template Grid) or 'customize' (Live Studio 2-Pane)
   const [viewMode, setViewMode] = useState<'gallery' | 'customize'>('gallery');
 
+  // Android hardware back button handler
+  useNativeBackButton(
+    'theme-picker-customize-back',
+    () => {
+      if (viewMode === 'customize') {
+        setViewMode('gallery');
+        return true;
+      }
+      return false;
+    },
+    viewMode === 'customize',
+    150
+  );
+
   // Category filter in gallery mode
   const [filterCategory, setFilterCategory] = useState<'all' | 'a4' | 'thermal'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -309,10 +325,14 @@ export const ThemePicker: React.FC = () => {
               size="small"
               variant="secondary"
               leadingIcon={RiArrowLeftLine}
-              onClick={() => setViewMode('gallery')}
+              onClick={() => {
+                haptics.light();
+                setViewMode('gallery');
+              }}
               className="text-xs shrink-0"
             >
-              Back to Templates
+              <span className="sm:hidden">Back</span>
+              <span className="hidden sm:inline">Back to Templates</span>
             </Button>
 
             <div className="h-5 w-px bg-slate-200 hidden sm:block shrink-0" />
@@ -431,8 +451,11 @@ export const ThemePicker: React.FC = () => {
               size="small"
               variant="secondary"
               leadingIcon={RiPrinterLine}
-              onClick={handlePrint}
-              className="text-xs shadow-xs font-semibold shrink-0"
+              onClick={() => {
+                haptics.light();
+                handlePrint();
+              }}
+              className="text-xs shadow-xs font-semibold shrink-0 px-2 sm:px-3"
             >
               Print
             </Button>
@@ -440,10 +463,14 @@ export const ThemePicker: React.FC = () => {
               size="small"
               variant="primary"
               leadingIcon={RiDownload2Line}
-              onClick={handleSavePdf}
-              className="text-xs shadow-xs font-semibold shrink-0"
+              onClick={() => {
+                haptics.light();
+                handleSavePdf();
+              }}
+              className="text-xs shadow-xs font-semibold shrink-0 px-2.5 sm:px-3"
             >
-              Save as PDF
+              <span className="sm:hidden">PDF</span>
+              <span className="hidden sm:inline">Save as PDF</span>
             </Button>
           </div>
         </div>
@@ -453,7 +480,10 @@ export const ThemePicker: React.FC = () => {
           <div className="inline-flex rounded-xl bg-slate-200/80 p-1 w-full max-w-sm shadow-inner">
             <button
               type="button"
-              onClick={() => setMobileTab('preview')}
+              onClick={() => {
+                haptics.selection();
+                setMobileTab('preview');
+              }}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 mobileTab === 'preview' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
@@ -462,7 +492,10 @@ export const ThemePicker: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setMobileTab('options')}
+              onClick={() => {
+                haptics.selection();
+                setMobileTab('options');
+              }}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 mobileTab === 'options' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'
               }`}
