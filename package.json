@@ -26,7 +26,8 @@
     "package:mac": "npm run build && electron-builder --mac pkg",
     "package:mac:pkg": "npm run build && electron-builder --mac pkg",
     "package:mac:dmg": "npm run build && electron-builder --mac dmg",
-    "package:mac:offline": "python scripts/build-mac.py",
+    "package:update": "node scripts/pack-asar.cjs",
+    "package:mac:offline": "node scripts/pack-asar.cjs && python scripts/build-mac.py",
     "package:android": "npm run build && npx cap sync android",
     "package:all": "npm run build && electron-builder -mw",
     "release": "node scripts/release.mjs"

@@ -57,10 +57,13 @@ export const SettingsUpdatesTab: React.FC = () => {
 
   const targetVersion = lastCheckResult.release?.version || currentVersion;
 
-  const getPackageUrl = (type: 'win-installer' | 'win-portable' | 'mac-pkg-arm' | 'mac-pkg-intel' | 'android-apk') => {
+  const getPackageUrl = (type: 'win-installer' | 'win-portable' | 'mac-pkg-arm' | 'mac-pkg-intel' | 'android-apk' | 'in-app-update') => {
     const assets = lastCheckResult.release?.assets;
     if (assets && assets.length > 0) {
-      if (type === 'win-installer') {
+      if (type === 'in-app-update') {
+        const a = assets.find(x => x.name.toLowerCase().endsWith('.asar'));
+        if (a) return a.downloadUrl;
+      } else if (type === 'win-installer') {
         const a = assets.find(x => x.name.toLowerCase().includes('setup') && x.name.endsWith('.exe'));
         if (a) return a.downloadUrl;
       } else if (type === 'win-portable') {
@@ -78,6 +81,8 @@ export const SettingsUpdatesTab: React.FC = () => {
       }
     }
     switch (type) {
+      case 'in-app-update':
+        return `https://github.com/rushikeshnarule/invoice-gen/releases/download/v${targetVersion}/Invoice-Gen-Update-${targetVersion}.asar`;
       case 'win-installer':
         return `https://github.com/rushikeshnarule/invoice-gen/releases/download/v${targetVersion}/Invoice-Gen-Setup-${targetVersion}.exe`;
       case 'win-portable':
@@ -225,7 +230,92 @@ export const SettingsUpdatesTab: React.FC = () => {
                 Pushed to GitHub: {new Date(lastCheckResult.release.publishedAt).toLocaleString()}
               </p>
             )}
+
+            {lastCheckResult.release?.recommendedAsset && (platform === "windows" || platform === "macos") && downloadState === "idle" && (
+              <div className="mt-3 pt-3 border-t border-emerald-200/60 flex items-center justify-between gap-3 flex-wrap">
+                <span className="text-[11px] text-emerald-800 flex items-center gap-1">
+                  <RiShieldCheckLine className="size-3.5 text-emerald-600" />
+                  Direct in-app hot reload available • No setup installer needed
+                </span>
+                <button
+                  onClick={() => handleStartInAppUpdate(lastCheckResult.release!.recommendedAsset!)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                >
+                  <RiDownload2Line className="size-3.5" />
+                  <span>Re-sync In-App ({formatFileSize(lastCheckResult.release.recommendedAsset.size)})</span>
+                </button>
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* Progress & Installation status for in-app update */}
+      {downloadState === "downloading" && (
+        <div className="p-4 rounded-xl bg-white border border-blue-200 space-y-2.5 animate-in fade-in shadow-sm">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
+            <span className="flex items-center gap-1.5">
+              <RiRefreshLine className="size-3.5 animate-spin text-blue-600" />
+              Downloading update package directly in app...
+            </span>
+            <span className="font-mono text-blue-600">{downloadProgress.percent}%</span>
+          </div>
+          <div className="w-full bg-blue-100 rounded-full h-2.5 overflow-hidden">
+            <div
+              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+              style={{ width: `${downloadProgress.percent}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+            <span>{formatFileSize(downloadProgress.bytesReceived)} / {formatFileSize(downloadProgress.totalBytes)}</span>
+            {downloadProgress.speed > 0 && <span>Speed: {formatSpeed(downloadProgress.speed)}</span>}
+          </div>
+        </div>
+      )}
+
+      {(downloadState === "downloaded" || downloadState === "installing") && (
+        <div className="p-4 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0" />
+            <div>
+              <h5 className="text-xs font-bold text-emerald-950">
+                {platform === "android"
+                  ? "APK Download Started!"
+                  : downloadState === "installing"
+                  ? "Updating application & restarting..."
+                  : "Download Complete! Updating in-app..."}
+              </h5>
+              <p className="text-[11px] text-emerald-800">
+                {platform === "android"
+                  ? "Check your notifications or tap Install APK below to install the update."
+                  : "Invoice Gen will reload automatically with the updated version (no setup wizard required)."}
+              </p>
+            </div>
+          </div>
+          {platform === "android" && lastCheckResult.release?.recommendedAsset && (
+            <a
+              href={lastCheckResult.release.recommendedAsset.downloadUrl}
+              target="_system"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shrink-0 shadow-sm cursor-pointer"
+            >
+              Install APK
+            </a>
+          )}
+        </div>
+      )}
+
+      {downloadState === "error" && (
+        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800">
+          <p className="font-semibold">Update download failed: {downloadError}</p>
+          <a
+            href={lastCheckResult.release?.recommendedAsset?.downloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-bold mt-1 inline-block"
+          >
+            Download via browser instead
+          </a>
         </div>
       )}
 
@@ -244,6 +334,9 @@ export const SettingsUpdatesTab: React.FC = () => {
                   <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold uppercase">
                     Pushed to GitHub now
                   </span>
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase">
+                    No Setup Wizard
+                  </span>
                 </div>
                 <p className="text-xs text-slate-600 mt-0.5">
                   Pushed to GitHub on {new Date(lastCheckResult.release.publishedAt).toLocaleString()}
@@ -254,84 +347,14 @@ export const SettingsUpdatesTab: React.FC = () => {
             {lastCheckResult.release.recommendedAsset && downloadState === "idle" && (
               <button
                 onClick={() => handleStartInAppUpdate(lastCheckResult.release!.recommendedAsset!)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-all shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
               >
                 <RiDownload2Line className="size-4" />
-                <span>Download &amp; Install ({formatFileSize(lastCheckResult.release.recommendedAsset.size)})</span>
+                <span>Update Now ({formatFileSize(lastCheckResult.release.recommendedAsset.size)})</span>
                 <RiArrowRightLine className="size-3.5" />
               </button>
             )}
           </div>
-
-          {/* Download Progress Bar */}
-          {downloadState === "downloading" && (
-            <div className="p-3.5 rounded-xl bg-white border border-blue-200 space-y-2 animate-in fade-in">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
-                <span className="flex items-center gap-1.5">
-                  <RiRefreshLine className="size-3.5 animate-spin text-blue-600" />
-                  Downloading update directly within workstation...
-                </span>
-                <span className="font-mono text-blue-600">{downloadProgress.percent}%</span>
-              </div>
-              <div className="w-full bg-blue-100 rounded-full h-2.5 overflow-hidden">
-                <div
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                  style={{ width: `${downloadProgress.percent}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                <span>{formatFileSize(downloadProgress.bytesReceived)} / {formatFileSize(downloadProgress.totalBytes)}</span>
-                {downloadProgress.speed > 0 && <span>Speed: {formatSpeed(downloadProgress.speed)}</span>}
-              </div>
-            </div>
-          )}
-
-          {/* Installing / Downloaded status */}
-          {(downloadState === "downloaded" || downloadState === "installing") && (
-            <div className="p-3.5 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-between gap-3 animate-in fade-in">
-              <div className="flex items-center gap-3">
-                <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0" />
-                <div>
-                  <h5 className="text-xs font-bold text-emerald-950">
-                    {platform === "android"
-                      ? "APK Download Started!"
-                      : downloadState === "installing"
-                      ? "Download Complete! Launching installer..."
-                      : "Download Complete! Installing automatically..."}
-                  </h5>
-                  <p className="text-[11px] text-emerald-800">
-                    {platform === "android"
-                      ? "Check your notifications or tap Install APK below to install the update."
-                      : "The application will restart with the latest update."}
-                  </p>
-                </div>
-              </div>
-              {platform === "android" && lastCheckResult.release.recommendedAsset && (
-                <a
-                  href={lastCheckResult.release.recommendedAsset.downloadUrl}
-                  target="_system"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shrink-0 shadow-sm cursor-pointer"
-                >
-                  Install APK
-                </a>
-              )}
-            </div>
-          )}
-
-          {downloadState === "error" && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800">
-              <p className="font-semibold">Update download failed: {downloadError}</p>
-              <a
-                href={lastCheckResult.release.recommendedAsset?.downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline font-bold mt-1 inline-block"
-              >
-                Download via browser instead
-              </a>
-            </div>
-          )}
 
           <div className="p-3.5 rounded-xl bg-white/80 border border-blue-100 text-xs text-slate-700 max-h-40 overflow-y-auto whitespace-pre-wrap font-sans">
             {lastCheckResult.release.body}
@@ -385,6 +408,36 @@ export const SettingsUpdatesTab: React.FC = () => {
           Direct Platform Packages &amp; Installers
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Seamless In-App Hot Update (.asar) */}
+          <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/50 hover:border-blue-300 transition-colors flex flex-col justify-between sm:col-span-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+                  <RiSparklingFill className="size-5 text-amber-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h5 className="text-xs font-bold text-slate-900">Seamless In-App Update Package (.asar)</h5>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase">
+                      Recommended
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    High-speed native hot reload for Windows &amp; macOS • Automatically updates inside workstation with zero setup wizard
+                  </p>
+                </div>
+              </div>
+              <a
+                href={getPackageUrl('in-app-update')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer shrink-0"
+              >
+                Download .asar
+              </a>
+            </div>
+          </div>
+
           {/* Windows */}
           <div className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-blue-200 transition-colors flex flex-col justify-between">
             <div className="flex items-center gap-2.5 mb-2">

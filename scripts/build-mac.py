@@ -245,10 +245,14 @@ def build_dmg_from_zip(app_zip, out_dmg):
 def main():
     print(f"=== Packaging {APP_NAME} v{APP_VERSION} for macOS ===")
     
-    # 1. Verify app.asar exists
-    asar_path = os.path.join(PROJECT_ROOT, "dist-electron", "win-unpacked", "resources", "app.asar")
+    # 1. Verify app.asar exists (check standalone clean asar first, fallback to win-unpacked)
+    asar_path = os.path.join(PROJECT_ROOT, "dist-electron", "app.asar")
     if not os.path.exists(asar_path):
-        print(f"Error: {asar_path} not found. Run 'npm run package:portable' first.")
+        asar_path = os.path.join(PROJECT_ROOT, "dist-electron", f"Invoice-Gen-Update-{APP_VERSION}.asar")
+    if not os.path.exists(asar_path):
+        asar_path = os.path.join(PROJECT_ROOT, "dist-electron", "win-unpacked", "resources", "app.asar")
+    if not os.path.exists(asar_path):
+        print(f"Error: {asar_path} not found. Run 'node scripts/pack-asar.cjs' first.")
         sys.exit(1)
         
     print(f"Loading payload: {asar_path} ...")

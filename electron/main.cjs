@@ -1011,15 +1011,139 @@ ipcMain.handle('desktop:download-update', async (_event, { downloadUrl, fileName
 
 ipcMain.handle('desktop:install-update', async (_event, { filePath }) => {
   if (!filePath || !fs.existsSync(filePath)) {
-    return { success: false, error: 'Update installer file not found on disk' };
+    return { success: false, error: 'Update package file not found on disk' };
   }
 
   try {
     const isWin = process.platform === 'win32';
     const isDarwin = process.platform === 'darwin';
+    const ext = path.extname(filePath).toLowerCase();
 
-    if (isWin) {
-      const child = spawn(filePath, [], {
+    // ─── Format 1: Direct In-App .asar Hot-Update (Zero Setup Wizard) ───
+    if (ext === '.asar') {
+      let targetAsar = null;
+
+      // Locate current app.asar in production resources
+      if (process.resourcesPath) {
+        const candidate = path.join(process.resourcesPath, 'app.asar');
+        if (fs.existsSync(candidate)) {
+          targetAsar = candidate;
+        }
+      }
+      if (!targetAsar) {
+        const appPath = app.getAppPath();
+        if (appPath.endsWith('.asar') && fs.existsSync(appPath)) {
+          targetAsar = appPath;
+        }
+      }
+
+      // If running unpack or dev, target resources or base
+      if (!targetAsar && process.resourcesPath) {
+        targetAsar = path.join(process.resourcesPath, 'app.asar');
+      }
+
+      if (isWin && targetAsar) {
+        // Windows updater: detached helper script waits for parent process to exit,
+        // copies updated app.asar into place, relaunches application, and cleans up.
+        const updaterBat = path.join(os.tmpdir(), `invoice-gen-update-${Date.now()}.cmd`);
+        const appExe = process.execPath;
+        const cleanNewAsar = filePath.replace(/"/g, '');
+        const cleanTargetAsar = targetAsar.replace(/"/g, '');
+        const cleanAppExe = appExe.replace(/"/g, '');
+
+        const batContent = `@echo off
+setlocal enabledelayedexpansion
+set "NEW_ASAR=${cleanNewAsar}"
+set "TARGET_ASAR=${cleanTargetAsar}"
+set "APP_EXE=${cleanAppExe}"
+
+:: Wait 1.5s for parent Electron process to exit and release file locks
+timeout /t 2 /nobreak >nul
+
+set RETRY=0
+:RETRY_LOOP
+set /a RETRY+=1
+copy /y "%NEW_ASAR%" "%TARGET_ASAR%" >nul 2>&1
+if not errorlevel 1 goto DONE
+if !RETRY! geq 30 goto FAILED
+timeout /t 1 /nobreak >nul
+goto RETRY_LOOP
+
+:DONE
+del /f /q "%NEW_ASAR%" >nul 2>&1
+start "" "%APP_EXE%"
+(goto) 2>nul & del "%~f0"
+exit /b 0
+
+:FAILED
+exit /b 1
+`;
+        fs.writeFileSync(updaterBat, batContent, 'utf8');
+
+        const child = spawn('cmd.exe', ['/c', updaterBat], {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true,
+        });
+        child.unref();
+
+        if (server) {
+          try { server.close(); } catch {}
+          server = null;
+        }
+        setTimeout(() => {
+          app.exit(0);
+        }, 300);
+        return { success: true };
+      }
+
+      if (isDarwin && targetAsar) {
+        // macOS updater: replaces app.asar inside Invoice Gen.app/Contents/Resources/
+        // and immediately re-opens the application bundle.
+        const appBundle = path.resolve(process.resourcesPath, '..', '..');
+        const updaterSh = path.join(os.tmpdir(), `invoice-gen-update-${Date.now()}.sh`);
+        const shContent = `#!/bin/bash
+NEW_ASAR="${filePath}"
+TARGET_ASAR="${targetAsar}"
+APP_BUNDLE="${appBundle}"
+
+sleep 1.5
+for i in {1..30}; do
+  if cp -f "$NEW_ASAR" "$TARGET_ASAR" 2>/dev/null; then
+    rm -f "$NEW_ASAR"
+    open "$APP_BUNDLE"
+    rm -f "$0"
+    exit 0
+  fi
+  sleep 1
+done
+exit 1
+`;
+        fs.writeFileSync(updaterSh, shContent, { mode: 0o755 });
+
+        const child = spawn('/bin/bash', [updaterSh], {
+          detached: true,
+          stdio: 'ignore',
+        });
+        child.unref();
+
+        if (server) {
+          try { server.close(); } catch {}
+          server = null;
+        }
+        setTimeout(() => {
+          app.exit(0);
+        }, 300);
+        return { success: true };
+      }
+    }
+
+    // ─── Format 2: Windows Installer Fallback (Silent Mode /S, No GUI Wizard) ───
+    if (isWin && ext === '.exe') {
+      const isSetup = path.basename(filePath).toLowerCase().includes('setup');
+      const args = isSetup ? ['/S'] : [];
+
+      const child = spawn(filePath, args, {
         detached: true,
         stdio: 'ignore',
       });
@@ -1030,11 +1154,12 @@ ipcMain.handle('desktop:install-update', async (_event, { filePath }) => {
         server = null;
       }
       setTimeout(() => {
-        app.quit();
+        app.exit(0);
       }, 500);
       return { success: true };
     }
 
+    // ─── Format 3: macOS PKG / DMG Fallback ───
     if (isDarwin) {
       const child = spawn('open', [filePath], {
         detached: true,
@@ -1047,7 +1172,7 @@ ipcMain.handle('desktop:install-update', async (_event, { filePath }) => {
         server = null;
       }
       setTimeout(() => {
-        app.quit();
+        app.exit(0);
       }, 500);
       return { success: true };
     }
@@ -1057,7 +1182,7 @@ ipcMain.handle('desktop:install-update', async (_event, { filePath }) => {
       stdio: 'ignore',
     });
     child.unref();
-    app.quit();
+    app.exit(0);
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };

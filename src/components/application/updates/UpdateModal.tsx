@@ -155,7 +155,10 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-900 text-sm">
-                        Direct In-App Upgrade
+                        Seamless In-App Upgrade
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wide">
+                        No Setup Wizard
                       </span>
                       <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-200/80 text-blue-800 capitalize">
                         {platform}
@@ -172,7 +175,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                     onClick={() => handleStartInAppUpdate(recommendedAsset)}
                     className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all shrink-0 active:scale-95 cursor-pointer"
                   >
-                    <span>Download &amp; Install</span>
+                    <span>Update Now</span>
                     <RiArrowRightLine className="size-4" />
                   </button>
                 )}
@@ -184,7 +187,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
                     <span className="flex items-center gap-1.5">
                       <RiRefreshLine className="size-3.5 animate-spin text-blue-600" />
-                      Downloading update package...
+                      Downloading update package directly in app...
                     </span>
                     <span className="font-mono text-blue-600">{downloadProgress.percent}%</span>
                   </div>
@@ -215,17 +218,17 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                     <div>
                       <h5 className="text-xs font-bold text-emerald-950">
                         {downloadState === "installing"
-                          ? "Launching installer & restarting app..."
+                          ? "Updating application & restarting..."
                           : platform === "android"
                           ? "APK Package Downloaded!"
                           : "Download Complete!"}
                       </h5>
                       <p className="text-[11px] text-emerald-800">
                         {downloadState === "installing"
-                          ? "The application will close and install automatically."
+                          ? "Invoice Gen will reload automatically with the updated version."
                           : platform === "android"
                           ? "Tap Install APK below or check your notifications to finish installing."
-                          : "Ready to install."}
+                          : "Ready to update."}
                       </p>
                     </div>
                   </div>

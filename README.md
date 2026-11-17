@@ -41,6 +41,7 @@ Choose your operating system to download the latest production build:
 
 | Operating System | Architecture | Package Format | Download Link |
 | :--- | :--- | :--- | :--- |
+| **⚡ All Desktop (Win/Mac)** | Universal | **In-App Hot Update (.asar)** | [⬇️ Download `Invoice-Gen-Update-1.4.2.1.asar`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.2.1/Invoice-Gen-Update-1.4.2.1.asar) |
 | **🪟 Windows** | x64 | **NSIS Setup Wizard** | [⬇️ Download `Invoice-Gen-Setup-1.4.2.1.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.2.1/Invoice-Gen-Setup-1.4.2.1.exe) |
 | **🪟 Windows** | x64 | **Portable (Zero-Install)** | [⬇️ Download `Invoice Gen 1.4.2.1.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.2.1/Invoice%20Gen%201.4.2.1.exe) |
 | **🍏 macOS** | Apple Silicon (`arm64`) | **Native PKG Installer** | [⬇️ Download `Invoice-Gen-Setup-1.4.2.1-arm64.pkg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.4.2.1/Invoice-Gen-Setup-1.4.2.1-arm64.pkg) |

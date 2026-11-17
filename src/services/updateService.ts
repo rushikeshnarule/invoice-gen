@@ -110,12 +110,23 @@ export function detectPlatform(): { platform: "windows" | "macos" | "android" | 
 
 /**
  * Identifies the best direct download asset for the user's platform.
+ * Prioritizes high-speed in-app update packages (.asar) on desktop
+ * so users can update seamlessly without re-running setup installers.
  */
 export function getRecommendedAsset(assets: ReleaseAsset[]): ReleaseAsset | null {
   const { platform, arch } = detectPlatform();
 
+  // 1. For Desktop (Windows or macOS), prioritize seamless in-app update bundle (.asar)
+  // This updates the workstation in-place without running setup or installer wizards
+  if (platform === "windows" || platform === "macos") {
+    const updateAsar = assets.find(
+      (a) => a.name.toLowerCase().endsWith(".asar") && a.name.toLowerCase().includes("update")
+    ) || assets.find((a) => a.name.toLowerCase().endsWith(".asar"));
+    if (updateAsar) return updateAsar;
+  }
+
   if (platform === "windows") {
-    // Prefer Setup.exe installer, then any .exe
+    // Fallback: Windows NSIS setup (installed silently via /S) or portable
     const installer = assets.find((a) => a.name.toLowerCase().includes("setup") && a.name.toLowerCase().endsWith(".exe"));
     if (installer) return installer;
     const portable = assets.find((a) => a.name.toLowerCase().endsWith(".exe"));
@@ -123,7 +134,7 @@ export function getRecommendedAsset(assets: ReleaseAsset[]): ReleaseAsset | null
   }
 
   if (platform === "macos") {
-    // Prefer PKG wizard, then DMG
+    // Fallback: PKG or DMG
     if (arch === "arm64") {
       const armPkg = assets.find((a) => a.name.toLowerCase().includes("arm64") && a.name.toLowerCase().endsWith(".pkg"));
       if (armPkg) return armPkg;
@@ -142,6 +153,10 @@ export function getRecommendedAsset(assets: ReleaseAsset[]): ReleaseAsset | null
 
   // Return the first valid installer asset as fallback
   return assets[0] || null;
+}
+
+export function isAsarAsset(asset?: ReleaseAsset | null): boolean {
+  return Boolean(asset && asset.name.toLowerCase().endsWith(".asar"));
 }
 
 /**

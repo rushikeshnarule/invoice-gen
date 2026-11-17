@@ -35,10 +35,22 @@ describe("Update Service Suite", () => {
       { name: "Invoice-Gen-1.5.0.apk", size: 200, downloadUrl: "https://example.com/app.apk", contentType: "application/vnd.android.package-archive" },
     ];
 
+    const mockAssetsWithAsar: ReleaseAsset[] = [
+      ...mockAssets,
+      { name: "Invoice-Gen-Update-1.5.0.asar", size: 500, downloadUrl: "https://example.com/update.asar", contentType: "application/octet-stream" },
+    ];
+
     it("matches installer assets for current platform", () => {
       const asset = getRecommendedAsset(mockAssets);
       expect(asset).toBeTruthy();
       expect(asset?.downloadUrl).toBeTruthy();
+    });
+
+    it("prioritizes seamless .asar in-app update bundle on desktop", () => {
+      const asset = getRecommendedAsset(mockAssetsWithAsar);
+      expect(asset).toBeTruthy();
+      expect(asset?.name).toBe("Invoice-Gen-Update-1.5.0.asar");
+      expect(asset?.downloadUrl).toBe("https://example.com/update.asar");
     });
   });
 
