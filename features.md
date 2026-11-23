@@ -1,6 +1,6 @@
 # Product Features & Functional Capabilities — Invoice Gen
 
-**Invoice Gen** is a commercial offline invoice and billing workstation designed for high-speed, zero-cloud invoicing across Windows, macOS, Android, and Web.
+**Invoice Gen** (Active Release: **v1.5.0**) is a commercial offline invoice and billing workstation designed for high-speed, zero-cloud invoicing across Windows, macOS, Android, and Web.
 
 ---
 

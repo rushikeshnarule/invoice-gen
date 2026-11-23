@@ -112,3 +112,16 @@ This document records technical defects, debugging insights, architectural lesso
 - **Root Cause:** The opened window maintains a reference to `window.opener`, allowing the target page to navigate the origin tab or access properties.
 - **Permanent Solution:**
   - Updated all `window.open(..., '_blank', 'noopener,noreferrer')` calls across `InvoiceEditor`, `ThemePicker`, `ClientsView`, and `InvoicesView`.
+
+### Lesson 5.7: Asynchronous State Deferral in Vitest/JSDOM Test Harnesses
+- **Defect:** Consolidated Monthly Modal test timed out or asserted `expect(createdResult).not.toBeNull()` failure when generating an invoice.
+- **Root Cause:** Wrapping synchronous state initializers in `requestAnimationFrame` inside React modals causes the state update to be deferred until after immediate DOM simulated click events in virtual JSDOM environments, leaving client selection empty.
+- **Permanent Solution:**
+  - Retain direct, synchronous state initialization for default selections (`selectedClientName`, `selectedInvoiceIds`) while reserving animation frames strictly for visual animations and DOM scroll measurements.
+
+### Lesson 5.8: Cross-Platform Version Synchronization & SemVer Precedence
+- **Defect:** Upgrading from legacy 4-digit version strings (e.g., `1.4.2.1`) requires higher SemVer versioning (`1.5.0`) so desktop in-app hot-updaters and Android package managers trigger without rejection.
+- **Root Cause:** Android package managers enforce strictly incrementing integer `versionCode` (e.g., `versionCode 3`), while GitHub Releases and desktop SemVer comparators evaluate `1.5.0 > 1.4.2.1`.
+- **Permanent Solution:**
+  - Increment Android `versionCode` atomically with each release.
+  - Standardize major/minor/patch SemVer progression across `package.json`, `android/app/build.gradle`, `updateService.ts`, and release manifests.

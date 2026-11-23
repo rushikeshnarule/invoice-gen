@@ -68,7 +68,7 @@ This document outlines the operational rules, responsibilities, architectural st
 ### B. Desktop Packaging (Electron)
 - **Windows:** `npm run package:exe` (`electron-builder --win nsis`).
 - **macOS:** `npm run package:mac` (`electron-builder --mac pkg`).
-- **Version Control:** Ensure `package.json`, `README.md`, and all update channels reflect the active version (currently `1.4.2.1`).
+- **Version Control:** Ensure `package.json`, `README.md`, and all update channels reflect the active version (currently `1.5.0`).
 
 ### C. Testing Standard
 - Unit & Integration: `npx vitest run`

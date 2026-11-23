@@ -71,16 +71,16 @@ describe("Update Service Suite", () => {
   describe("checkForUpdates", () => {
     it("handles mock GitHub API newer release response", async () => {
       const mockGitHubResponse = {
-        tag_name: "v1.5.0",
-        name: "Invoice Gen v1.5.0 - Supercharged Release",
+        tag_name: "v2.0.0",
+        name: "Invoice Gen v2.0.0 - Supercharged Release",
         body: "New features and enhancements",
         published_at: "2026-11-20T10:00:00Z",
-        html_url: "https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.5.0",
+        html_url: "https://github.com/rushikeshnarule/invoice-gen/releases/tag/v2.0.0",
         assets: [
           {
-            name: "Invoice-Gen-Setup-1.5.0.exe",
+            name: "Invoice-Gen-Setup-2.0.0.exe",
             size: 150000000,
-            browser_download_url: "https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.0/Invoice-Gen-Setup-1.5.0.exe",
+            browser_download_url: "https://github.com/rushikeshnarule/invoice-gen/releases/download/v2.0.0/Invoice-Gen-Setup-2.0.0.exe",
             content_type: "application/octet-stream",
           },
         ],
@@ -94,8 +94,8 @@ describe("Update Service Suite", () => {
       const result = await checkForUpdates(true);
       expect(result.hasUpdate).toBe(true);
       expect(result.currentVersion).toBe(CURRENT_APP_VERSION);
-      expect(result.latestVersion).toBe("1.5.0");
-      expect(result.release?.name).toContain("v1.5.0");
+      expect(result.latestVersion).toBe("2.0.0");
+      expect(result.release?.name).toContain("v2.0.0");
       expect(result.release?.assets).toHaveLength(1);
     });
 

@@ -4,14 +4,14 @@ All notable changes to **Invoice Gen** are documented in this file.
 
 ---
 
-## [1.4.2.1] - 2026-11-23
+## [1.5.0] - 2026-11-23
 
 ### 🔢 Invoice Numbering Sequence
 * **Strict Sequential Starting Sequence (`INV-001`)**: Sequential generator now starts strictly with `INV-001` (followed by `INV-002`, `INV-003`, etc.) across all new installations, setups, and sample datasets, adhering to statutory commercial standards.
 
 ### ⚡ Seamless In-App Hot Updates (Zero Setup Wizard)
 * **Direct `.asar` Binary Hot-Swap**: Solved the issue where clicking "Update" re-downloaded the setup wizard and forced users to run installation setup again.
-* **Automatic In-Place Reload**: Both Windows and macOS updates now download the packaged bundle and seamlessly hot-swap the internal core runtime in the background, relaunching the app directly into the updated version without displaying setup wizards or touching persistent Documents data.
+* **Automatic In-Place Reload**: Both Windows and macOS updates now download the compact application package (`Invoice-Gen-Update-1.5.0.asar`, ~31 MB) and seamlessly hot-swap the internal core runtime in the background, relaunching the app directly into the updated version without displaying setup wizards or touching persistent Documents data.
 * **Fallback Silent Mode**: Added `/S` silent switch to Windows `.exe` installers and background `/bin/bash` / `open` wrappers on macOS to ensure automated silent transitions.
 
 ### 🛡️ Static Application Security Testing (SAST) & Supply-Chain Hardening
