@@ -19,7 +19,7 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
   const isUS = isUSInvoice(data);
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
-  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const hasItemDates = (data.items || []).some((i) => Boolean(i.date));
   const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
 
   const invoiceTitle = getInvoiceTitle(data);
@@ -27,7 +27,7 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
   const taxHeader = getTaxColumnHeader(data);
   const curSymbol = getCurrencySymbol(data, options);
   const numFormat = getNumberFormat(data, options);
-  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || data.items.some((i) => (Number(i.gstRate) || 0) > 0);
+  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || (data.items || []).some((i) => (Number(i.gstRate) || 0) > 0);
 
   return (
     <div
@@ -42,13 +42,13 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
           {options.showLogo && (data.business?.logoUrl || data.logoUrl) && (
             <img
               src={data.business?.logoUrl || data.logoUrl}
-              alt={data.business.name}
+              alt={data.business?.name || ''}
               className={styles.logo}
               style={{ maxHeight: '48px', maxWidth: '140px', objectFit: 'contain' }}
             />
           )}
           <div>
-            <div className={styles.corporateTitle}>{data.business.name}</div>
+            <div className={styles.corporateTitle}>{data.business?.name || ''}</div>
             <div className={styles.subTitle}>Commercial Invoice &amp; Remittance Statement</div>
           </div>
         </div>
@@ -87,21 +87,21 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
       <div className={styles.partiesGrid}>
         <div className={styles.partyCol}>
           <div className={styles.partyLabel}>From</div>
-          <div className={styles.partyName}>{data.business.name}</div>
+          <div className={styles.partyName}>{data.business?.name || ''}</div>
           <div className={styles.partyDetails}>
-            <div>{data.business.address}</div>
-            <div>{data.business.city}, {data.business.state} - {data.business.pincode}</div>
-            <div>Phone: {data.business.phone}</div>
-            <div>Email: {data.business.email}</div>
+            <div>{data.business?.address}</div>
+            <div>{data.business?.city}, {data.business?.state} - {data.business?.pincode}</div>
+            <div>Phone: {data.business?.phone}</div>
+            <div>Email: {data.business?.email}</div>
             {isUS ? (
               <>
-                {data.business.ein && <div>EIN: <strong>{data.business.ein}</strong></div>}
-                {data.business.stateTaxId && <div>State Tax ID: <strong>{data.business.stateTaxId}</strong></div>}
+                {data.business?.ein && <div>EIN: <strong>{data.business?.ein}</strong></div>}
+                {data.business?.stateTaxId && <div>State Tax ID: <strong>{data.business?.stateTaxId}</strong></div>}
               </>
             ) : (
               <>
-                {data.business.gstin && <div>GSTIN: <strong>{data.business.gstin}</strong></div>}
-                {data.business.pan && <div>PAN: <strong>{data.business.pan}</strong></div>}
+                {data.business?.gstin && <div>GSTIN: <strong>{data.business?.gstin}</strong></div>}
+                {data.business?.pan && <div>PAN: <strong>{data.business?.pan}</strong></div>}
               </>
             )}
           </div>
@@ -109,19 +109,19 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
 
         <div className={styles.partyCol}>
           <div className={styles.partyLabel}>Bill To</div>
-          <div className={styles.partyName}>{data.client.name}</div>
+          <div className={styles.partyName}>{data.client?.name || ''}</div>
           <div className={styles.partyDetails}>
-            <div>{data.client.address}</div>
-            <div>{data.client.city}, {data.client.state} - {data.client.pincode}</div>
-            {data.client.phone && <div>Phone: {data.client.phone}</div>}
-            {data.client.email && <div>Email: {data.client.email}</div>}
+            <div>{data.client?.address}</div>
+            <div>{data.client?.city}, {data.client?.state} - {data.client?.pincode}</div>
+            {data.client?.phone && <div>Phone: {data.client?.phone}</div>}
+            {data.client?.email && <div>Email: {data.client?.email}</div>}
             {isUS ? (
               <>
-                {data.client.ein && <div>EIN / Tax ID: <strong>{data.client.ein}</strong></div>}
-                {data.client.taxExempt && <div style={{ color: '#059669', fontWeight: 600 }}>Tax-Exempt Entity</div>}
+                {data.client?.ein && <div>EIN / Tax ID: <strong>{data.client?.ein}</strong></div>}
+                {data.client?.taxExempt && <div style={{ color: '#059669', fontWeight: 600 }}>Tax-Exempt Entity</div>}
               </>
             ) : (
-              data.client.gstin && <div>GSTIN: <strong>{data.client.gstin}</strong></div>
+              data.client?.gstin && <div>GSTIN: <strong>{data.client?.gstin}</strong></div>
             )}
           </div>
         </div>
@@ -143,7 +143,7 @@ export const CorporateTheme: React.FC<ThemeComponentProps> = ({ data, options })
           </tr>
         </thead>
         <tbody>
-          {data.items.map((item, idx) => (
+          {(data.items || []).map((item, idx) => (
             <tr key={item.id || idx}>
               <td className={styles.centerCol}>{item.sno || idx + 1}</td>
               {showDateCol && (

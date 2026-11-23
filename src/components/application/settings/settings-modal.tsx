@@ -464,7 +464,7 @@ export function SettingsModal({
           role="dialog"
           aria-modal="true"
           aria-label="Business Profile & Settings"
-          className="flex flex-col md:flex-row h-dvh w-screen md:h-[85vh] md:max-h-[720px] md:min-h-[480px] md:w-[880px] md:max-w-[calc(100vw-32px)] overflow-hidden rounded-none md:rounded-3xl bg-white shadow-xl border-0 md:border md:border-slate-200 outline-none safe-area-top safe-area-bottom"
+          className="flex flex-col md:flex-row h-dvh w-screen md:h-[85vh] md:max-h-[min(720px,calc(100vh-4rem))] md:min-h-[480px] md:w-[880px] md:max-w-[calc(100vw-32px)] overflow-hidden rounded-none md:rounded-3xl bg-white shadow-xl border-0 md:border md:border-slate-200 outline-none safe-area-top safe-area-bottom"
         >
           {/* Desktop Left Navigation Rail */}
           <nav
@@ -1544,7 +1544,7 @@ export function SettingsModal({
 
             {/* Sticky Pinned Footer Bar - Permanently Visible on Laptops, Mobile & Desktop Apps */}
             <div className="shrink-0 px-4 sm:px-6 py-3 bg-slate-50/95 border-t border-slate-200 flex items-center justify-between gap-3 safe-area-bottom">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 hidden sm:block">
                 {activeTab !== "backup" && activeTab !== "license" && activeTab !== "updates" ? (
                   <span className="text-[11px] text-slate-500 font-medium truncate block">
                     Changes apply immediately to newly generated invoices &amp; QR codes.

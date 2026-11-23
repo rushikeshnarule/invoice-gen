@@ -131,8 +131,10 @@ export const InvoicesView: React.FC = () => {
     100
   );
 
-  // Compact metrics calculations (Excludes cancelled invoices for strict accounting accuracy)
-  const activeInvoices = invoices.filter((inv) => inv?.status !== 'cancelled');
+  // Compact metrics calculations (Excludes cancelled & consolidated invoices for strict accounting accuracy)
+  const activeInvoices = invoices.filter(
+    (inv) => inv?.status !== 'cancelled' && !inv?.isConsolidated && !inv?.data?.isConsolidated
+  );
   const grossInvoiced = activeInvoices.reduce((s, inv) => s + (inv?.total || 0), 0);
   const totalCollected = activeInvoices.reduce((s, inv) => s + (inv?.status === 'paid' ? (inv?.total || 0) : (inv?.data?.amountPaid || 0)), 0);
   const totalDue = activeInvoices.reduce((s, inv) => s + (inv?.status === 'paid' ? 0 : (inv?.data?.balanceDue || 0)), 0);
@@ -204,7 +206,7 @@ export const InvoicesView: React.FC = () => {
   const handlePrint = (invoiceId: string, themeId: string) => {
     toast.info('Opening print dialog...');
     const printUrl = `/print/${invoiceId}?theme=${themeId}&action=print`;
-    const win = window.open(printUrl, '_blank');
+    const win = window.open(printUrl, '_blank', 'noopener,noreferrer');
     if (!win) {
       window.location.href = printUrl;
     }
@@ -280,7 +282,14 @@ export const InvoicesView: React.FC = () => {
     }
   };
 
-  const renderStatusChip = (status: string) => {
+  const renderStatusChip = (status: string, isConsolidated?: boolean) => {
+    if (isConsolidated) {
+      return (
+        <Chip color="purple" variant="caption" className="inline-flex items-center gap-1 font-medium">
+          Consolidated
+        </Chip>
+      );
+    }
     switch (status) {
       case 'paid':
         return (
@@ -593,7 +602,7 @@ export const InvoicesView: React.FC = () => {
                               <span className="font-bold text-sm text-slate-900 font-mono">
                                 {inv.invoiceNumber}
                               </span>
-                              {renderStatusChip(inv.status)}
+                              {renderStatusChip(inv.status, inv.isConsolidated || inv.data?.isConsolidated)}
                             </div>
                             <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
                               {clientDisplayName}
@@ -696,7 +705,7 @@ export const InvoicesView: React.FC = () => {
                             <span className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors font-mono tracking-tight">
                               {inv.invoiceNumber}
                             </span>
-                            {renderStatusChip(inv.status)}
+                            {renderStatusChip(inv.status, inv.isConsolidated || inv.data?.isConsolidated)}
 
                             {isMonthly ? (
                               <Chip color="blue" variant="caption" className="inline-flex items-center gap-1 font-medium">

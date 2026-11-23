@@ -19,20 +19,13 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
           class="_companyDetails_368423"
         >
           <div>
-            301, Pinnacle Business Park, Andheri East
-            , 
-            Mumbai
+            301, Pinnacle Business Park, Andheri East, Mumbai
           </div>
           <div>
-            Maharashtra
-             - 
-            400069
+            Maharashtra - 400069
           </div>
           <div>
-            Phone: 
-            +91 98765 43210
-             | Email: 
-            billing@techcraft.in
+            Phone: +91 98765 43210 | Email: billing@techcraft.in
           </div>
           <div>
             GSTIN: 
@@ -97,13 +90,8 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       <div
         class="_clientDetails_368423"
       >
-        45, Industrial Area, Phase II
-        , 
-        Pune
-        , 
-        Maharashtra
-         - 
-        411018
+        45, Industrial Area, Phase II, Pune, Maharashtra
+         - 411018
         <span>
            | GSTIN: 
           <strong>
@@ -660,21 +648,13 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
       <div
         class="_companyAddress_f43ed2"
       >
-        301, Pinnacle Business Park, Andheri East
-        , 
-        Mumbai
-        , 
-        Maharashtra
-         - 
-        400069
+        301, Pinnacle Business Park, Andheri East, Mumbai, Maharashtra
+         - 400069
       </div>
       <div
         class="_companyContact_f43ed2"
       >
-        Phone: 
-        +91 98765 43210
-         | Email: 
-        billing@techcraft.in
+        Phone: +91 98765 43210 | Email: billing@techcraft.in
          | Web: www.techcraft.in
       </div>
       <div
@@ -790,13 +770,8 @@ exports[`Invoice Themes Suite > All 8 Themes Base Rendering & Snapshots > render
         <div
           style="font-size: 8.5pt; color: rgb(75, 85, 99); margin-bottom: 2px;"
         >
-          45, Industrial Area, Phase II
-          , 
-          Pune
-          , 
-          Maharashtra
-           - 
-          411018
+          45, Industrial Area, Phase II, Pune, Maharashtra
+           - 411018
         </div>
         <div
           style="font-size: 8.5pt;"

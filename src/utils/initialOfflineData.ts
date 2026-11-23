@@ -13,6 +13,9 @@ export interface InvoiceRecord {
   billingPeriod?: string;
   total: number;
   status: 'paid' | 'sent' | 'draft' | 'overdue' | 'cancelled';
+  isConsolidated?: boolean;
+  sourceInvoiceIds?: string[];
+  consolidatedIntoInvoiceId?: string;
   themeId?: string;
   data: InvoiceRenderData;
   createdAt: string;

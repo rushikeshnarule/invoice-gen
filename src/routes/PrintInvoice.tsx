@@ -44,6 +44,7 @@ export const PrintInvoice: React.FC = () => {
 
   const [data, setData] = useState<RenderDataWithTheme | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isSavingPdf, setIsSavingPdf] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const isMountedRef = useRef(true);
@@ -85,13 +86,21 @@ export const PrintInvoice: React.FC = () => {
 
   useEffect(() => {
     isMountedRef.current = true;
+    setError(null);
 
-    buildRenderData(invoiceId || 'sample', variantParam).then((res) => {
-      if (isMountedRef.current) {
-        setData(res);
-        setLoading(false);
-      }
-    });
+    buildRenderData(invoiceId || 'sample', variantParam)
+      .then((res) => {
+        if (isMountedRef.current) {
+          setData(res);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMountedRef.current) {
+          setError(err instanceof Error ? err.message : 'Failed to prepare invoice document');
+          setLoading(false);
+        }
+      });
 
     return () => {
       isMountedRef.current = false;
@@ -136,7 +145,7 @@ export const PrintInvoice: React.FC = () => {
     window.print();
   };
 
-  const handleSavePdf = async () => {
+  const handleSavePdf = useCallback(async () => {
     if (!data) return;
     const safeTitle = data.invoiceNumber.trim().replace(/[\\/:*?"<>|]/g, '-');
     const defaultFilename = `${safeTitle}.pdf`;
@@ -186,7 +195,7 @@ export const PrintInvoice: React.FC = () => {
       toast.info('Choose "Save as PDF" in the printer destination dropdown.');
       window.print();
     }
-  };
+  }, [data, options.paper]);
 
   const handleExportExcel = async () => {
     if (!data) return;
@@ -215,7 +224,29 @@ export const PrintInvoice: React.FC = () => {
         return () => clearTimeout(timer);
       }
     }
-  }, [loading, data, autoPrint, autoSavePdf]);
+  }, [loading, data, autoPrint, autoSavePdf, handleSavePdf]);
+
+  if (error) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center p-6 bg-slate-50">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-rose-200 p-6 text-center shadow-lg space-y-4">
+          <div className="size-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-xl font-bold">
+            !
+          </div>
+          <h2 className="text-base font-bold text-slate-900">Failed to Load Invoice</h2>
+          <p className="text-xs text-slate-600 font-mono">{error}</p>
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={handleBack}
+            className="w-full justify-center text-xs font-semibold"
+          >
+            Back to Invoices
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !data) {
     return (
@@ -225,10 +256,8 @@ export const PrintInvoice: React.FC = () => {
     );
   }
 
-
-
   return (
-    <div className="print-page-container min-h-dvh bg-slate-100/70" style={{ margin: 0, padding: 0 }}>
+    <div className="print-page-container min-h-dvh overflow-y-auto bg-slate-100/70" style={{ margin: 0, padding: 0 }}>
       {/* Floating no-print desktop control bar */}
       <div className="no-print sticky top-0 z-50 flex flex-wrap sm:flex-nowrap items-center justify-between border-b border-slate-200 bg-white/95 px-3 sm:px-6 pt-[max(0.625rem,env(safe-area-inset-top,0px))] pb-2.5 shadow-xs backdrop-blur-sm select-none gap-2 min-w-0">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">

@@ -19,7 +19,7 @@ export const MinimalTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
   const isUS = isUSInvoice(data);
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
-  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const hasItemDates = (data.items || []).some((i) => Boolean(i.date));
   const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
 
   const invoiceTitle = getInvoiceTitle(data);
@@ -27,7 +27,7 @@ export const MinimalTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
   const taxHeader = getTaxColumnHeader(data);
   const curSymbol = getCurrencySymbol(data, options);
   const numFormat = getNumberFormat(data, options);
-  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || data.items.some((i) => (Number(i.gstRate) || 0) > 0);
+  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || (data.items || []).some((i) => (Number(i.gstRate) || 0) > 0);
 
   return (
     <div
@@ -43,26 +43,26 @@ export const MinimalTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
             <div style={{ marginBottom: 6 }}>
               <img
                 src={data.business?.logoUrl || data.logoUrl}
-                alt={data.business.name}
+                alt={data.business?.name || ''}
                 className={styles.logo}
                 style={{ maxHeight: '48px', maxWidth: '160px', objectFit: 'contain' }}
               />
             </div>
           )}
-          <div className={styles.businessName}>{data.business.name}</div>
+          <div className={styles.businessName}>{data.business?.name || ''}</div>
           <div className={styles.businessMeta}>
-            <div>{data.business.address}, {data.business.city}</div>
-            <div>{data.business.state} - {data.business.pincode}</div>
-            <div>{data.business.email} | {data.business.phone}</div>
+            <div>{data.business?.address}, {data.business?.city}</div>
+            <div>{data.business?.state} - {data.business?.pincode}</div>
+            <div>{data.business?.email} | {data.business?.phone}</div>
             {isUS ? (
               <>
-                {data.business.ein && <div>EIN: <strong>{data.business.ein}</strong></div>}
-                {data.business.stateTaxId && <div>State Tax ID: <strong>{data.business.stateTaxId}</strong></div>}
+                {data.business?.ein && <div>EIN: <strong>{data.business?.ein}</strong></div>}
+                {data.business?.stateTaxId && <div>State Tax ID: <strong>{data.business?.stateTaxId}</strong></div>}
               </>
             ) : (
               <>
-                {data.business.gstin && <div>GSTIN: {data.business.gstin}</div>}
-                {data.business.pan && <div>PAN: {data.business.pan}</div>}
+                {data.business?.gstin && <div>GSTIN: {data.business?.gstin}</div>}
+                {data.business?.pan && <div>PAN: {data.business?.pan}</div>}
               </>
             )}
           </div>

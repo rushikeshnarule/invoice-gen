@@ -1,8 +1,8 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ThemeProvider, useTheme } from '../context/ThemeContext';
-import { InvoiceProvider, useInvoices } from '../context/InvoiceContext';
+import { ThemeProvider } from '../context/ThemeContext';
+import { InvoiceProvider } from '../context/InvoiceContext';
 import { getTheme, getAllThemes } from '../themes';
 import { ColorPickerField } from '../components/ThemeOptions/ColorPickerField';
 import { ThemePreview } from '../components/ThemePreview/ThemePreview';

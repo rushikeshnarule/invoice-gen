@@ -182,6 +182,7 @@ export async function exportAndSaveFile(options: ExportFileOptions): Promise<Exp
       } else if (fileName.endsWith('.pdf') && (window as any).invoiceDesktop.savePdf) {
         const res = await (window as any).invoiceDesktop.savePdf({
           defaultFilename: fileName,
+          base64: base64Data,
         });
         if (res.success && res.filePath) {
           toast.success(`Saved PDF to: ${res.filePath}`);

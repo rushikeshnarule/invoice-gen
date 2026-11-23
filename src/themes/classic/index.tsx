@@ -19,7 +19,7 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
   const isUS = isUSInvoice(data);
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
-  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const hasItemDates = (data.items || []).some((i) => Boolean(i?.date));
   const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
 
   const invoiceTitle = getInvoiceTitle(data);
@@ -27,7 +27,7 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
   const taxHeader = getTaxColumnHeader(data);
   const curSymbol = getCurrencySymbol(data, options);
   const numFormat = getNumberFormat(data, options);
-  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || data.items.some((i) => (Number(i.gstRate) || 0) > 0);
+  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || (data.items || []).some((i) => (Number(i?.gstRate) || 0) > 0);
 
   return (
     <div
@@ -57,31 +57,31 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
           >
             <img
               src={data.business?.logoUrl || data.logoUrl}
-              alt={data.business.name}
+              alt={data.business?.name || ''}
               className={styles.logo}
               style={{ maxHeight: '55px', maxWidth: '180px', objectFit: 'contain' }}
             />
           </div>
         )}
-        <div className={styles.companyName}>{data.business.name}</div>
+        <div className={styles.companyName}>{data.business?.name || ''}</div>
         <div className={styles.companyAddress}>
-          {data.business.address}, {data.business.city}, {data.business.state} - {data.business.pincode}
+          {[data.business?.address, data.business?.city, data.business?.state].filter(Boolean).join(', ')}{data.business?.pincode ? ` - ${data.business.pincode}` : ''}
         </div>
         <div className={styles.companyContact}>
-          Phone: {data.business.phone} | Email: {data.business.email}
-          {data.business.website && ` | Web: ${data.business.website}`}
+          {[data.business?.phone && `Phone: ${data.business.phone}`, data.business?.email && `Email: ${data.business.email}`].filter(Boolean).join(' | ')}
+          {data.business?.website && ` | Web: ${data.business.website}`}
         </div>
 
         {/* Tax Identifiers */}
         <div className={styles.gstBoxes}>
           {isUS ? (
             <>
-              {data.business.ein && (
+              {data.business?.ein && (
                 <div className={styles.gstBox}>
                   EIN: <strong>{data.business.ein}</strong>
                 </div>
               )}
-              {data.business.stateTaxId && (
+              {data.business?.stateTaxId && (
                 <div className={styles.gstBox}>
                   State Tax ID: <strong>{data.business.stateTaxId}</strong>
                 </div>
@@ -89,12 +89,12 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
             </>
           ) : (
             <>
-              {data.business.gstin && (
+              {data.business?.gstin && (
                 <div className={styles.gstBox}>
                   GSTIN: <strong>{data.business.gstin}</strong>
                 </div>
               )}
-              {data.business.pan && (
+              {data.business?.pan && (
                 <div className={styles.gstBox}>
                   PAN: <strong>{data.business.pan}</strong>
                 </div>
@@ -145,28 +145,28 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
         {/* Right Column: Billed To Details */}
         <div className={styles.metaColRight}>
           <div className={styles.sectionHeading}>Billed To (Buyer)</div>
-          <div style={{ fontWeight: 700, marginBottom: 2 }}>{data.client.name}</div>
+          <div style={{ fontWeight: 700, marginBottom: 2 }}>{data.client?.name || ''}</div>
           <div style={{ fontSize: '8.5pt', color: '#4b5563', marginBottom: 2 }}>
-            {data.client.address}, {data.client.city}, {data.client.state} - {data.client.pincode}
+            {[data.client?.address, data.client?.city, data.client?.state].filter(Boolean).join(', ')}{data.client?.pincode ? ` - ${data.client.pincode}` : ''}
           </div>
-          {data.client.phone && (
+          {data.client?.phone && (
             <div style={{ fontSize: '8.5pt' }}>Phone: {data.client.phone}</div>
           )}
           {isUS ? (
             <>
-              {data.client.ein && (
+              {data.client?.ein && (
                 <div style={{ fontSize: '8.5pt', marginTop: 2 }}>
                   EIN / Tax ID: <strong>{data.client.ein}</strong>
                 </div>
               )}
-              {data.client.taxExempt && (
+              {data.client?.taxExempt && (
                 <div style={{ fontSize: '8pt', color: '#059669', fontWeight: 600, marginTop: 2 }}>
                   Tax-Exempt Customer
                 </div>
               )}
             </>
           ) : (
-            data.client.gstin && (
+            data.client?.gstin && (
               <div style={{ fontSize: '8.5pt', marginTop: 2 }}>
                 GSTIN: <strong>{data.client.gstin}</strong>
               </div>
@@ -191,7 +191,7 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
           </tr>
         </thead>
         <tbody>
-          {data.items.map((item, idx) => (
+          {(data.items || []).map((item, idx) => (
             <tr key={item.id || idx}>
               <td className={styles.centerCol}>{item.sno || idx + 1}</td>
               {showDateCol && (
@@ -415,7 +415,7 @@ export const ClassicTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
         {/* Right: Signature & Stamp */}
         <div className={styles.signBlock}>
           <div style={{ fontSize: '8.5pt', fontWeight: 600 }}>
-            For {data.business.name}
+            For {data.business?.name || ''}
           </div>
           <div>
             {((data.stampUrl || data.business?.stampUrl) || (options.showSignature && (data.signatureUrl || data.business?.signatureUrl))) ? (

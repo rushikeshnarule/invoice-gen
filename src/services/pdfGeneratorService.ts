@@ -224,6 +224,12 @@ export function generateInvoicePdf(invoice: InvoiceRenderData): GeneratePdfResul
 
   curY += 4;
 
+  // Check remaining height before drawing summary/totals and bank remittance boxes
+  if (curY + 45 > 250) {
+    doc.addPage();
+    curY = 16;
+  }
+
   // ─── 4. Totals Calculation Block ───────────────────────────────────────────
   const totalsBoxX = pageWidth - marginX - 78;
   const totalsBoxWidth = 78;
@@ -312,6 +318,12 @@ export function generateInvoicePdf(invoice: InvoiceRenderData): GeneratePdfResul
   }
 
   curY += 40;
+
+  // Page break protection if notes or amount in words would collide with signatory line
+  if (curY > 255) {
+    doc.addPage();
+    curY = 16;
+  }
 
   // ─── 6. Amount in Words & Notes ────────────────────────────────────────────
   try {

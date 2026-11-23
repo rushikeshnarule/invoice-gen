@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   RiDownload2Line,
@@ -40,6 +40,15 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({ percent: 0, bytesReceived: 0, totalBytes: 0, speed: 0 });
   const [downloadedFilePath, setDownloadedFilePath] = useState<string>("");
   const [downloadError, setDownloadError] = useState<string>("");
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !release) return null;
 
@@ -109,8 +118,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   const recommendedAsset = release.recommendedAsset;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl max-h-[90vh] flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative w-full max-w-xl max-h-[calc(100vh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
         {/* Header gradient banner */}
         <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white p-6 pb-7">
           <button

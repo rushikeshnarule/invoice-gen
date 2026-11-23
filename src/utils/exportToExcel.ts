@@ -424,7 +424,7 @@ export async function exportInvoiceToExcel(invoice: InvoiceRenderData): Promise<
     3,
     curRow,
     4,
-    invoice.status.toUpperCase(),
+    (invoice.status || 'draft').toUpperCase(),
     invoice.status === 'paid'
       ? {
           font: { name: 'Calibri', bold: true, size: 9, color: { argb: 'FF15803D' } },
@@ -853,17 +853,20 @@ export async function exportInvoicesLedgerToExcel(
   invoices.forEach((inv, idx) => {
     ws.getRow(curRow).height = 22;
     const isMonthly = inv.data?.invoiceType === 'monthly';
+    const isConsolidated = inv.isConsolidated || inv.data?.isConsolidated;
     const taxable = inv.data?.totalTaxableAmount || 0;
     const tax = inv.data?.totalTax || 0;
     const total = inv.total || 0;
     const paid = inv.data?.amountPaid || 0;
     const due = inv.data?.balanceDue || 0;
 
-    sumTaxable += taxable;
-    sumTax += tax;
-    sumGrand += total;
-    sumPaid += paid;
-    sumDue += due;
+    if (!isConsolidated) {
+      sumTaxable += taxable;
+      sumTax += tax;
+      sumGrand += total;
+      sumPaid += paid;
+      sumDue += due;
+    }
 
     const rowBg = idx % 2 === 1
       ? {
@@ -887,7 +890,7 @@ export async function exportInvoicesLedgerToExcel(
       ws,
       curRow,
       7,
-      inv.status.toUpperCase(),
+      isConsolidated ? 'CONSOLIDATED' : (inv.status || 'draft').toUpperCase(),
       inv.status === 'paid'
         ? {
             font: { name: 'Calibri', bold: true, size: 9, color: { argb: 'FF15803D' } },

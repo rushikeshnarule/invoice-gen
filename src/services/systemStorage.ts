@@ -116,7 +116,7 @@ export async function getSystemMemoryInfo(): Promise<SystemMemoryInfo> {
           exists: true,
           businessName: bizName,
           invoiceCount: parsedInvoices.length,
-          hasCompletedSetup: Boolean(hasSetup),
+          hasCompletedSetup: hasSetup === 'true',
           path: 'Local Storage / PC Memory',
         };
       }
@@ -162,7 +162,7 @@ export async function loadSystemMemory(): Promise<SystemStorageDatabase | null> 
         invoices: rawInvoices ? JSON.parse(rawInvoices) : [],
         businessProfile: rawBusiness ? JSON.parse(rawBusiness) : null,
         clients: rawClients ? JSON.parse(rawClients) : [],
-        hasCompletedSetup: Boolean(rawSetup),
+        hasCompletedSetup: rawSetup === 'true',
         updatedAt: new Date().toISOString(),
         version: 2,
       };

@@ -42,17 +42,32 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const handle = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(handle);
   }, []);
 
   useEffect(() => {
+    let handle: number;
     if (isOpen) {
-      requestAnimationFrame(() => setVisible(true));
+      handle = requestAnimationFrame(() => setVisible(true));
       checkServerConnection();
     } else {
-      setVisible(false);
+      handle = requestAnimationFrame(() => setVisible(false));
     }
+    return () => {
+      if (handle) cancelAnimationFrame(handle);
+    };
   }, [isOpen, checkServerConnection]);
+
+  // Keyboard Escape listener
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!mounted || !isOpen) return null;
 
@@ -127,7 +142,7 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
       <div
         className={cx(
           "w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800",
-          "flex flex-col max-h-[92vh] overflow-hidden transition-all duration-200",
+          "flex flex-col max-h-[calc(100vh-4rem)] max-h-[calc(100dvh-4rem)] overflow-hidden transition-all duration-200",
           visible ? "scale-100 opacity-100" : "scale-95 opacity-0"
         )}
       >

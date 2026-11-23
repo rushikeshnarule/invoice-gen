@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { InvoiceProvider, useInvoices } from '../context/InvoiceContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ConsolidatedMonthlyModal } from '../components/ConsolidatedMonthlyModal/ConsolidatedMonthlyModal';
@@ -124,15 +124,21 @@ describe('Consolidated Monthly Invoice & Excel Export Suite', () => {
     expect(capturedFilename).toBe('INV-2026-M01.xlsx');
     expect(capturedBase64.length).toBeGreaterThan(0);
 
-    // Parse the generated base64 back into an XLSX workbook
-    const wb = XLSX.read(capturedBase64, { type: 'base64' });
-    expect(wb.SheetNames).toContain('Monthly Statement');
+    // Parse the generated base64 back into an ExcelJS workbook
+    const workbook = new ExcelJS.Workbook();
+    const buffer = Uint8Array.from(atob(capturedBase64), (c) => c.charCodeAt(0));
+    await workbook.xlsx.load(buffer);
+    const sheet = workbook.getWorksheet('Monthly Statement');
+    expect(sheet).toBeDefined();
 
-    const sheet = wb.Sheets['Monthly Statement'];
-    const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+    let allText = '';
+    sheet?.eachRow((row) => {
+      row.eachCell((cell) => {
+        allText += ' ' + String(cell.value ?? '');
+      });
+    });
 
     // Verify company name & title
-    const allText = sheetData.flat().join(' ');
     expect(allText).toContain('CONSOLIDATED MONTHLY TAX INVOICE');
     expect(allText).toContain('Apex Infotech Solutions');
     expect(allText).toContain('Larsen & Toubro Ltd');
@@ -179,12 +185,18 @@ describe('Consolidated Monthly Invoice & Excel Export Suite', () => {
     await exportInvoicesLedgerToExcel(mockRecords, 'April 2026 Billing Ledger');
 
     expect(capturedFilename).toMatch(/^invoices-ledger-/);
-    const wb = XLSX.read(capturedBase64, { type: 'base64' });
-    expect(wb.SheetNames).toContain('Ledger');
+    const workbook = new ExcelJS.Workbook();
+    const buffer = Uint8Array.from(atob(capturedBase64), (c) => c.charCodeAt(0));
+    await workbook.xlsx.load(buffer);
+    const sheet = workbook.getWorksheet('Ledger');
+    expect(sheet).toBeDefined();
 
-    const sheet = wb.Sheets['Ledger'];
-    const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
-    const ledgerText = sheetData.flat().join(' ');
+    let ledgerText = '';
+    sheet?.eachRow((row) => {
+      row.eachCell((cell) => {
+        ledgerText += ' ' + String(cell.value ?? '');
+      });
+    });
     expect(ledgerText).toContain('April 2026 Billing Ledger');
     expect(ledgerText).toContain('INV-2026-001');
     expect(ledgerText).toContain('Larsen & Toubro Ltd');

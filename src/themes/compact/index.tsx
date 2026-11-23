@@ -19,7 +19,7 @@ export const CompactTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
   const isUS = isUSInvoice(data);
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
-  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const hasItemDates = (data.items || []).some((i) => Boolean(i.date));
   const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
 
   const invoiceTitle = getInvoiceTitle(data);
@@ -27,7 +27,7 @@ export const CompactTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
   const taxHeader = getTaxColumnHeader(data);
   const curSymbol = getCurrencySymbol(data, options);
   const numFormat = getNumberFormat(data, options);
-  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || data.items.some((i) => (Number(i.gstRate) || 0) > 0);
+  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || (data.items || []).some((i) => (Number(i.gstRate) || 0) > 0);
 
   return (
     <div
@@ -42,22 +42,22 @@ export const CompactTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
           {options.showLogo && (data.business?.logoUrl || data.logoUrl) && (
             <img
               src={data.business?.logoUrl || data.logoUrl}
-              alt={data.business.name}
+              alt={data.business?.name || ''}
               className={styles.logo}
               style={{ maxHeight: '32px', maxWidth: '100px', objectFit: 'contain' }}
             />
           )}
           <div>
-            <div className={styles.companyTitle}>{data.business.name}</div>
+            <div className={styles.companyTitle}>{data.business?.name || ''}</div>
             <div className={styles.companySub}>
-              {data.business.address}, {data.business.city} - {data.business.pincode} | Tel: {data.business.phone}
+              {data.business?.address}, {data.business?.city} - {data.business?.pincode} | Tel: {data.business?.phone}
               {isUS ? (
                 <>
-                  {data.business.ein && ` | EIN: ${data.business.ein}`}
-                  {data.business.stateTaxId && ` | State Tax ID: ${data.business.stateTaxId}`}
+                  {data.business?.ein && ` | EIN: ${data.business.ein}`}
+                  {data.business?.stateTaxId && ` | State Tax ID: ${data.business.stateTaxId}`}
                 </>
               ) : (
-                data.business.gstin && ` | GSTIN: ${data.business.gstin}`
+                data.business?.gstin && ` | GSTIN: ${data.business.gstin}`
               )}
             </div>
           </div>
@@ -104,17 +104,17 @@ export const CompactTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
 
         <div className={styles.metaColRight}>
           <div style={{ fontWeight: 700, color: '#111827' }}>
-            Bill To: {data.client.name}
+            Bill To: {data.client?.name || ''}
           </div>
           <div style={{ fontSize: '7.5pt', color: '#4b5563' }}>
-            {data.client.address}, {data.client.city} - {data.client.pincode}
+            {data.client?.address}, {data.client?.city} - {data.client?.pincode}
             {isUS ? (
               <>
-                {data.client.ein && ` | EIN: ${data.client.ein}`}
-                {data.client.taxExempt && ' | Tax-Exempt Entity'}
+                {data.client?.ein && ` | EIN: ${data.client.ein}`}
+                {data.client?.taxExempt && ' | Tax-Exempt Entity'}
               </>
             ) : (
-              data.client.gstin && ` | GSTIN: ${data.client.gstin}`
+              data.client?.gstin && ` | GSTIN: ${data.client.gstin}`
             )}
           </div>
         </div>
@@ -136,7 +136,7 @@ export const CompactTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
           </tr>
         </thead>
         <tbody>
-          {data.items.map((item, idx) => (
+          {(data.items || []).map((item, idx) => (
             <tr key={item.id || idx}>
               <td className={styles.centerCol}>{item.sno || idx + 1}</td>
               {showDateCol && (

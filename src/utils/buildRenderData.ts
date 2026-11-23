@@ -11,7 +11,7 @@ import {
   createSampleDataUS,
 } from './sampleData';
 import { amountInWords } from './amountInWords';
-import { buildTaxSummary, determineGSTType, roundTotal } from './gst';
+import { buildTaxSummary, determineGSTType, roundTotal, round2 } from './gst';
 
 export type RenderDataWithTheme = InvoiceRenderData & {
   _themeId?: string;
@@ -88,7 +88,6 @@ export async function buildRenderData(
 export function recalculate(
   data: InvoiceRenderData
 ): InvoiceRenderData {
-  const round2 = (val: number) => Math.round((val + Number.EPSILON) * 100) / 100;
 
   const isUS =
     data.region === 'US'

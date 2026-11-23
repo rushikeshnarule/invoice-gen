@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   computeOfflineChecksum,
   validateLicenseOffline,
-  SAMPLE_LICENSES,
 } from '../context/LicenseContext';
 import cloudLicenseHandler from '../../netlify/functions/license-check.mts';
 

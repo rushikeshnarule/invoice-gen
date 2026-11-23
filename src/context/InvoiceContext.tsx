@@ -18,7 +18,67 @@ import {
 } from '../utils/initialOfflineData';
 import { recalculate } from '../utils/buildRenderData';
 import { getUSStateTaxRate } from '../utils/usTax';
+import { extractStateCode } from '../utils/gst';
 import { loadSystemMemory, saveSystemMemory } from '../services/systemStorage';
+
+const STORAGE_SEQUENCE_COUNTERS_KEY = 'invoice-sequence-counters';
+
+export function getTodayLocalDateString(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getStoredSequenceCounters(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(STORAGE_SEQUENCE_COUNTERS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistSequenceCounter(prefix: string, counter: number): void {
+  try {
+    const counters = getStoredSequenceCounters();
+    counters[prefix] = Math.max(counters[prefix] || 0, counter);
+    localStorage.setItem(STORAGE_SEQUENCE_COUNTERS_KEY, JSON.stringify(counters));
+  } catch {}
+}
+
+function generateMonotonicInvoiceNumber(prefix: string, invoicesList: InvoiceRecord[]): string {
+  const counters = getStoredSequenceCounters();
+  let maxNum = counters[prefix] || 0;
+  const escaped = escapeRegex(prefix);
+  const regex = new RegExp(`^${escaped}(\\d+)$`);
+
+  for (const inv of invoicesList) {
+    const numStr = inv.invoiceNumber || inv.data?.invoiceNumber || '';
+    const match = numStr.match(regex);
+    if (match) {
+      const parsed = parseInt(match[1], 10);
+      if (!isNaN(parsed) && parsed > maxNum) {
+        maxNum = parsed;
+      }
+    }
+  }
+
+  let nextCounter = maxNum + 1;
+  let candidate = `${prefix}${String(nextCounter).padStart(3, '0')}`;
+  while (invoicesList.some((inv) => inv.invoiceNumber === candidate || inv.data?.invoiceNumber === candidate)) {
+    nextCounter++;
+    candidate = `${prefix}${String(nextCounter).padStart(3, '0')}`;
+  }
+
+  persistSequenceCounter(prefix, nextCounter);
+  return candidate;
+}
 
 export interface CreateInvoiceOptions {
   type?: 'services' | 'goods' | 'retail';
@@ -206,9 +266,9 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    let cancelled = false;
+    const cancelledRef = { current: false };
     loadSystemMemory().then((sysDb) => {
-      if (cancelled || !sysDb) return;
+      if (cancelledRef.current || !sysDb) return;
       if (sysDb.businessProfile && sysDb.businessProfile.name && sysDb.businessProfile.name.trim().length > 0) {
         if (!sysDb.businessProfile.name.includes('Apex Infotech')) {
           setBusinessProfile((prev) => ({
@@ -241,7 +301,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
   }, [hasCompletedSetup]);
 
@@ -323,7 +383,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const timestamp = Date.now();
       const prefix = type === 'retail' ? 'POS-' : 'INV-';
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocalDateString();
 
       const isUS =
         businessProfile.region === 'US'
@@ -388,24 +448,9 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             },
           ];
 
-      let maxNum = 0;
-      for (const inv of invoices) {
-        const numStr = inv.invoiceNumber || inv.data?.invoiceNumber || '';
-        const match = numStr.match(new RegExp(`^${prefix}(\\d+)$`));
-        if (match) {
-          const parsed = parseInt(match[1], 10);
-          if (!isNaN(parsed) && parsed > maxNum) {
-            maxNum = parsed;
-          }
-        }
-      }
-      let counter = Math.max(1, maxNum + 1);
-      let invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
-      while (invoices.some((inv) => inv.invoiceNumber === invoiceNumber || inv.data?.invoiceNumber === invoiceNumber)) {
-        counter++;
-        invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
-      }
+      const invoiceNumber = generateMonotonicInvoiceNumber(prefix, invoices);
 
+      const clientStateCode = extractStateCode(initialClient.state, initialClient.gstin) || (initialClient.gstin ? initialClient.gstin.slice(0, 2) : '27');
       const rawInvoice: InvoiceRenderData = {
         region: isUS ? 'US' : 'IN',
         taxType: isUS ? 'sales_tax' : 'gst',
@@ -415,7 +460,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         invoiceNumber,
         invoiceDate: today,
         dueDate: today,
-        placeOfSupply: isUS ? (initialClient.state || 'California (CA)') : `${initialClient.state} (${initialClient.gstin ? initialClient.gstin.slice(0, 2) : '27'})`,
+        placeOfSupply: isUS ? (initialClient.state || 'California (CA)') : `${initialClient.state} (${clientStateCode})`,
         status: 'draft',
         business: { ...businessProfile, region: isUS ? 'US' : 'IN' },
         client: { ...initialClient },
@@ -493,7 +538,9 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const getClientMetrics = useCallback(
     (clientName: string): ClientMetrics => {
       const clientInvoices = getClientInvoices(clientName);
-      const activeClientInvoices = clientInvoices.filter((inv) => inv?.status !== 'cancelled');
+      const activeClientInvoices = clientInvoices.filter(
+        (inv) => inv?.status !== 'cancelled' && !inv?.isConsolidated && !inv?.data?.isConsolidated
+      );
       const invoiceCount = activeClientInvoices.length;
       const totalBilled = activeClientInvoices.reduce((s, inv) => s + (inv?.total || 0), 0);
       const amountPaid = activeClientInvoices.reduce(
@@ -568,6 +615,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
+      let resolvedSourceIds: string[] = sourceInvoiceIds ? [...sourceInvoiceIds] : [];
       let lineItems = items;
       if (!lineItems || lineItems.length === 0) {
         // Collect daily deliveries made to this client matching the criteria
@@ -576,6 +624,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           if (sourceInvoiceIds !== undefined) {
             return sourceInvoiceIds.includes(inv.id);
           }
+          if (inv.isConsolidated || inv.data?.isConsolidated) return false;
           const invDate = (inv?.date || inv?.data?.invoiceDate || '').slice(0, 10);
           if (startDate && endDate) {
             return invDate >= startDate.slice(0, 10) && invDate <= endDate.slice(0, 10) && inv?.data?.invoiceType !== 'monthly';
@@ -587,10 +636,13 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
 
         if (candidateInvoices.length > 0) {
+          if (resolvedSourceIds.length === 0) {
+            resolvedSourceIds = candidateInvoices.map((i) => i.id);
+          }
           const extracted: LineItem[] = [];
           let sno = 1;
           for (const dInv of candidateInvoices) {
-            for (const it of dInv.data.items) {
+            for (const it of (dInv?.data?.items || [])) {
               extracted.push({
                 ...it,
                 id: `item-${Date.now()}-${sno}`,
@@ -612,7 +664,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             ? false
             : (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_REGION === 'US');
         const defaultTaxRate = isUS ? (getUSStateTaxRate(businessProfile.state) || 0) : 18;
-        const defaultItemDate = startDate || (billingMonth ? `${billingMonth}-01` : new Date().toISOString().split('T')[0]);
+        const defaultItemDate = startDate || (billingMonth ? `${billingMonth}-01` : getTodayLocalDateString());
         lineItems = [
           {
             id: `item-${Date.now()}-1`,
@@ -635,7 +687,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ];
       }
 
-      return createInvoice({
+      const createdRecord = createInvoice({
         type: 'goods',
         invoiceType: 'monthly',
         billingMonth,
@@ -644,13 +696,64 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         initialItems: lineItems,
         themeId: themeId || 'contractor',
       });
+
+      if (resolvedSourceIds.length > 0) {
+        setInvoices((prev) => {
+          const next = prev.map((inv) => {
+            if (inv.id === createdRecord.id) {
+              return {
+                ...inv,
+                sourceInvoiceIds: resolvedSourceIds,
+                data: {
+                  ...inv.data,
+                  sourceInvoiceIds: resolvedSourceIds,
+                },
+              };
+            }
+            if (resolvedSourceIds.includes(inv.id)) {
+              return {
+                ...inv,
+                isConsolidated: true,
+                consolidatedIntoInvoiceId: createdRecord.id,
+                data: {
+                  ...inv.data,
+                  isConsolidated: true,
+                  consolidatedIntoInvoiceId: createdRecord.id,
+                },
+              };
+            }
+            return inv;
+          });
+          saveToStorage(STORAGE_INVOICES_KEY, next);
+          return next;
+        });
+      }
+
+      return createdRecord;
     },
-    [getClientInvoices, createInvoice]
+    [getClientInvoices, createInvoice, businessProfile.region, businessProfile.state]
   );
 
   const deleteInvoice = useCallback((id: string) => {
     setInvoices((prev) => {
-      const next = prev.filter((inv) => inv.id !== id);
+      const target = prev.find((inv) => inv.id === id);
+      const freedSourceIds = target?.sourceInvoiceIds || target?.data?.sourceInvoiceIds || [];
+      const next = prev
+        .filter((inv) => inv.id !== id)
+        .map((inv) => {
+          if (freedSourceIds.includes(inv.id) || inv.consolidatedIntoInvoiceId === id) {
+            const nextData = { ...inv.data };
+            delete nextData.isConsolidated;
+            delete nextData.consolidatedIntoInvoiceId;
+            return {
+              ...inv,
+              isConsolidated: false,
+              consolidatedIntoInvoiceId: undefined,
+              data: nextData,
+            };
+          }
+          return inv;
+        });
       saveToStorage(STORAGE_INVOICES_KEY, next);
       return next;
     });
@@ -665,25 +768,8 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const timestamp = Date.now();
       const isRetail = source.data.invoiceNumber.startsWith('POS');
       const prefix = isRetail ? 'POS-' : 'INV-';
-      const today = new Date().toISOString().split('T')[0];
-
-      let maxNum = 0;
-      for (const inv of invoices) {
-        const numStr = inv.invoiceNumber || inv.data?.invoiceNumber || '';
-        const match = numStr.match(new RegExp(`^${prefix}(\\d+)$`));
-        if (match) {
-          const parsed = parseInt(match[1], 10);
-          if (!isNaN(parsed) && parsed > maxNum) {
-            maxNum = parsed;
-          }
-        }
-      }
-      let counter = Math.max(1, maxNum + 1);
-      let invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
-      while (invoices.some((inv) => inv.invoiceNumber === invoiceNumber || inv.data?.invoiceNumber === invoiceNumber)) {
-        counter++;
-        invoiceNumber = `${prefix}${String(counter).padStart(3, '0')}`;
-      }
+      const today = getTodayLocalDateString();
+      const invoiceNumber = generateMonotonicInvoiceNumber(prefix, invoices);
 
       const clonedItems = (source.data.items || []).map((it, idx) => ({
         ...it,
@@ -763,8 +849,12 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const updateClient = useCallback((originalName: string, updated: ClientInfo) => {
+    const oldNorm = originalName.trim().toLowerCase();
+    const oldId = getClientId(originalName);
+    const newId = getClientId(updated.name);
+
     setClients((prev) => {
-      const idx = prev.findIndex((c) => c.name.toLowerCase() === originalName.toLowerCase());
+      const idx = prev.findIndex((c) => c.name.toLowerCase() === oldNorm);
       let next: ClientInfo[];
       if (idx >= 0) {
         next = [...prev];
@@ -773,6 +863,46 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         next = [updated, ...prev];
       }
       saveToStorage(STORAGE_CLIENTS_KEY, next);
+      return next;
+    });
+
+    setInvoices((prev) => {
+      const anyMatch = prev.some((inv) => {
+        const matchesName = inv.clientName && inv.clientName.trim().toLowerCase() === oldNorm;
+        const matchesId = inv.clientId === oldId;
+        const matchesDataName = inv.data?.client?.name && inv.data.client.name.trim().toLowerCase() === oldNorm;
+        return matchesName || matchesId || matchesDataName;
+      });
+
+      if (!anyMatch) return prev;
+
+      const next = prev.map((inv) => {
+        const matchesName = inv.clientName && inv.clientName.trim().toLowerCase() === oldNorm;
+        const matchesId = inv.clientId === oldId;
+        const matchesDataName = inv.data?.client?.name && inv.data.client.name.trim().toLowerCase() === oldNorm;
+
+        if (matchesName || matchesId || matchesDataName) {
+          const updatedClientData: ClientInfo = {
+            ...(inv.data?.client || {}),
+            ...updated,
+            name: updated.name,
+          };
+          const updatedData = recalculate({
+            ...inv.data,
+            client: updatedClientData,
+          });
+          return {
+            ...inv,
+            clientName: updated.name,
+            clientId: newId,
+            data: updatedData,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return inv;
+      });
+
+      saveToStorage(STORAGE_INVOICES_KEY, next);
       return next;
     });
   }, []);
@@ -810,7 +940,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           invoiceNumber: cleanData.invoiceNumber || String(inv.invoiceNumber || 'INV-UNKNOWN'),
           clientName: cleanData.client?.name || String(inv.clientName || 'Unknown Client'),
           clientId: inv.clientId || getClientId(cleanData.client?.name || ''),
-          date: cleanData.invoiceDate || String(inv.date || new Date().toISOString().split('T')[0]),
+          date: cleanData.invoiceDate || String(inv.date || getTodayLocalDateString()),
           total: cleanData.grandTotalRounded,
           status: cleanData.status || inv.status || 'draft',
           themeId: inv.themeId || 'classic',

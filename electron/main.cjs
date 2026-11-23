@@ -27,6 +27,48 @@ const isMac = process.platform === 'darwin';
 const sessionAuthToken = crypto.randomBytes(32).toString('hex');
 process.env.INVOICE_SESSION_TOKEN = sessionAuthToken;
 
+// In-memory set of legitimate updates downloaded and validated by our updater
+const validDownloadedUpdates = new Set();
+
+/**
+ * Safe JSON parser with prototype pollution protection (CWE-1321)
+ */
+function safeJsonParse(jsonString, fallback = null) {
+  try {
+    return JSON.parse(jsonString, (key, value) => {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        return undefined;
+      }
+      return value;
+    });
+  } catch (err) {
+    if (fallback !== null) return fallback;
+    throw err;
+  }
+}
+
+/**
+ * Validate that a download URL points to an authorized release distribution host (SSRF / CWE-918 prevention)
+ */
+function isTrustedDownloadUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'https:') return false;
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host === 'github.com' ||
+      host === 'api.github.com' ||
+      host.endsWith('.github.com') ||
+      host === 'githubusercontent.com' ||
+      host.endsWith('.githubusercontent.com') ||
+      host.endsWith('.amazonaws.com')
+    );
+  } catch {
+    return false;
+  }
+}
+
 let pendingOpenedFile = null;
 
 function detectOpenedFileFromArgv(argv) {
@@ -189,7 +231,7 @@ async function startLocalServer(distPath) {
             try {
               const content = fs.readFileSync(dbFile, 'utf8');
               const stats = fs.statSync(dbFile);
-              const parsed = JSON.parse(content);
+              const parsed = safeJsonParse(content, {});
               const DEMO_IDS = new Set(['inv-089', 'inv-090', 'inv-091', 'inv-092', 'inv-093']);
               const realInvoices = Array.isArray(parsed.invoices)
                 ? parsed.invoices.filter((inv) => !DEMO_IDS.has(inv?.id) && !/^inv-0(89|90|91|92|93)$/i.test(inv?.id || ''))
@@ -235,7 +277,7 @@ async function startLocalServer(distPath) {
             try {
               const content = fs.readFileSync(dbFile, 'utf8');
               const stats = fs.statSync(dbFile);
-              const parsed = JSON.parse(content);
+              const parsed = safeJsonParse(content, {});
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(
                 JSON.stringify({
@@ -277,9 +319,23 @@ async function startLocalServer(distPath) {
               fs.mkdirSync(dataDir, { recursive: true });
               fs.mkdirSync(backupsDir, { recursive: true });
 
-              const parsed = JSON.parse(body);
+              let existing = {};
+              if (fs.existsSync(dbFile)) {
+                try {
+                  existing = safeJsonParse(fs.readFileSync(dbFile, 'utf8'), {}) || {};
+                } catch {
+                  existing = {};
+                }
+              }
+
+              const parsed = safeJsonParse(body, {});
+              const merged = { ...existing, ...parsed };
+              if (existing.licenseData && !parsed.licenseData) {
+                merged.licenseData = existing.licenseData;
+              }
+
               tmpFile = path.join(dataDir, `database.tmp.${Date.now()}.json`);
-              fs.writeFileSync(tmpFile, JSON.stringify(parsed, null, 2), 'utf8');
+              fs.writeFileSync(tmpFile, JSON.stringify(merged, null, 2), 'utf8');
               fs.renameSync(tmpFile, dbFile);
               tmpFile = null;
 
@@ -338,7 +394,7 @@ async function startLocalServer(distPath) {
           if (fs.existsSync(dbFile)) {
             try {
               const content = fs.readFileSync(dbFile, 'utf8');
-              const parsed = JSON.parse(content);
+              const parsed = safeJsonParse(content, null);
               if (parsed && parsed.licenseData) {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ exists: true, licenseData: parsed.licenseData }));
@@ -376,13 +432,13 @@ async function startLocalServer(distPath) {
               let existing = {};
               if (fs.existsSync(dbFile)) {
                 try {
-                  existing = JSON.parse(fs.readFileSync(dbFile, 'utf8')) || {};
+                  existing = safeJsonParse(fs.readFileSync(dbFile, 'utf8'), {}) || {};
                 } catch {
                   existing = {};
                 }
               }
 
-              const licensePayload = JSON.parse(body);
+              const licensePayload = safeJsonParse(body, {});
               existing.licenseData = licensePayload;
               existing.updatedAt = new Date().toISOString();
 
@@ -713,6 +769,12 @@ ipcMain.handle('desktop:save-pdf', async (event, args) => {
   }
 
   try {
+    if (args && args.base64) {
+      const cleanBase64 = String(args.base64).replace(/^data:application\/pdf;base64,/, '');
+      const buffer = Buffer.from(cleanBase64, 'base64');
+      fs.writeFileSync(filePath, buffer);
+      return { success: true, filePath };
+    }
     const pdfBuffer = await event.sender.printToPDF({
       printBackground: true,
       pageSize: args?.paper === 'A5' ? 'A5' : 'A4',
@@ -775,13 +837,13 @@ ipcMain.handle('desktop:get-machine-info', async () => {
 
   if (process.platform === 'win32') {
     try {
-      const reg = execSync('reg query HKLM\\SOFTWARE\\Microsoft\\Cryptography /v MachineGuid', { encoding: 'utf8', timeout: 2000 });
-      const m = reg.match(/MachineGuid\s+REG_SZ\s+([A-Fa-f0-9\-]+)/i);
+      const reg = execSync('reg query HKLM\\SOFTWARE\\Microsoft\\Cryptography /v MachineGuid', { encoding: 'utf8', timeout: 2000, windowsHide: true });
+      const m = reg.match(/MachineGuid\s+REG_SZ\s+([A-Fa-f0-9-]+)/i);
       if (m) machineId = m[1].trim();
     } catch {}
 
     try {
-      const ver = execSync('powershell -NoProfile -Command "(Get-CimInstance Win32_OperatingSystem).Caption"', { encoding: 'utf8', timeout: 2000 });
+      const ver = execSync('powershell -NoProfile -Command "(Get-CimInstance Win32_OperatingSystem).Caption"', { encoding: 'utf8', timeout: 2000, windowsHide: true });
       if (ver.trim()) osName = ver.trim();
     } catch {
       osName = `Windows ${os.release()}`;
@@ -876,12 +938,12 @@ function fetchGitHubRelease() {
         res.on('end', () => {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             try {
-              const parsedData = JSON.parse(body);
+              const parsedData = safeJsonParse(body);
               if (Array.isArray(parsedData)) {
                 return resolve(parsedData[0] || null);
               }
               return resolve(parsedData);
-            } catch (e) {
+            } catch {
               return reject(new Error('Failed to parse release JSON'));
             }
           }
@@ -915,6 +977,7 @@ ipcMain.handle('desktop:check-updates', async () => {
 function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects = 10) {
   return new Promise((resolve, reject) => {
     if (maxRedirects <= 0) return reject(new Error('Too many redirects while downloading update'));
+    if (!isTrustedDownloadUrl(fileUrl)) return reject(new Error('Untrusted download URL origin: only HTTPS releases from verified hosts are allowed'));
 
     const isHttps = fileUrl.startsWith('https');
     const client = isHttps ? https : http;
@@ -931,6 +994,10 @@ function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects =
         if (!redirectUrl.startsWith('http')) {
           const parsed = new URL(fileUrl);
           redirectUrl = `${parsed.protocol}//${parsed.host}${redirectUrl}`;
+        }
+        if (!isTrustedDownloadUrl(redirectUrl)) {
+          res.resume();
+          return reject(new Error('Blocked redirect to untrusted host'));
         }
         res.resume();
         return resolve(downloadFileWithRedirects(redirectUrl, destPath, onProgress, maxRedirects - 1));
@@ -987,11 +1054,22 @@ function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects =
 
 ipcMain.handle('desktop:download-update', async (_event, { downloadUrl, fileName }) => {
   if (!downloadUrl) return { success: false, error: 'No download URL specified' };
+  if (!isTrustedDownloadUrl(downloadUrl)) {
+    return { success: false, error: 'Untrusted download URL origin: only HTTPS releases from verified hosts are allowed' };
+  }
 
   try {
-    const tempDir = app.getPath('temp');
+    const tempDir = path.resolve(app.getPath('temp'));
     const safeName = (fileName || 'Invoice-Gen-Update.exe').replace(/[^a-zA-Z0-9.-]/g, '_');
-    const destPath = path.join(tempDir, safeName);
+    const ext = path.extname(safeName).toLowerCase();
+    if (!['.asar', '.exe', '.pkg', '.dmg'].includes(ext)) {
+      return { success: false, error: 'Disallowed file extension for update package' };
+    }
+
+    const destPath = path.resolve(tempDir, safeName);
+    if (!destPath.startsWith(tempDir)) {
+      return { success: false, error: 'Invalid destination path traversal' };
+    }
 
     if (fs.existsSync(destPath)) {
       try { fs.unlinkSync(destPath); } catch {}
@@ -1003,6 +1081,7 @@ ipcMain.handle('desktop:download-update', async (_event, { downloadUrl, fileName
       }
     });
 
+    validDownloadedUpdates.add(destPath);
     return { success: true, filePath: destPath };
   } catch (err) {
     return { success: false, error: err.message };
@@ -1010,14 +1089,32 @@ ipcMain.handle('desktop:download-update', async (_event, { downloadUrl, fileName
 });
 
 ipcMain.handle('desktop:install-update', async (_event, { filePath }) => {
-  if (!filePath || !fs.existsSync(filePath)) {
+  if (!filePath) {
+    return { success: false, error: 'Update package file not specified' };
+  }
+
+  const resolvedPath = path.resolve(filePath);
+  const tempDir = path.resolve(app.getPath('temp'));
+
+  // Path containment & verification check (CWE-78 / CWE-426 protection)
+  if (!resolvedPath.startsWith(tempDir)) {
+    return { success: false, error: 'Access denied: Update file must originate from temporary download directory' };
+  }
+  if (!validDownloadedUpdates.has(resolvedPath)) {
+    return { success: false, error: 'Unauthorized update execution: file was not validated by the updater service' };
+  }
+  if (!fs.existsSync(resolvedPath)) {
     return { success: false, error: 'Update package file not found on disk' };
+  }
+
+  const ext = path.extname(resolvedPath).toLowerCase();
+  if (!['.asar', '.exe', '.pkg', '.dmg'].includes(ext)) {
+    return { success: false, error: 'Unsupported file extension for update package' };
   }
 
   try {
     const isWin = process.platform === 'win32';
     const isDarwin = process.platform === 'darwin';
-    const ext = path.extname(filePath).toLowerCase();
 
     // ─── Format 1: Direct In-App .asar Hot-Update (Zero Setup Wizard) ───
     if (ext === '.asar') {

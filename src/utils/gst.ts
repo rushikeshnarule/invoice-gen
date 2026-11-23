@@ -142,8 +142,16 @@ export function determineGSTType(
 }
 
 /**
+ * High-precision 2-decimal exponential rounding to eliminate IEEE-754 floating-point drift.
+ */
+export const round2 = (val: number): number => {
+  if (isNaN(val)) return 0;
+  return Number(Math.round(Number(val + 'e2')) + 'e-2');
+};
+
+/**
  * Build tax summary rows grouped by GST rate.
- * Ensures half-paise rounding splits CGST/SGST cleanly without cumulative drift.
+ * Enforces equal statutory split between CGST and SGST on odd-paise taxes per Section 9 of CGST Act.
  */
 export function buildTaxSummary(items: LineItem[], gstType: GSTType): TaxSummaryRow[] {
   if (gstType === 'none') return [];
@@ -160,12 +168,13 @@ export function buildTaxSummary(items: LineItem[], gstType: GSTType): TaxSummary
 
   const rows: TaxSummaryRow[] = [];
 
-  for (const [rate, { taxable, tax }] of grouped) {
-    const taxableRounded = Math.round((taxable + Number.EPSILON) * 100) / 100;
-    const taxRounded = Math.round((tax + Number.EPSILON) * 100) / 100;
-    const cgst = gstType === 'cgst_sgst' ? Math.round((taxRounded / 2 + Number.EPSILON) * 100) / 100 : 0;
-    const sgst = gstType === 'cgst_sgst' ? Math.round((taxRounded - cgst + Number.EPSILON) * 100) / 100 : 0;
-    const igst = gstType === 'igst' ? taxRounded : 0;
+  for (const [rate, { taxable }] of grouped) {
+    const taxableRounded = round2(taxable);
+    const halfTax = round2((taxableRounded * (rate / 2)) / 100);
+    const cgst = gstType === 'cgst_sgst' ? halfTax : 0;
+    const sgst = gstType === 'cgst_sgst' ? halfTax : 0;
+    const igst = gstType === 'igst' ? round2((taxableRounded * rate) / 100) : 0;
+    const totalTax = gstType === 'cgst_sgst' ? round2(cgst + sgst) : igst;
 
     rows.push({
       gstRate: rate,
@@ -173,7 +182,7 @@ export function buildTaxSummary(items: LineItem[], gstType: GSTType): TaxSummary
       cgst,
       sgst,
       igst,
-      totalTax: taxRounded,
+      totalTax,
     });
   }
 
@@ -185,6 +194,6 @@ export function buildTaxSummary(items: LineItem[], gstType: GSTType): TaxSummary
  */
 export function roundTotal(amount: number): { rounded: number; roundOff: number } {
   const rounded = Math.round(amount);
-  const roundOff = Math.round((rounded - amount + Number.EPSILON) * 100) / 100;
+  const roundOff = round2(rounded - amount);
   return { rounded, roundOff };
 }

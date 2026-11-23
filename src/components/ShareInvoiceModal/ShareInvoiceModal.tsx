@@ -323,36 +323,43 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
     <Modal isOpen={isOpen} onOpenChange={(open) => !open && onClose()} size="lg" className="max-h-[92vh] flex flex-col">
         <ModalHeader
           title="Share Invoice"
-          description={`Send or copy invoice ${invoice.invoiceNumber} for ${invoice.client.name}`}
+          description={
+            invoice.client?.name?.trim()
+              ? `Send or copy invoice ${invoice.invoiceNumber} for ${invoice.client.name.trim()}`
+              : `Send or copy invoice ${invoice.invoiceNumber}`
+          }
         />
         <ModalBody className="min-h-0 flex-1 overflow-y-auto">
           <div className="space-y-4 pt-1">
             {/* Invoice Snapshot Card */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 flex items-center justify-between">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-sm text-slate-900">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono font-bold text-sm text-slate-900 whitespace-nowrap">
                     {invoice.invoiceNumber}
                   </span>
                   {isPaid ? (
-                    <Chip color="lime" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                    <Chip color="lime" variant="caption" className="inline-flex items-center gap-1 font-medium whitespace-nowrap">
                       <StatusDot color="green" /> Paid
                     </Chip>
                   ) : (
-                    <Chip color="rose" variant="caption" className="inline-flex items-center gap-1 font-medium">
+                    <Chip color="rose" variant="caption" className="inline-flex items-center gap-1 font-medium whitespace-nowrap">
                       <StatusDot color="yellow" /> Due: {formatCurrency(invoice.balanceDue, invoice.currencySymbol)}
                     </Chip>
                   )}
                 </div>
-                <p className="text-xs text-slate-600 truncate mt-0.5">
-                  <strong>{invoice.client.name}</strong> • {invoice.invoiceDate}
+                <p className="text-xs text-slate-600 truncate mt-1">
+                  <strong>{invoice.client?.name?.trim() || 'Walk-in Client'}</strong> • {invoice.invoiceDate}
                 </p>
               </div>
-              <div className="text-right shrink-0">
-                <div className="text-sm font-bold font-mono text-slate-900 tabular-nums">
-                  {formatCurrency(invoice.grandTotalRounded, invoice.currencySymbol)}
+              <div className="flex items-baseline sm:block sm:text-right shrink-0 justify-between border-t sm:border-t-0 border-slate-200/60 pt-2 sm:pt-0">
+                <span className="text-[10px] text-slate-500 font-mono sm:hidden">Grand Total:</span>
+                <div>
+                  <div className="text-sm sm:text-base font-bold font-mono text-slate-900 tabular-nums whitespace-nowrap">
+                    {formatCurrency(invoice.grandTotalRounded, invoice.currencySymbol)}
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono hidden sm:block">Grand Total</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">Grand Total</span>
               </div>
             </div>
 
@@ -361,9 +368,9 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
               type="button"
               onClick={handleSharePdf}
               disabled={isGeneratingPdf}
-              className="w-full flex items-center justify-between p-3.5 rounded-xl border border-blue-600 bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors cursor-pointer disabled:opacity-70 group"
+              className="w-full flex items-center justify-between p-3.5 rounded-xl border border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-xs transition-colors cursor-pointer disabled:opacity-70 group"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="size-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
                   {isGeneratingPdf ? (
                     <RiLoader4Line className="size-5 animate-spin text-white" />
@@ -371,11 +378,11 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
                     <RiFilePdf2Line className="size-5 text-white" />
                   )}
                 </div>
-                <div className="text-left">
-                  <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                <div className="text-left min-w-0 flex-1">
+                  <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 leading-snug">
                     {isGeneratingPdf ? 'Generating PDF Document...' : 'Share PDF Document (WhatsApp, Drive, Email)'}
                   </div>
-                  <div className="text-[11px] text-blue-100">
+                  <div className="text-[11px] text-blue-100 mt-0.5 leading-tight">
                     {Capacitor.isNativePlatform()
                       ? 'Attaches real .pdf document directly to Android apps'
                       : 'Download or share high-resolution print PDF'}
@@ -391,7 +398,7 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
               <button
                 type="button"
                 onClick={handleWhatsAppShare}
-                className="flex items-center gap-3 p-3 rounded-xl border border-emerald-200/90 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-900 transition-colors text-left group cursor-pointer"
+                className="flex items-center gap-3 p-3 rounded-xl border border-emerald-200/90 bg-emerald-50/50 hover:bg-emerald-100/60 active:bg-emerald-200/60 text-emerald-900 transition-colors text-left group cursor-pointer"
               >
                 <div className="size-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
                   <RiWhatsappLine className="size-5" />
@@ -410,7 +417,7 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
               <button
                 type="button"
                 onClick={handleEmailShare}
-                className="flex items-center gap-3 p-3 rounded-xl border border-blue-200/90 bg-blue-50/50 hover:bg-blue-100/60 text-blue-900 transition-colors text-left group cursor-pointer"
+                className="flex items-center gap-3 p-3 rounded-xl border border-blue-200/90 bg-blue-50/50 hover:bg-blue-100/60 active:bg-blue-200/60 text-blue-900 transition-colors text-left group cursor-pointer"
               >
                 <div className="size-9 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
                   <RiMailLine className="size-5" />
@@ -430,16 +437,16 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
                 <button
                   type="button"
                   onClick={handleNativeShare}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 transition-colors text-left group cursor-pointer sm:col-span-2"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-900 transition-colors text-left group cursor-pointer sm:col-span-2"
                 >
                   <div className="size-9 rounded-lg bg-slate-800 text-white flex items-center justify-center shrink-0 shadow-2xs">
                     <RiShareForwardLine className="size-5" />
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="text-xs font-bold text-slate-900">
                       System Share Sheet
                     </div>
-                    <div className="text-[11px] text-slate-500 truncate">
+                    <div className="text-[11px] text-slate-500 leading-tight mt-0.5">
                       Share PDF file directly through Android, iOS, or system apps
                     </div>
                   </div>
@@ -474,13 +481,13 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
             )}
 
             {/* Additional Export Options */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-slate-100 pt-3">
               <Button
                 size="small"
                 variant="secondary"
                 leadingIcon={RiFileCopyLine}
                 onClick={handleCopySummary}
-                className="text-xs font-semibold"
+                className="text-xs font-semibold w-full justify-center"
               >
                 Copy Summary
               </Button>
@@ -490,7 +497,7 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
                 variant="secondary"
                 leadingIcon={RiFileExcel2Line}
                 onClick={() => exportInvoiceToExcel(invoice)}
-                className="text-xs font-semibold text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/70"
+                className="text-xs font-semibold text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/70 w-full justify-center"
               >
                 Download Excel (.xlsx)
               </Button>
@@ -500,7 +507,7 @@ export const ShareInvoiceModal: React.FC<ShareInvoiceModalProps> = ({
                 variant="secondary"
                 leadingIcon={RiDownload2Line}
                 onClick={handleDownloadJson}
-                className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/50 hover:bg-blue-100/70"
+                className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/50 hover:bg-blue-100/70 w-full justify-center"
               >
                 Download JSON
               </Button>

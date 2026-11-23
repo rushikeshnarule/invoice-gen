@@ -131,9 +131,11 @@ export const ClientsView: React.FC = () => {
     200
   );
 
-  // ── Top Portfolio Metrics Across All Clients (Excludes cancelled invoices) ─
+  // ── Top Portfolio Metrics Across All Clients (Excludes cancelled & consolidated invoices) ─
   const totalClients = clients.length;
-  const activeInvoicesAcrossAll = invoices.filter((inv) => inv?.status !== 'cancelled');
+  const activeInvoicesAcrossAll = invoices.filter(
+    (inv) => inv?.status !== 'cancelled' && !inv?.isConsolidated && !inv?.data?.isConsolidated
+  );
   const totalInvoicesAcrossAll = activeInvoicesAcrossAll.length;
   const totalBilledAcrossAll = activeInvoicesAcrossAll.reduce((s, inv) => s + (inv?.total || 0), 0);
   const totalDueAcrossAll = activeInvoicesAcrossAll.reduce(
@@ -183,7 +185,7 @@ export const ClientsView: React.FC = () => {
     const preferredTheme = clientDefaults[clientId] || currentThemeId;
     toast.info('Opening print dialog...');
     const printUrl = `/print/${invoiceId}?theme=${preferredTheme}&action=print`;
-    window.open(printUrl, '_blank');
+    window.open(printUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleSavePdfInvoice = (invoiceId: string, clientName: string) => {
@@ -191,7 +193,7 @@ export const ClientsView: React.FC = () => {
     const preferredTheme = clientDefaults[clientId] || currentThemeId;
     toast.info('Opening Save as PDF...');
     const pdfUrl = `/print/${invoiceId}?theme=${preferredTheme}&action=save-pdf`;
-    window.open(pdfUrl, '_blank');
+    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleExportExcelInvoice = async (invoiceData: any) => {
@@ -311,9 +313,9 @@ export const ClientsView: React.FC = () => {
   const filteredClients = clients.filter((client) => {
     const q = searchQuery.toLowerCase();
     return (
-      client.name.toLowerCase().includes(q) ||
-      client.city.toLowerCase().includes(q) ||
-      client.state.toLowerCase().includes(q) ||
+      (client.name || '').toLowerCase().includes(q) ||
+      (client.city || '').toLowerCase().includes(q) ||
+      (client.state || '').toLowerCase().includes(q) ||
       (client.pincode && client.pincode.toLowerCase().includes(q)) ||
       (client.phone && client.phone.toLowerCase().includes(q)) ||
       (client.email && client.email.toLowerCase().includes(q)) ||

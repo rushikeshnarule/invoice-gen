@@ -216,7 +216,7 @@ function parseDynamicKey(key: string): LicenseAllotmentEntry | null {
   };
 }
 
-export default async function handler(req: Request, context: Context): Promise<Response> {
+export default async function handler(req: Request, _context: Context): Promise<Response> {
   const corsHeaders: Record<string, string> = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key, cache-control',
@@ -429,7 +429,6 @@ export default async function handler(req: Request, context: Context): Promise<R
         );
       }
 
-      const initialCount = entry.devices.length;
       const removedDev = entry.devices.find((d) => d.id === deviceId || d.machineId === deviceId);
 
       if (!removedDev) {

@@ -286,7 +286,7 @@ export const ThemePicker: React.FC = () => {
 
   const handlePrint = () => {
     const printUrl = `/print/sample?theme=${currentThemeId}&action=print&variant=${dataVariant}`;
-    const win = window.open(printUrl, '_blank');
+    const win = window.open(printUrl, '_blank', 'noopener,noreferrer');
     if (!win) {
       window.location.href = printUrl;
     }
@@ -294,7 +294,7 @@ export const ThemePicker: React.FC = () => {
 
   const handleSavePdf = () => {
     const printUrl = `/print/sample?theme=${currentThemeId}&action=save-pdf&variant=${dataVariant}`;
-    const win = window.open(printUrl, '_blank');
+    const win = window.open(printUrl, '_blank', 'noopener,noreferrer');
     if (!win) {
       window.location.href = printUrl;
     }

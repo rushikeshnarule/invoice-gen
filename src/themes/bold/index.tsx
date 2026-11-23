@@ -19,7 +19,7 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
   const isUS = isUSInvoice(data);
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
-  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const hasItemDates = (data.items || []).some((i) => Boolean(i?.date));
   const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
 
   const invoiceTitle = getInvoiceTitle(data);
@@ -27,7 +27,7 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
   const taxHeader = getTaxColumnHeader(data);
   const curSymbol = getCurrencySymbol(data, options);
   const numFormat = getNumberFormat(data, options);
-  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || data.items.some((i) => (Number(i.gstRate) || 0) > 0);
+  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || (data.items || []).some((i) => (Number(i?.gstRate) || 0) > 0);
 
   return (
     <div
@@ -42,23 +42,23 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
           {options.showLogo && (data.business?.logoUrl || data.logoUrl) && (
             <img
               src={data.business?.logoUrl || data.logoUrl}
-              alt={data.business.name}
+              alt={data.business?.name || ''}
               className={styles.logo}
               style={{ maxHeight: '52px', maxWidth: '160px', objectFit: 'contain' }}
             />
           )}
-          <div className={styles.companyName}>{data.business.name}</div>
+          <div className={styles.companyName}>{data.business?.name || ''}</div>
           <div className={styles.companyDetails}>
-            <div>{data.business.address}, {data.business.city}</div>
-            <div>{data.business.state} - {data.business.pincode}</div>
-            <div>Phone: {data.business.phone} | Email: {data.business.email}</div>
+            <div>{[data.business?.address, data.business?.city].filter(Boolean).join(', ')}</div>
+            <div>{[data.business?.state, data.business?.pincode].filter(Boolean).join(' - ')}</div>
+            <div>{[data.business?.phone && `Phone: ${data.business.phone}`, data.business?.email && `Email: ${data.business.email}`].filter(Boolean).join(' | ')}</div>
             {isUS ? (
               <>
-                {data.business.ein && <div>EIN: <strong>{data.business.ein}</strong></div>}
-                {data.business.stateTaxId && <div>State Tax ID: <strong>{data.business.stateTaxId}</strong></div>}
+                {data.business?.ein && <div>EIN: <strong>{data.business.ein}</strong></div>}
+                {data.business?.stateTaxId && <div>State Tax ID: <strong>{data.business.stateTaxId}</strong></div>}
               </>
             ) : (
-              data.business.gstin && <div>GSTIN: <strong>{data.business.gstin}</strong></div>
+              data.business?.gstin && <div>GSTIN: <strong>{data.business.gstin}</strong></div>
             )}
           </div>
         </div>
@@ -78,16 +78,16 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
       {/* Client Box */}
       <div className={styles.clientBox}>
         <div className={styles.clientLabel}>Invoiced To</div>
-        <div className={styles.clientName}>{data.client.name}</div>
+        <div className={styles.clientName}>{data.client?.name || ''}</div>
         <div className={styles.clientDetails}>
-          {data.client.address}, {data.client.city}, {data.client.state} - {data.client.pincode}
+          {[data.client?.address, data.client?.city, data.client?.state].filter(Boolean).join(', ')}{data.client?.pincode ? ` - ${data.client.pincode}` : ''}
           {isUS ? (
             <>
-              {data.client.ein && <span> | EIN: <strong>{data.client.ein}</strong></span>}
-              {data.client.taxExempt && <span> | <strong>Tax-Exempt Entity</strong></span>}
+              {data.client?.ein && <span> | EIN: <strong>{data.client.ein}</strong></span>}
+              {data.client?.taxExempt && <span> | <strong>Tax-Exempt Entity</strong></span>}
             </>
           ) : (
-            data.client.gstin && <span> | GSTIN: <strong>{data.client.gstin}</strong></span>
+            data.client?.gstin && <span> | GSTIN: <strong>{data.client.gstin}</strong></span>
           )}
         </div>
       </div>
@@ -108,7 +108,7 @@ export const BoldTheme: React.FC<ThemeComponentProps> = ({ data, options }) => {
           </tr>
         </thead>
         <tbody>
-          {data.items.map((item, idx) => (
+          {(data.items || []).map((item, idx) => (
             <tr key={item.id || idx}>
               <td className={styles.centerCol}>{item.sno || idx + 1}</td>
               {showDateCol && (

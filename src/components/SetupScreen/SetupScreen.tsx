@@ -334,7 +334,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     }, delay);
 
     return () => clearInterval(timer);
-  }, [isInitializing, formData, isUS, onComplete, stepDelayMs]);
+  }, [isInitializing, formData, isUS, onComplete, stepDelayMs, INITIALIZATION_STEPS.length]);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // LOADING / INITIALIZATION SCREEN VIEW (Clean Mobile & Desktop Workstation)
@@ -412,8 +412,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   // MAIN SETUP ONBOARDING VIEW
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-dvh w-full sm:min-h-dvh sm:items-center sm:justify-center sm:bg-slate-100/70 sm:p-6 font-sans overflow-hidden bg-white">
-      <div className="w-full h-full sm:h-auto sm:max-w-2xl sm:rounded-2xl sm:border sm:border-slate-200 bg-white sm:shadow-xl overflow-hidden flex flex-col">
+    <div className="flex h-dvh w-full sm:min-h-dvh sm:items-center sm:justify-center sm:bg-slate-100/70 sm:p-6 font-sans overflow-y-auto bg-white">
+      <div className="w-full h-full sm:h-auto sm:max-h-[calc(100dvh-3rem)] sm:max-w-2xl sm:rounded-2xl sm:border sm:border-slate-200 bg-white sm:shadow-xl overflow-hidden flex flex-col my-auto">
         {/* Workstation Hero Banner - Mobile Safe Area Aware */}
         <div className="shrink-0 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-3 sm:py-5 px-4 sm:px-8 bg-slate-900 text-white border-b border-slate-800">
           <div className="flex items-center justify-between gap-2.5">

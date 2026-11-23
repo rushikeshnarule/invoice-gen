@@ -19,7 +19,7 @@ export const ElegantTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
   const isUS = isUSInvoice(data);
   const showGst = data.gstType !== 'none';
   const isInterState = data.gstType === 'igst';
-  const hasItemDates = data.items.some((i) => Boolean(i.date));
+  const hasItemDates = (data.items || []).some((i) => Boolean(i.date));
   const showDateCol = data.invoiceType === 'monthly' || hasItemDates;
 
   const invoiceTitle = getInvoiceTitle(data);
@@ -27,7 +27,7 @@ export const ElegantTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
   const taxHeader = getTaxColumnHeader(data);
   const curSymbol = getCurrencySymbol(data, options);
   const numFormat = getNumberFormat(data, options);
-  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || data.items.some((i) => (Number(i.gstRate) || 0) > 0);
+  const hasTaxOnItems = (data.totalSalesTax ?? 0) > 0 || (data.items || []).some((i) => (Number(i.gstRate) || 0) > 0);
 
   return (
     <div
@@ -42,21 +42,21 @@ export const ElegantTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
           {options.showLogo && (data.business?.logoUrl || data.logoUrl) && (
             <img
               src={data.business?.logoUrl || data.logoUrl}
-              alt={data.business.name}
+              alt={data.business?.name || ''}
               className={styles.logo}
               style={{ maxHeight: '50px', maxWidth: '150px', objectFit: 'contain' }}
             />
           )}
-          <div className={styles.brandName}>{data.business.name}</div>
+          <div className={styles.brandName}>{data.business?.name || ''}</div>
           <div className={styles.brandAddress}>
-            {data.business.address}, {data.business.city}, {data.business.state} {data.business.pincode}
+            {data.business?.address}, {data.business?.city}, {data.business?.state} {data.business?.pincode}
             {isUS ? (
               <>
-                {data.business.ein && ` | EIN: ${data.business.ein}`}
-                {data.business.stateTaxId && ` | State Tax ID: ${data.business.stateTaxId}`}
+                {data.business?.ein && ` | EIN: ${data.business?.ein}`}
+                {data.business?.stateTaxId && ` | State Tax ID: ${data.business?.stateTaxId}`}
               </>
             ) : (
-              data.business.gstin && ` | GSTIN: ${data.business.gstin}`
+              data.business?.gstin && ` | GSTIN: ${data.business?.gstin}`
             )}
           </div>
         </div>
@@ -74,18 +74,18 @@ export const ElegantTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
       <div className={styles.detailsGrid}>
         <div className={styles.clientCol}>
           <div className={styles.sectionLabel}>Billed to</div>
-          <div className={styles.clientName}>{data.client.name}</div>
+          <div className={styles.clientName}>{data.client?.name || ''}</div>
           <div className={styles.clientMeta}>
-            <div>{data.client.address}</div>
-            <div>{data.client.city}, {data.client.state} {data.client.pincode}</div>
-            {data.client.phone && <div>Phone: {data.client.phone}</div>}
+            <div>{data.client?.address}</div>
+            <div>{data.client?.city}, {data.client?.state} {data.client?.pincode}</div>
+            {data.client?.phone && <div>Phone: {data.client?.phone}</div>}
             {isUS ? (
               <>
-                {data.client.ein && <div>EIN / Tax ID: <strong>{data.client.ein}</strong></div>}
-                {data.client.taxExempt && <div style={{ color: '#059669', fontWeight: 600 }}>Tax-Exempt Customer</div>}
+                {data.client?.ein && <div>EIN / Tax ID: <strong>{data.client?.ein}</strong></div>}
+                {data.client?.taxExempt && <div style={{ color: '#059669', fontWeight: 600 }}>Tax-Exempt Customer</div>}
               </>
             ) : (
-              data.client.gstin && <div>GSTIN: {data.client.gstin}</div>
+              data.client?.gstin && <div>GSTIN: {data.client?.gstin}</div>
             )}
           </div>
         </div>
@@ -132,7 +132,7 @@ export const ElegantTheme: React.FC<ThemeComponentProps> = ({ data, options }) =
           </tr>
         </thead>
         <tbody>
-          {data.items.map((item, idx) => (
+          {(data.items || []).map((item, idx) => (
             <tr key={item.id || idx}>
               <td className={styles.centerCol}>{item.sno || idx + 1}</td>
               {showDateCol && (

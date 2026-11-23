@@ -170,6 +170,8 @@ export const ConsolidatedMonthlyModal: React.FC<ConsolidatedMonthlyModalProps> =
 
       // Exclude existing consolidated monthly invoices to avoid double-nesting
       if (inv.data?.invoiceType === 'monthly') return false;
+      // Exclude already-consolidated daily invoices
+      if (inv.isConsolidated || inv.data?.isConsolidated) return false;
 
       const rawDate = inv.date || inv.data?.invoiceDate || '';
       if (!rawDate) return false;
@@ -312,7 +314,7 @@ export const ConsolidatedMonthlyModal: React.FC<ConsolidatedMonthlyModalProps> =
       const extracted: LineItem[] = [];
       let sno = 1;
       for (const inv of selectedInvoicesList) {
-        for (const it of inv.data.items) {
+        for (const it of (inv?.data?.items || [])) {
           extracted.push({
             ...it,
             id: `item-${Date.now()}-${sno}`,

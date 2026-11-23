@@ -4,7 +4,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { pathToFileURL } = require('url');
 
 // Disable GPU acceleration for deterministic headless rendering
 app.disableHardwareAcceleration();

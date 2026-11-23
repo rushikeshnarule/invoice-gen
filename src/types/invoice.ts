@@ -108,6 +108,9 @@ export interface InvoiceRenderData {
   invoiceType?: 'daily' | 'monthly'; // 'daily' is standard single-day bill; 'monthly' is consolidated monthly invoice
   billingPeriod?: string;            // e.g. "April 2026" or "01-04-2026 to 30-04-2026"
   billingMonth?: string;             // e.g. "2026-04"
+  isConsolidated?: boolean;          // Set to true if this daily invoice has been consolidated into a monthly invoice
+  sourceInvoiceIds?: string[];       // On monthly invoice: IDs of the source daily invoices consolidated
+  consolidatedIntoInvoiceId?: string;// On daily invoice: ID of the monthly invoice this was consolidated into
 
   // Invoice metadata
   invoiceNumber: string;

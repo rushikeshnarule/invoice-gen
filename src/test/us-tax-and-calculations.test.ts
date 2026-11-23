@@ -5,10 +5,8 @@ import {
   isUSTaxExemptState,
   formatEIN,
   isValidEIN,
-  formatRoutingNumber,
   isValidRoutingNumber,
   formatUSZip,
-  US_STATES,
 } from '../utils/usTax';
 import { amountInWords } from '../utils/amountInWords';
 import { recalculate } from '../utils/buildRenderData';

@@ -13,7 +13,7 @@ import type {
   WatermarkType,
   AppRegion,
 } from '../../types';
-import { useInvoices } from '../../context/InvoiceContext';
+import { useInvoices, getTodayLocalDateString } from '../../context/InvoiceContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getAllThemes, resolveOptions } from '../../themes';
 import { ThemePreview } from '../ThemePreview/ThemePreview';
@@ -23,6 +23,7 @@ import { exportAndSaveFile } from '../../services/fileExportService';
 import { ColorPickerField } from '../ThemeOptions/ColorPickerField';
 import { recalculate } from '../../utils/buildRenderData';
 import { formatCurrency, formatNumber, exportInvoiceToExcel } from '../../utils';
+import { extractStateCode } from '../../utils/gst';
 import { useNativeBackButton } from '../../hooks/useNativeBackButton';
 import { haptics } from '../../services/nativeMobileService';
 import {
@@ -68,6 +69,7 @@ import {
   RiBankCardLine,
   RiCalendarLine,
   RiQrCodeLine,
+  RiMoreFill,
 } from '@remixicon/react';
 
 function getMonthNameAndYear(ym: string): string {
@@ -105,6 +107,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   const [themeId, setThemeId] = useState<string>(() => record?.themeId || currentThemeId);
   const [zoomLevel, setZoomLevel] = useState<number | 'auto'>('auto');
   const [newPresetName, setNewPresetName] = useState('');
+  const [showActionMenu, setShowActionMenu] = useState(false);
 
   // Share Invoice Modal
   const [showShareModal, setShowShareModal] = useState(false);
@@ -113,13 +116,17 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [newPaymentAmount, setNewPaymentAmount] = useState('');
   const [newPaymentMethod, setNewPaymentMethod] = useState<'UPI' | 'NEFT' | 'Cash' | 'Cheque' | 'Card'>('UPI');
-  const [newPaymentDate, setNewPaymentDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [newPaymentDate, setNewPaymentDate] = useState(() => getTodayLocalDateString());
   const [newPaymentRef, setNewPaymentRef] = useState('');
 
   // Android hardware back button handler
   useNativeBackButton(
     'invoice-editor-screen',
     () => {
+      if (showActionMenu) {
+        setShowActionMenu(false);
+        return true;
+      }
       if (showShareModal) {
         setShowShareModal(false);
         return true;
@@ -169,9 +176,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
       region: isAppUS ? 'US' : 'IN',
       taxType: isAppUS ? 'sales_tax' : 'gst',
       invoiceNumber: 'INV-001',
-      invoiceDate: new Date().toISOString().split('T')[0],
-      dueDate: new Date().toISOString().split('T')[0],
-      placeOfSupply: isAppUS ? (businessProfile.state || 'California (CA)') : (businessProfile.state || 'Maharashtra (27)'),
+      invoiceDate: getTodayLocalDateString(),
+      dueDate: getTodayLocalDateString(),
+      placeOfSupply: isAppUS
+        ? (businessProfile.state || 'California (CA)')
+        : `${businessProfile.state || 'Maharashtra'} (${extractStateCode(businessProfile.state || '', businessProfile.gstin) || '27'})`,
       status: 'draft',
       business: {
         name: businessProfile.name || '',
@@ -334,7 +343,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
     updateInvoice(invoiceId, calculatedData, themeId);
     toast.info('Opening print layout...');
     const url = `/print/${invoiceId}?theme=${themeId}&action=print`;
-    const win = window.open(url, '_blank');
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
     if (!win) {
       window.location.href = url;
     }
@@ -496,7 +505,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
       return;
     }
     setNewPaymentAmount(calculatedData.balanceDue > 0 ? String(calculatedData.balanceDue) : '');
-    setNewPaymentDate(new Date().toISOString().split('T')[0]);
+    setNewPaymentDate(getTodayLocalDateString());
     setNewPaymentRef(`REF-${Date.now().toString().slice(-6)}`);
     setShowPaymentForm(true);
   };
@@ -511,14 +520,14 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
     const roundedAmount = Math.round(amountNum * 100) / 100;
     const newPayment: PaymentInfo = {
-      date: newPaymentDate || new Date().toISOString().split('T')[0],
+      date: newPaymentDate || getTodayLocalDateString(),
       amount: roundedAmount,
       method: newPaymentMethod,
       reference: newPaymentRef.trim() || undefined,
     };
 
     setInvoiceData((prev) => {
-      const nextPayments = [...prev.payments, newPayment];
+      const nextPayments = [...(prev.payments || []), newPayment];
       const totalPaid = nextPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
       const isPaid = totalPaid >= calculatedData.grandTotalRounded;
       return {
@@ -544,7 +553,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
   const handleRemovePayment = (idx: number) => {
     setInvoiceData((prev) => {
-      const remainingPayments = prev.payments.filter((_, i) => i !== idx);
+      const remainingPayments = (prev.payments || []).filter((_, i) => i !== idx);
       const totalPaid = remainingPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
       const isStillPaid = totalPaid >= calculatedData.grandTotalRounded;
       return {
@@ -566,7 +575,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
         const nextPayments = [...(prev.payments || [])];
         if (remaining > 0) {
           nextPayments.push({
-            date: new Date().toISOString().split('T')[0],
+            date: getTodayLocalDateString(),
             amount: remaining,
             method: isUS ? 'ACH' : 'UPI',
             reference: 'Settled in Full',
@@ -598,7 +607,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
     setInvoiceData((prev) => ({
       ...prev,
       client: { ...matched },
-      placeOfSupply: `${matched.state} (${matched.gstin ? matched.gstin.slice(0, 2) : '27'})`,
+      placeOfSupply: `${matched.state} (${extractStateCode(matched.state, matched.gstin) || (matched.gstin ? matched.gstin.slice(0, 2) : '27')})`,
     }));
     toast.info(`Applied client: ${matched.name}`);
   };
@@ -716,8 +725,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             </Button>
           </div>
 
-          {/* Zoom Controls */}
-          <div className="hidden lg:flex items-center gap-1 bg-slate-100 px-1.5 py-1 rounded-lg border border-slate-200 shrink-0">
+          {/* Zoom Controls: Visible on xl+ screens (>= 1280px) */}
+          <div className="hidden xl:flex items-center gap-1 bg-slate-100 px-1.5 py-1 rounded-lg border border-slate-200 shrink-0">
             <IconButton
               size="small"
               icon={RiZoomOutLine}
@@ -757,7 +766,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             </Button>
           </div>
 
-          {/* Action CTAs: always pinned and visible */}
+          {/* Primary Action CTA: Save Draft (Always visible) */}
           <Button
             size="small"
             variant="secondary"
@@ -768,39 +777,147 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             Save Draft
           </Button>
 
-          <Button
-            size="small"
-            variant="secondary"
-            leadingIcon={RiFileExcel2Line}
-            onClick={handleExportExcel}
-            className="text-xs font-semibold shrink-0 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200"
-          >
-            Export Excel
-          </Button>
+          {/* Secondary Actions: Visible on xl+ screens (>= 1280px), collapsed below xl to prevent 1366x768 workstation clipping */}
+          <div className="hidden xl:flex items-center gap-2 shrink-0">
+            <Button
+              size="small"
+              variant="secondary"
+              leadingIcon={RiFileExcel2Line}
+              onClick={handleExportExcel}
+              className="text-xs font-semibold shrink-0 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200"
+            >
+              Export Excel
+            </Button>
 
-          <Button
-            size="small"
-            variant="secondary"
-            leadingIcon={RiShareForwardLine}
-            onClick={() => {
-              updateInvoice(invoiceId, calculatedData, themeId);
-              setShowShareModal(true);
-            }}
-            className="text-xs font-semibold shrink-0"
-          >
-            Share
-          </Button>
+            <Button
+              size="small"
+              variant="secondary"
+              leadingIcon={RiShareForwardLine}
+              onClick={() => {
+                updateInvoice(invoiceId, calculatedData, themeId);
+                setShowShareModal(true);
+              }}
+              className="text-xs font-semibold shrink-0"
+            >
+              Share
+            </Button>
 
-          <Button
-            size="small"
-            variant="secondary"
-            leadingIcon={RiPrinterLine}
-            onClick={handlePrint}
-            className="text-xs font-semibold shrink-0"
-          >
-            Print
-          </Button>
+            <Button
+              size="small"
+              variant="secondary"
+              leadingIcon={RiPrinterLine}
+              onClick={handlePrint}
+              className="text-xs font-semibold shrink-0"
+            >
+              Print
+            </Button>
+          </div>
 
+          {/* Responsive Action Menu for < xl (including 1366x768 laptops) */}
+          <div className="relative xl:hidden shrink-0">
+            <Button
+              size="small"
+              variant="secondary"
+              leadingIcon={RiMoreFill}
+              onClick={() => setShowActionMenu((open) => !open)}
+              className="text-xs font-semibold shrink-0"
+              aria-label="More actions"
+            >
+              Actions
+            </Button>
+
+            {showActionMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowActionMenu(false)}
+                />
+                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionMenu(false);
+                      handleExportExcel();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-emerald-700 text-left cursor-pointer"
+                  >
+                    <RiFileExcel2Line className="size-4 text-emerald-600" />
+                    <span>Export Excel</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionMenu(false);
+                      updateInvoice(invoiceId, calculatedData, themeId);
+                      setShowShareModal(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-600 text-left cursor-pointer"
+                  >
+                    <RiShareForwardLine className="size-4 text-blue-600" />
+                    <span>Share Invoice</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionMenu(false);
+                      handlePrint();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-left cursor-pointer"
+                  >
+                    <RiPrinterLine className="size-4 text-slate-600" />
+                    <span>Print Invoice</span>
+                  </button>
+
+                  <div className="h-px bg-slate-100 my-1" />
+
+                  {/* Compact Zoom Controls inside dropdown */}
+                  <div className="px-3 py-1.5 flex items-center justify-between text-xs text-slate-600">
+                    <span className="font-semibold text-[11px]">Zoom:</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setZoomLevel((z) => {
+                            const current = typeof z === 'number' ? z : 0.85;
+                            return Math.max(0.4, Number((current - 0.1).toFixed(2)));
+                          })
+                        }
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-xs font-bold"
+                      >
+                        -
+                      </button>
+                      <span className="font-mono text-[11px] tabular-nums min-w-8 text-center">
+                        {typeof zoomLevel === 'number' ? `${Math.round(zoomLevel * 100)}%` : 'Auto'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setZoomLevel((z) => {
+                            const current = typeof z === 'number' ? z : 0.85;
+                            return Math.min(1.5, Number((current + 0.1).toFixed(2)));
+                          })
+                        }
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-xs font-bold"
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setZoomLevel('auto')}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-blue-600 ml-1"
+                      >
+                        Fit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Primary Action CTA: Save PDF (Always visible) */}
           <Button
             size="small"
             variant="primary"
@@ -841,8 +958,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
         {/* LEFT PANE: HIGH-DENSITY EDITING FORM */}
         <div className={`w-full lg:w-[480px] xl:w-[560px] 2xl:w-[640px] 3xl:w-[700px] bg-white border-r border-slate-200 flex-col shrink-0 overflow-hidden transition-all duration-200 ${mobileTab === 'editor' ? 'flex flex-1 lg:flex-initial' : 'hidden lg:flex'}`}>
-          {/* Form Tabs */}
-          <div className="px-4 xl:px-6 pt-3 xl:pt-4 pb-2.5 xl:pb-3 border-b border-slate-200 bg-slate-50/70 shrink-0">
+          {/* Form Tabs - Horizontally scrollable on mobile screens to prevent overlapping */}
+          <div className="px-3 xl:px-6 pt-2.5 xl:pt-4 pb-2 xl:pb-3 border-b border-slate-200 bg-slate-50/70 shrink-0 overflow-x-auto [scrollbar-width:none]">
             <SegmentedControl
               aria-label="Editor Form Tabs"
               selectedKeys={new Set([activeTab])}
@@ -853,21 +970,21 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                   setActiveTab(val as any);
                 }
               }}
-              className="w-full bg-slate-200/70 p-0.5"
+              className="flex min-w-max w-full bg-slate-200/70 p-0.5"
             >
-              <SegmentedControlItem id="items" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
+              <SegmentedControlItem id="items" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
                 Items ({invoiceData.items.length})
               </SegmentedControlItem>
-              <SegmentedControlItem id="parties" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
+              <SegmentedControlItem id="parties" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
                 Buyer &amp; Dates
               </SegmentedControlItem>
-              <SegmentedControlItem id="branding" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
+              <SegmentedControlItem id="branding" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
                 Logo &amp; Stamp
               </SegmentedControlItem>
-              <SegmentedControlItem id="payment" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
+              <SegmentedControlItem id="payment" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
                 Pay &amp; Terms
               </SegmentedControlItem>
-              <SegmentedControlItem id="styling" className="text-[11px] sm:text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-1 sm:px-2 truncate">
+              <SegmentedControlItem id="styling" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
                 Style &amp; Theme
               </SegmentedControlItem>
             </SegmentedControl>
@@ -1717,7 +1834,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                               setInvoiceData({
                                 ...invoiceData,
                                 client: { ...invoiceData.client, state: e.target.value },
-                                placeOfSupply: `${e.target.value} (${invoiceData.client.gstin ? invoiceData.client.gstin.slice(0, 2) : '27'})`,
+                                placeOfSupply: `${e.target.value} (${extractStateCode(e.target.value, invoiceData.client.gstin) || (invoiceData.client.gstin ? invoiceData.client.gstin.slice(0, 2) : '27')})`,
                               })
                             }
                             placeholder="Maharashtra"
