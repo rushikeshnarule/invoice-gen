@@ -4,6 +4,37 @@ All notable changes to **Invoice Gen** are documented in this file.
 
 ---
 
+## [1.4.2.1] - 2026-11-23
+
+### 🔢 Invoice Numbering Sequence
+* **Strict Sequential Starting Sequence (`INV-001`)**: Sequential generator now starts strictly with `INV-001` (followed by `INV-002`, `INV-003`, etc.) across all new installations, setups, and sample datasets, adhering to statutory commercial standards.
+
+### ⚡ Seamless In-App Hot Updates (Zero Setup Wizard)
+* **Direct `.asar` Binary Hot-Swap**: Solved the issue where clicking "Update" re-downloaded the setup wizard and forced users to run installation setup again.
+* **Automatic In-Place Reload**: Both Windows and macOS updates now download the packaged bundle and seamlessly hot-swap the internal core runtime in the background, relaunching the app directly into the updated version without displaying setup wizards or touching persistent Documents data.
+* **Fallback Silent Mode**: Added `/S` silent switch to Windows `.exe` installers and background `/bin/bash` / `open` wrappers on macOS to ensure automated silent transitions.
+
+### 🛡️ Static Application Security Testing (SAST) & Supply-Chain Hardening
+* **Supply-Chain Remediation (CWE-1321 & CWE-400)**: Pruned legacy SheetJS `xlsx` and `xlsx-js-style` packages containing unpatched prototype pollution and ReDoS vulnerabilities. Fully transitioned test harnesses to modern `ExcelJS 4.4.0`. Achieved **0 high / critical vulnerabilities** in `npm audit`.
+* **Insecure IPC Execution Guard (CWE-78 & CWE-426)**: Added in-memory updater verification tokens (`validDownloadedUpdates`) and strict temporary directory containment checks (`app.getPath('temp')`) in `desktop:install-update` to prevent arbitrary binary execution via IPC.
+* **SSRF Prevention (CWE-918)**: Implemented `isTrustedDownloadUrl()` enforcing HTTPS and strict domain allowlists across all updater downloads and HTTP redirect chains.
+* **Prototype Pollution Immunity (CWE-1321)**: Replaced raw `JSON.parse` with `safeJsonParse()` revivers across all system storage endpoints (`/api/system-storage`), stripping `__proto__`, `constructor`, and `prototype` keys during deserialization.
+* **CSS & URI Injection Protection (CWE-79 & CWE-20)**: Enhanced `sanitizeTemplateCss` to strip `@import` external stylesheet leakage and `url(javascript:...)` execution. Added `sanitizeSafeUrl()` to validate all user-supplied links.
+* **Reverse Tabnabbing Prevention**: Enforced `noopener,noreferrer` on all `window.open(..., '_blank')` calls across Invoice Editor, Theme Picker, Clients View, and Invoices View.
+
+### 📱 Mobile UI Refinements & Android Physical Device Verification
+* **Physical Hardware Validation**: Tested extensively on a physical OnePlus 8T (`KB2001`, Android 14) connected via USB tethering/debugging.
+* **Fixed Tab Collision in Invoice Editor**: Resolved crushed tab headers (`Items (1)Buyer & DatesLogo & Stamp...`) by adding horizontal smooth scrolling (`overflow-x-auto [scrollbar-width:none] min-w-max`) to `SegmentedControl`.
+* **Fixed Invoice Number & Badge Collisions**: Added `whitespace-nowrap font-mono` to invoice numbers and converted the mobile snapshot card to a responsive layout, preventing line-wrapping and badge overlap.
+* **Android Native File Sharing**: Mapped `Directory.Cache` in `file_paths.xml` as `<cache-path name="my_cache_images" path="." />`. Shares real binary `.pdf` and `.xlsx` files via native `Intent.ACTION_CHOOSER`, completely eliminating broken `http://localhost/...` links.
+* **Root Crash Isolation**: Wrapped application roots in an `ErrorBoundary` component with offline state preservation and safe session restart options.
+
+### 🧪 Test Coverage & Quality
+* Expanded automated Vitest suite to **194 passed tests across 17 test files (100% pass rate)**.
+* Verified 0 TypeScript compilation errors (`npx tsc -b`) and 0 linter errors (`oxlint`).
+
+---
+
 ## [1.4.2] - 2026-11-15
 
 ### 🚀 Resilient Auto-Update Architecture & Dynamic Version Resolution

@@ -25,6 +25,7 @@ This document outlines the operational rules, responsibilities, architectural st
      - `memory.md`: Persistent state, active versions, device configurations, and project roadmap.
      - `lessons.md`: Mistakes identified, root causes, permanent solutions, and anti-patterns.
      - `features.md`: Complete functional catalog of billing features, templates, and export engines.
+     - `CHANGELOG.md`: User-facing release notes documenting all functional and security additions.
    - If any of these files are missing, create them immediately.
 
 2. **Permanent Fixes Only:**
@@ -47,7 +48,7 @@ This document outlines the operational rules, responsibilities, architectural st
    - Sanitize all user-supplied links and CSS injections (`sanitizeSafeUrl`, `sanitizeTemplateCss`).
    - Prevent reverse tabnabbing by enforcing `noopener,noreferrer` on all `window.open` external targets.
 
-4. **Offline-First & Privacy Non-Negotiable:**
+5. **Offline-First & Privacy Non-Negotiable:**
    - Invoices, client data, settings, and tax calculations must execute 100% locally on the user's device.
    - Zero telemetry leaks, zero external tracking, zero unauthorized network calls.
    - Local exports must use real binary files (pure vector PDF via PDFKit/blob, Excel via ExcelJS), never localhost links or mock web endpoints.

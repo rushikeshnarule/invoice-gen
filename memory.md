@@ -72,6 +72,7 @@ Invoice Gen/
 ├── memory.md                        # Persistent state & architecture memory (This file)
 ├── lessons.md                       # Historical defects, root causes & solutions
 ├── features.md                      # Catalog of features and functional specs
+├── CHANGELOG.md                     # Release notes and version changelog
 ├── android/                         # Capacitor native Android Gradle project
 │   └── app/build/outputs/apk/debug/ # Generated debug APKs
 ├── electron/                        # Electron main process & IPC handlers
@@ -85,6 +86,6 @@ Invoice Gen/
 │   ├── services/                    # fileExportService, pdfGeneratorService, nativeMobileService
 │   ├── themes/                      # 18 commercial invoice rendering templates
 │   ├── utils/                       # Calculations, tax rules, Excel exports
-│   └── test/                        # 17 Vitest test suites (191 tests)
+│   └── test/                        # 17 Vitest test suites (194 tests)
 └── dist/                            # Production web bundle
 ```
