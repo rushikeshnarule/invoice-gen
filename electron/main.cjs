@@ -21,6 +21,20 @@ if (process.platform === 'win32') {
   } catch {}
 }
 
+// Enforce single instance across desktop platforms: prevent duplicate background processes
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+  process.exit(0);
+}
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
 const isMac = process.platform === 'darwin';
 
 // Generate cryptographically strong loopback session token to prevent cross-site exfiltration
@@ -1144,18 +1158,25 @@ ipcMain.handle('desktop:install-update', async (_event, { filePath }) => {
         // copies updated app.asar into place, relaunches application, and cleans up.
         const updaterBat = path.join(os.tmpdir(), `invoice-gen-update-${Date.now()}.cmd`);
         const appExe = process.execPath;
+        const parentPid = process.pid;
+        const exeName = path.basename(appExe);
         const cleanNewAsar = filePath.replace(/"/g, '');
         const cleanTargetAsar = targetAsar.replace(/"/g, '');
         const cleanAppExe = appExe.replace(/"/g, '');
 
         const batContent = `@echo off
 setlocal enabledelayedexpansion
+set "PARENT_PID=${parentPid}"
+set "EXE_NAME=${exeName}"
 set "NEW_ASAR=${cleanNewAsar}"
 set "TARGET_ASAR=${cleanTargetAsar}"
 set "APP_EXE=${cleanAppExe}"
 
-:: Wait 1.5s for parent Electron process to exit and release file locks
-timeout /t 2 /nobreak >nul
+:: Force kill parent Electron process and any lingering child handles
+taskkill /f /pid %PARENT_PID% >nul 2>&1
+timeout /t 1 /nobreak >nul
+taskkill /f /im "%EXE_NAME%" >nul 2>&1
+timeout /t 1 /nobreak >nul
 
 set RETRY=0
 :RETRY_LOOP
@@ -1199,12 +1220,18 @@ exit /b 1
         // and immediately re-opens the application bundle.
         const appBundle = path.resolve(process.resourcesPath, '..', '..');
         const updaterSh = path.join(os.tmpdir(), `invoice-gen-update-${Date.now()}.sh`);
+        const parentPid = process.pid;
         const shContent = `#!/bin/bash
+PARENT_PID="${parentPid}"
 NEW_ASAR="${filePath}"
 TARGET_ASAR="${targetAsar}"
 APP_BUNDLE="${appBundle}"
 
-sleep 1.5
+# Force terminate parent Electron process and any lingering helper instances
+kill -9 "$PARENT_PID" 2>/dev/null
+pkill -f "Invoice Gen" 2>/dev/null
+sleep 1
+
 for i in {1..30}; do
   if cp -f "$NEW_ASAR" "$TARGET_ASAR" 2>/dev/null; then
     rm -f "$NEW_ASAR"
@@ -1238,11 +1265,43 @@ exit 1
     // ─── Format 2: Windows Installer Fallback (Silent Mode /S, No GUI Wizard) ───
     if (isWin && ext === '.exe') {
       const isSetup = path.basename(filePath).toLowerCase().includes('setup');
-      const args = isSetup ? ['/S'] : [];
+      const updaterBat = path.join(os.tmpdir(), `invoice-gen-installer-${Date.now()}.cmd`);
+      const parentPid = process.pid;
+      const appExe = process.execPath;
+      const exeName = path.basename(appExe);
+      const cleanInstaller = filePath.replace(/"/g, '');
+      const cleanAppExe = appExe.replace(/"/g, '');
 
-      const child = spawn(filePath, args, {
+      const batContent = `@echo off
+setlocal enabledelayedexpansion
+set "PARENT_PID=${parentPid}"
+set "EXE_NAME=${exeName}"
+set "INSTALLER=${cleanInstaller}"
+set "APP_EXE=${cleanAppExe}"
+
+:: Force kill parent Electron process and any lingering instances so setup has zero file locks
+taskkill /f /pid %PARENT_PID% >nul 2>&1
+timeout /t 1 /nobreak >nul
+taskkill /f /im "%EXE_NAME%" >nul 2>&1
+timeout /t 1 /nobreak >nul
+
+:: Launch installer silently if setup, or interactive
+${isSetup ? 'start "" /wait "%INSTALLER%" /S' : 'start "" /wait "%INSTALLER%"'}
+
+:: Relaunch updated application
+start "" "%APP_EXE%"
+
+:: Cleanup installer and script
+del /f /q "%INSTALLER%" >nul 2>&1
+(goto) 2>nul & del "%~f0"
+exit /b 0
+`;
+      fs.writeFileSync(updaterBat, batContent, 'utf8');
+
+      const child = spawn('cmd.exe', ['/c', updaterBat], {
         detached: true,
         stdio: 'ignore',
+        windowsHide: true,
       });
       child.unref();
 
@@ -1252,13 +1311,30 @@ exit 1
       }
       setTimeout(() => {
         app.exit(0);
-      }, 500);
+      }, 300);
       return { success: true };
     }
 
     // ─── Format 3: macOS PKG / DMG Fallback ───
     if (isDarwin) {
-      const child = spawn('open', [filePath], {
+      const parentPid = process.pid;
+      const updaterSh = path.join(os.tmpdir(), `invoice-gen-installer-${Date.now()}.sh`);
+      const shContent = `#!/bin/bash
+PARENT_PID="${parentPid}"
+INSTALLER="${filePath}"
+
+# Force terminate parent Electron process and lingering helpers
+kill -9 "$PARENT_PID" 2>/dev/null
+pkill -f "Invoice Gen" 2>/dev/null
+sleep 1
+
+open "$INSTALLER"
+rm -f "$0"
+exit 0
+`;
+      fs.writeFileSync(updaterSh, shContent, { mode: 0o755 });
+
+      const child = spawn('/bin/bash', [updaterSh], {
         detached: true,
         stdio: 'ignore',
       });
@@ -1270,7 +1346,7 @@ exit 1
       }
       setTimeout(() => {
         app.exit(0);
-      }, 500);
+      }, 300);
       return { success: true };
     }
 

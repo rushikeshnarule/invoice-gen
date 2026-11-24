@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   compareSemver,
   getRecommendedAsset,
@@ -117,6 +117,74 @@ describe("Update Service Suite", () => {
       const result = await checkForUpdates(true);
       expect(result.hasUpdate).toBe(false);
       expect(result.latestVersion).toBe("1.4.0");
+    });
+  });
+
+  describe("Android Native OTA Bridge", () => {
+    afterEach(() => {
+      delete (window as unknown as { invoiceAndroid?: unknown }).invoiceAndroid;
+      delete (window as unknown as { __onAndroidUpdateProgress?: unknown }).__onAndroidUpdateProgress;
+      delete (window as unknown as { __onAndroidUpdateDownloaded?: unknown }).__onAndroidUpdateDownloaded;
+      delete (window as unknown as { __onAndroidUpdateError?: unknown }).__onAndroidUpdateError;
+    });
+
+    it("correctly identifies Android environment when native bridge is active", async () => {
+      const { isAndroidAppEnvironment, detectPlatform } = await import("../services/updateService");
+
+      (window as unknown as { invoiceAndroid?: { isAndroidApp: () => boolean } }).invoiceAndroid = {
+        isAndroidApp: () => true,
+      };
+
+      expect(isAndroidAppEnvironment()).toBe(true);
+      expect(detectPlatform().platform).toBe("android");
+    });
+
+    it("handles Android OTA download with progress and auto-installation", async () => {
+      const { downloadUpdate, installUpdate } = await import("../services/updateService");
+
+      const downloadMock = vi.fn((_url: string, _file: string) => {
+        // Simulate native thread posting progress and completion
+        setTimeout(() => {
+          const win = window as unknown as {
+            __onAndroidUpdateProgress?: (p: number, r: number, t: number, s: number) => void;
+            __onAndroidUpdateDownloaded?: (f: string) => void;
+          };
+          win.__onAndroidUpdateProgress?.(50, 500, 1000, 250);
+          win.__onAndroidUpdateDownloaded?.("/data/user/0/com.invoicegen.app/cache/update.apk");
+        }, 10);
+      });
+
+      const installMock = vi.fn((_path?: string) => {});
+
+      (window as unknown as {
+        invoiceAndroid?: {
+          downloadAndInstallUpdate: (url: string, file: string) => void;
+          installDownloadedApk: (path?: string) => void;
+        };
+      }).invoiceAndroid = {
+        downloadAndInstallUpdate: downloadMock,
+        installDownloadedApk: installMock,
+      };
+
+      const progressEvents: number[] = [];
+      const res = await downloadUpdate(
+        {
+          name: "Invoice-Gen-1.5.0.apk",
+          size: 1000,
+          downloadUrl: "https://example.com/apk",
+          contentType: "application/vnd.android.package-archive",
+        },
+        (p) => progressEvents.push(p.percent)
+      );
+
+      expect(downloadMock).toHaveBeenCalledWith("https://example.com/apk", "Invoice-Gen-1.5.0.apk");
+      expect(res.success).toBe(true);
+      expect(res.filePath).toBe("/data/user/0/com.invoicegen.app/cache/update.apk");
+      expect(progressEvents).toContain(50);
+
+      const installRes = await installUpdate("/data/user/0/com.invoicegen.app/cache/update.apk");
+      expect(installMock).toHaveBeenCalledWith("/data/user/0/com.invoicegen.app/cache/update.apk");
+      expect(installRes.success).toBe(true);
     });
   });
 });

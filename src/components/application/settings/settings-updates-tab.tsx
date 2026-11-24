@@ -37,6 +37,7 @@ export const SettingsUpdatesTab: React.FC = () => {
 
   const [downloadState, setDownloadState] = useState<"idle" | "downloading" | "downloaded" | "installing" | "error">("idle");
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({ percent: 0, bytesReceived: 0, totalBytes: 0, speed: 0 });
+  const [downloadedFilePath, setDownloadedFilePath] = useState<string>("");
   const [downloadError, setDownloadError] = useState("");
   const [autoCheck, setAutoCheck] = useState(() => getUpdatePreferences().autoCheckOnStartup);
   const { platform, arch } = detectPlatform();
@@ -144,6 +145,7 @@ export const SettingsUpdatesTab: React.FC = () => {
 
       setDownloadState("downloaded");
       if (result.filePath) {
+        setDownloadedFilePath(result.filePath);
         setDownloadState("installing");
         setTimeout(async () => {
           await installUpdate(result.filePath!);
@@ -283,28 +285,31 @@ export const SettingsUpdatesTab: React.FC = () => {
             <RiCheckboxCircleFill className="size-5 text-emerald-600 shrink-0" />
             <div>
               <h5 className="text-xs font-bold text-emerald-950">
-                {platform === "android"
-                  ? "APK Download Started!"
-                  : downloadState === "installing"
-                  ? "Updating application & restarting..."
-                  : "Download Complete! Updating in-app..."}
+                {downloadState === "installing"
+                  ? platform === "android"
+                    ? "Launching Android Installer..."
+                    : "Updating application & restarting..."
+                  : "Download Complete! Ready to update."}
               </h5>
               <p className="text-[11px] text-emerald-800">
-                {platform === "android"
-                  ? "Check your notifications or tap Install APK below to install the update."
-                  : "Invoice Gen will reload automatically with the updated version (no setup wizard required)."}
+                {downloadState === "installing"
+                  ? platform === "android"
+                    ? "Confirm the system prompt on your screen to complete installation."
+                    : "Invoice Gen will reload automatically with the updated version."
+                  : "Ready to update."}
               </p>
             </div>
           </div>
-          {platform === "android" && lastCheckResult.release?.recommendedAsset && (
-            <a
-              href={lastCheckResult.release.recommendedAsset.downloadUrl}
-              target="_system"
-              rel="noopener noreferrer"
+          {downloadState === "downloaded" && downloadedFilePath && (
+            <button
+              onClick={() => {
+                setDownloadState("installing");
+                installUpdate(downloadedFilePath);
+              }}
               className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shrink-0 shadow-sm cursor-pointer"
             >
-              Install APK
-            </a>
+              Install Now
+            </button>
           )}
         </div>
       )}

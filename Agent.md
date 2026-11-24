@@ -35,7 +35,7 @@ This document outlines the operational rules, responsibilities, architectural st
 3. **Strict Validation & Quality Gates:**
    - Before declaring any task complete or committing code:
      - `npx tsc -b`: Must exit with code 0 (zero type errors).
-     - `npm test`: Must pass 100% of test suites across all 17 test files (194 tests).
+     - `npm test`: Must pass 100% of test suites across all 17 test files (196 tests).
      - `npm audit`: Zero high or critical vulnerabilities.
      - `npm run lint`: Zero lint errors.
      - Check mobile responsiveness across standard phone viewports (360px–412px width).

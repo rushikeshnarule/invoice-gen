@@ -4,7 +4,21 @@ All notable changes to **Invoice Gen** are documented in this file.
 
 ---
 
-## [1.5.0] - 2026-11-23
+## [1.5.0] - 2026-11-24
+
+### 🔄 Universal In-App OTA Update System (Windows, macOS & Android)
+* **Zero Browser, Zero File Hunting**: Completed full in-app OTA update system across Windows, macOS, and Android. Every platform follows the exact same seamless flow: detect update → download in-app with real-time percentage, byte count, and speed progress bar → install → relaunch on the new version.
+* **Eliminated Windows/macOS "App Already Running" Lock Errors**:
+  - Enforced Electron `app.requestSingleInstanceLock()` and `second-instance` window focus restoration.
+  - Implemented detached updater helper scripts (`.cmd` on Windows, `.sh` on macOS) that force-terminate the parent process tree (`taskkill /f /pid %PARENT_PID%` and `taskkill /f /t /im "Invoice Gen.exe"`) prior to overwriting `.asar` files or executing silent setup `/S`.
+  - Added `build/installer.nsh` with `customInit` and `customUnInit` macros to kill running `Invoice Gen.exe` instances before NSIS setup proceeds.
+* **Android 100% In-App OTA Engine**:
+  - Added `<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />` in `AndroidManifest.xml`.
+  - Implemented native background streaming in `MainActivity.java` with automatic multi-hop HTTP/HTTPS redirect traversal (supporting GitHub Releases CDN redirects) and real-time JS progress dispatch (`window.__onAndroidUpdateProgress`).
+  - Saved APKs to `context.getCacheDir()` and launched native `PackageInstaller` via `Intent.ACTION_VIEW` with `FileProvider.getUriForFile()` and `FLAG_GRANT_READ_URI_PERMISSION`.
+  - Added `onResume()` permission listener to automatically launch the installer prompt once the user returns from granting unknown sources permission.
+  - Eliminated all external browser redirects and `<a target="_system">` links.
+* **Automated Test Coverage**: Expanded Vitest suite to **196 passed tests across 17 test files (100% pass rate)** including native Android OTA bridge simulation.
 
 ### 🔢 Invoice Numbering Sequence
 * **Strict Sequential Starting Sequence (`INV-001`)**: Sequential generator now starts strictly with `INV-001` (followed by `INV-002`, `INV-003`, etc.) across all new installations, setups, and sample datasets, adhering to statutory commercial standards.

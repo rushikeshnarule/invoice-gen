@@ -42,7 +42,7 @@ This document stores persistent project knowledge, current architecture, environ
 | **PDF Engine** | `pdfGeneratorService.ts` | 100% deterministic pure vector PDF generation. Zero DOM/canvas dependency. Multi-page support. |
 | **Excel Engine** | `exportToExcel.ts` via ExcelJS | Publication-grade OpenXML spreadsheets with A4 portrait Fit-to-Page settings. |
 | **Data Layer** | LocalStorage + `systemStorage.ts` | Complete offline resilience with zero external cloud requirements. |
-| **Test Engine** | Vitest + jsdom + testing-library | 17 test suites, 194 unit and integration tests (100% pass). |
+| **Test Engine** | Vitest + jsdom + testing-library | 17 test suites, 196 unit and integration tests (100% pass). |
 | **Security / SAST** | OWASP Top 10 + CWE Compliance | Safe JSON deserialization, IPC updater verification, zero high CVEs. |
 
 ---
@@ -62,9 +62,10 @@ This document stores persistent project knowledge, current architecture, environ
    - **Laptops & Desktops (≥ 1024px):** Dual-pane layout (Form on left, live responsive A4 preview on right).
    - **Smartphones (< 1024px):** Single-pane layout with persistent segmented toggle between `✍️ Edit Invoice` and `👁️ Live Preview`.
 
-4. **In-App Hot Updates (.asar Strict Priority):**
-   - On Electron desktop runtimes (`isDesktopEnvironment() === true`), the updater strictly resolves to `Invoice-Gen-Update-*.asar` over `.exe` installers.
-   - Updates download in-place and replace `app.asar` via detached helper script, relaunching cleanly without triggering setup wizard prompts.
+4. **Universal In-App OTA Update System:**
+   - **Zero Browser, Zero File Hunting:** All platforms (Windows, macOS, Android) download updates inside the app with a real-time progress bar (percentage, bytes, speed) and trigger seamless installation without browser popups or manual file hunting.
+   - **Desktop (Electron):** Enforces single-instance lock (`app.requestSingleInstanceLock()`). Prioritizes in-place `.asar` hot updates (~29 MB). Detached helper `.cmd` / `.sh` script force-terminates parent process tree (`taskkill /f /pid %PARENT_PID%` and `taskkill /f /t /im "Invoice Gen.exe"`) before copying `.asar` files or launching `/S` silent setup, completely eliminating "the app is already running in background" lock errors. NSIS installer includes `build/installer.nsh` with customInit hooks.
+   - **Android (Capacitor):** Implements in-app background download stream via `HttpURLConnection` in `MainActivity.java` with real-time JS progress dispatch (`window.__onAndroidUpdateProgress`). Triggers native `PackageInstaller` via `Intent.ACTION_VIEW` and `FileProvider.getUriForFile()`. Prompts `REQUEST_INSTALL_PACKAGES` and resumes automatically on return (`onResume`).
 
 5. **Commercial Advertising Dossier:**
    - Master advertising, copywriting, and video commercial script documentation is cataloged for marketing campaigns.

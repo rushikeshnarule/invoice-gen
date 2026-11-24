@@ -93,6 +93,11 @@ export function detectPlatform(): { platform: "windows" | "macos" | "android" | 
     }
   }
 
+  // 2. Prioritize native Android bridge if running inside Android APK
+  if (isAndroidAppEnvironment()) {
+    return { platform: "android" };
+  }
+
   const ua = typeof navigator !== "undefined" ? navigator.userAgent.toLowerCase() : "";
 
   // Check Android
@@ -318,10 +323,27 @@ export function isDesktopEnvironment(): boolean {
   return typeof window !== "undefined" && Boolean((window as unknown as { invoiceDesktop?: { isDesktop?: boolean } }).invoiceDesktop?.isDesktop);
 }
 
+export function isAndroidAppEnvironment(): boolean {
+  if (typeof window !== "undefined") {
+    const android = (window as unknown as { invoiceAndroid?: { isAndroidApp?: () => boolean } }).invoiceAndroid;
+    if (android?.isAndroidApp && typeof android.isAndroidApp === "function") {
+      try {
+        return Boolean(android.isAndroidApp());
+      } catch {}
+    }
+  }
+  return false;
+}
+
+export function isNativeAppEnvironment(): boolean {
+  return isDesktopEnvironment() || isAndroidAppEnvironment();
+}
+
 export async function downloadUpdate(
   asset: ReleaseAsset,
   onProgress?: (progress: DownloadProgress) => void
 ): Promise<{ success: boolean; filePath?: string; error?: string }> {
+  // 1. Desktop Electron IPC bridge
   const desktop = typeof window !== "undefined" ? (window as unknown as {
     invoiceDesktop?: {
       downloadUpdate?: (options: { downloadUrl: string; fileName: string }) => Promise<{ success: boolean; filePath?: string; error?: string }>;
@@ -346,10 +368,59 @@ export async function downloadUpdate(
     }
   }
 
-  // Fallback for web / mobile environment: trigger browser download
+  // 2. Android Native Bridge: full in-app background download stream + PackageInstaller
+  const android = typeof window !== "undefined" ? (window as unknown as {
+    invoiceAndroid?: {
+      downloadAndInstallUpdate?: (downloadUrl: string, fileName: string) => void;
+      installDownloadedApk?: (filePath?: string) => void;
+    };
+  }).invoiceAndroid : undefined;
+
+  if (android && typeof android.downloadAndInstallUpdate === "function") {
+    const triggerAndroidDownload = android.downloadAndInstallUpdate.bind(android);
+    return new Promise((resolve) => {
+      const win = window as unknown as {
+        __onAndroidUpdateProgress?: (percent: number, bytesReceived: number, totalBytes: number, speed: number) => void;
+        __onAndroidUpdateDownloaded?: (filePath: string) => void;
+        __onAndroidUpdateError?: (error: string) => void;
+      };
+
+      win.__onAndroidUpdateProgress = (percent: number, bytesReceived: number, totalBytes: number, speed: number) => {
+        if (onProgress) {
+          onProgress({ percent, bytesReceived, totalBytes, speed });
+        }
+      };
+
+      win.__onAndroidUpdateDownloaded = (filePath: string) => {
+        cleanup();
+        resolve({ success: true, filePath });
+      };
+
+      win.__onAndroidUpdateError = (error: string) => {
+        cleanup();
+        resolve({ success: false, error: error || "Android update download failed" });
+      };
+
+      function cleanup() {
+        try {
+          delete win.__onAndroidUpdateProgress;
+          delete win.__onAndroidUpdateDownloaded;
+          delete win.__onAndroidUpdateError;
+        } catch {}
+      }
+
+      try {
+        triggerAndroidDownload(asset.downloadUrl, asset.name);
+      } catch (err) {
+        cleanup();
+        resolve({ success: false, error: err instanceof Error ? err.message : "Failed to initiate update download" });
+      }
+    });
+  }
+
+  // Fallback for web browser environment only: trigger browser download
   if (typeof window !== "undefined") {
     try {
-      // In Android WebView / Capacitor, use _system to invoke Android DownloadManager
       window.open(asset.downloadUrl, "_system");
     } catch {}
     const a = document.createElement("a");
@@ -363,7 +434,7 @@ export async function downloadUpdate(
     return { success: true };
   }
 
-  return { success: false, error: "Download is only supported in browser or desktop environment" };
+  return { success: false, error: "Download is only supported in browser or native application" };
 }
 
 export async function installUpdate(filePath: string): Promise<{ success: boolean; error?: string }> {
@@ -377,5 +448,20 @@ export async function installUpdate(filePath: string): Promise<{ success: boolea
     return desktop.installUpdate({ filePath });
   }
 
-  return { success: false, error: "Auto-install is available on Windows and macOS desktop editions" };
+  const android = typeof window !== "undefined" ? (window as unknown as {
+    invoiceAndroid?: {
+      installDownloadedApk?: (filePath?: string) => void;
+    };
+  }).invoiceAndroid : undefined;
+
+  if (android?.installDownloadedApk) {
+    try {
+      android.installDownloadedApk(filePath);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Failed to trigger Android installation" };
+    }
+  }
+
+  return { success: false, error: "Auto-install is available on Windows, macOS, and Android editions" };
 }

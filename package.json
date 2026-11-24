@@ -93,6 +93,7 @@
       "uninstallerIcon": "build/uninstallerIcon.ico",
       "installerHeaderIcon": "build/installerHeaderIcon.ico",
       "artifactName": "Invoice-Gen-Setup-${version}.${ext}",
+      "include": "build/installer.nsh",
       "deleteAppDataOnUninstall": true,
       "runAfterFinish": true
     },

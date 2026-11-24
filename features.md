@@ -107,7 +107,21 @@
 
 ---
 
-## 8. In-App Hot-Reload Auto-Updater Engine
+## 8. Seamless In-App OTA Update System (Windows, macOS & Android)
 
-- **Direct In-App ASAR Hot Reload:** Electron desktop instances prioritize the compact `Invoice-Gen-Update-*.asar` bundle (~29 MB) over installer executables.
-- **Zero Wizard Friction:** Replaces runtime assets in-place and hot-reloads the application, completely bypassing re-running setup wizards or installers.
+- **Universal Single-Tap Workflow:**
+  - Detect update → Download inside the app with real-time percentage, byte count, and download speed progress bar → Install seamlessly → Relaunch on new version.
+  - Zero browser redirects, zero manual file hunting, zero external download managers.
+- **Windows Desktop:**
+  - Prioritizes high-speed `.asar` hot-reload bundle directly in-place (~29 MB) over full installer executables.
+  - Enforces `app.requestSingleInstanceLock()` and `second-instance` focus handling to prevent duplicate background instances.
+  - Detached helper batch script force-terminates parent process tree (`taskkill /f /pid %PARENT_PID%` and `taskkill /f /t /im "Invoice Gen.exe"`) prior to file replacement or `/S` silent setup execution, completely eliminating "the app is already running in background" lock errors.
+  - NSIS installer configured with `customInit` and `customUnInit` process termination macros via `build/installer.nsh`.
+- **macOS Desktop:**
+  - Direct `.asar` hot-reload inside `Invoice Gen.app/Contents/Resources/` followed by automated bundle relaunch.
+  - Helper shell script force-terminates parent PID and app instances before file copy or installer execution.
+- **Android Mobile:**
+  - Native background download stream via `HttpURLConnection` with multi-hop HTTP/HTTPS redirect traversal (supporting GitHub Releases CDN redirects).
+  - Real-time progress dispatched directly to WebView (`window.__onAndroidUpdateProgress`).
+  - Native package installation triggered directly via `Intent.ACTION_VIEW` with `androidx.core.content.FileProvider` content URI (`FLAG_GRANT_READ_URI_PERMISSION`).
+  - Handles Android 8.0–15 `REQUEST_INSTALL_PACKAGES` permission prompt with automatic resumption on return (`onResume`).

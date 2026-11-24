@@ -133,3 +133,31 @@ This document records technical defects, debugging insights, architectural lesso
   1. Updated `detectPlatform()` to check the native desktop bridge (`window.invoiceDesktop.platform`) first.
   2. Enforced strict `.asar` bundle resolution in `getRecommendedAsset()`, `UpdateModal.tsx`, and `settings-updates-tab.tsx` whenever `isDesktopEnvironment()` is true.
   3. Guaranteed that clicking "Update Now" on Windows and macOS workstations always pulls `Invoice-Gen-Update-*.asar` for seamless in-place hot reloads without installer wizards.
+
+---
+
+## 6. Cross-Platform OTA Updating
+
+### Lesson 6.1: Desktop File Locks & Process Contention ("App is already running in background")
+- **Defect:** On Windows and macOS, when initiating an in-app update or running the installer, setup failed with *"the app is already running in background, setup won't work"*, or file replacement failed due to file locks on `app.asar`.
+- **Root Cause:**
+  1. Missing single-instance enforcement in Electron: multiple background instances could run simultaneously.
+  2. Spawning NSIS setup or running `.asar` replacement while parent Electron process and its child processes (renderer, GPU, utility) were still actively holding file handles.
+  3. NSIS setup lacked custom termination hooks to kill running instances prior to file extraction.
+- **Permanent Solution:**
+  1. In `electron/main.cjs`, enforced `app.requestSingleInstanceLock()` and `second-instance` focus restoration.
+  2. Created `build/installer.nsh` with `!macro customInit` and `!macro customUnInit` running `cmd.exe /c taskkill /f /t /im "Invoice Gen.exe"` before installer initialization.
+  3. Replaced direct installer spawning in `electron/main.cjs` with detached helper scripts (`.cmd` on Windows, `.sh` on macOS) that forcefully terminate the parent process tree (`taskkill /f /pid %PARENT_PID%` and `taskkill /f /im "%EXE_NAME%"`) before copying `.asar` files or executing setup with `/S`.
+
+### Lesson 6.2: Android In-App OTA Updates (Zero Browser, Zero File Hunting)
+- **Defect:** On Android, tapping "Update Now" kicked the user out of the application into an external browser or Android DownloadManager, leaving the user to manually search their notifications or downloads folder to tap the APK.
+- **Root Cause:**
+  1. Missing `<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />` in `AndroidManifest.xml`.
+  2. Update service fell back to `window.open(url, "_system")` instead of downloading inside the app.
+  3. Lack of a native streaming engine with real-time progress callbacks and `PackageInstaller` launch bridge.
+- **Permanent Solution:**
+  1. Added `REQUEST_INSTALL_PACKAGES` permission to `android/app/src/main/AndroidManifest.xml`.
+  2. Implemented `downloadAndInstallUpdate()` in `MainActivity.java` with background thread streaming, multi-hop redirect traversal (for GitHub CDN redirects), and real-time JS progress dispatch (`window.__onAndroidUpdateProgress`).
+  3. Saved the update APK into `context.getCacheDir()` (mapped in `file_paths.xml`) and launched `Intent.ACTION_VIEW` with `FileProvider.getUriForFile()` and `FLAG_GRANT_READ_URI_PERMISSION`.
+  4. Added `onResume()` permission detection in `MainActivity.java` so if the user grants "Install unknown apps", the installer prompt appears immediately upon returning to the app.
+  5. Connected `downloadUpdate()` and `installUpdate()` in `updateService.ts` to `window.invoiceAndroid`, providing the exact same progress bar and seamless in-app experience on Android as on desktop.

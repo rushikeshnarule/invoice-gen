@@ -233,33 +233,22 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                     <div>
                       <h5 className="text-xs font-bold text-emerald-950">
                         {downloadState === "installing"
-                          ? "Updating application & restarting..."
-                          : platform === "android"
-                          ? "APK Package Downloaded!"
+                          ? platform === "android"
+                            ? "Launching Android Installer..."
+                            : "Updating application & restarting..."
                           : "Download Complete!"}
                       </h5>
                       <p className="text-[11px] text-emerald-800">
                         {downloadState === "installing"
-                          ? "Invoice Gen will reload automatically with the updated version."
-                          : platform === "android"
-                          ? "Tap Install APK below or check your notifications to finish installing."
+                          ? platform === "android"
+                            ? "Confirm the system prompt to complete the in-app update."
+                            : "Invoice Gen will reload automatically with the updated version."
                           : "Ready to update."}
                       </p>
                     </div>
                   </div>
 
-                  {platform === "android" && recommendedAsset && (
-                    <a
-                      href={recommendedAsset.downloadUrl}
-                      target="_system"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
-                    >
-                      Install APK
-                    </a>
-                  )}
-
-                  {downloadState === "downloaded" && downloadedFilePath && platform !== "android" && (
+                  {downloadState === "downloaded" && downloadedFilePath && (
                     <button
                       onClick={() => {
                         setDownloadState("installing");
