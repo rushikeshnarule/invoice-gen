@@ -20,6 +20,7 @@ import {
   detectPlatform,
   downloadUpdate,
   installUpdate,
+  isDesktopEnvironment,
   type ReleaseInfo,
   type ReleaseAsset,
   type DownloadProgress,
@@ -39,6 +40,9 @@ export const SettingsUpdatesTab: React.FC = () => {
   const [downloadError, setDownloadError] = useState("");
   const [autoCheck, setAutoCheck] = useState(() => getUpdatePreferences().autoCheckOnStartup);
   const { platform, arch } = detectPlatform();
+  const isDesktop = isDesktopEnvironment();
+  const asarAsset = lastCheckResult.release?.assets.find((a) => a.name.toLowerCase().endsWith(".asar"));
+  const effectiveAsset = (isDesktop && asarAsset) ? asarAsset : lastCheckResult.release?.recommendedAsset;
 
   useEffect(() => {
     // Perform update check on mount so current status is immediately reflected
@@ -231,18 +235,18 @@ export const SettingsUpdatesTab: React.FC = () => {
               </p>
             )}
 
-            {lastCheckResult.release?.recommendedAsset && (platform === "windows" || platform === "macos") && downloadState === "idle" && (
+            {effectiveAsset && (platform === "windows" || platform === "macos" || isDesktop) && downloadState === "idle" && (
               <div className="mt-3 pt-3 border-t border-emerald-200/60 flex items-center justify-between gap-3 flex-wrap">
                 <span className="text-[11px] text-emerald-800 flex items-center gap-1">
                   <RiShieldCheckLine className="size-3.5 text-emerald-600" />
                   Direct in-app hot reload available • No setup installer needed
                 </span>
                 <button
-                  onClick={() => handleStartInAppUpdate(lastCheckResult.release!.recommendedAsset!)}
+                  onClick={() => handleStartInAppUpdate(effectiveAsset)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
                 >
                   <RiDownload2Line className="size-3.5" />
-                  <span>Re-sync In-App ({formatFileSize(lastCheckResult.release.recommendedAsset.size)})</span>
+                  <span>Re-sync In-App ({formatFileSize(effectiveAsset.size)})</span>
                 </button>
               </div>
             )}
@@ -344,13 +348,13 @@ export const SettingsUpdatesTab: React.FC = () => {
               </div>
             </div>
 
-            {lastCheckResult.release.recommendedAsset && downloadState === "idle" && (
+            {effectiveAsset && downloadState === "idle" && (
               <button
-                onClick={() => handleStartInAppUpdate(lastCheckResult.release!.recommendedAsset!)}
+                onClick={() => handleStartInAppUpdate(effectiveAsset)}
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md transition-all shrink-0 cursor-pointer active:scale-95"
               >
                 <RiDownload2Line className="size-4" />
-                <span>Update Now ({formatFileSize(lastCheckResult.release.recommendedAsset.size)})</span>
+                <span>Update Now ({formatFileSize(effectiveAsset.size)})</span>
                 <RiArrowRightLine className="size-3.5" />
               </button>
             )}

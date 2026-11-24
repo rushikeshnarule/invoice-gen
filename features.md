@@ -104,3 +104,10 @@
   - All new window targets isolated with `noopener,noreferrer`.
 - **Modern Supply Chain:**
   - Zero high-severity vulnerabilities; 100% migrated to verified modern libraries (`ExcelJS 4.4.0`, `PDFKit`, `React 19`, `Zod 4.6.6`).
+
+---
+
+## 8. In-App Hot-Reload Auto-Updater Engine
+
+- **Direct In-App ASAR Hot Reload:** Electron desktop instances prioritize the compact `Invoice-Gen-Update-*.asar` bundle (~29 MB) over installer executables.
+- **Zero Wizard Friction:** Replaces runtime assets in-place and hot-reloads the application, completely bypassing re-running setup wizards or installers.

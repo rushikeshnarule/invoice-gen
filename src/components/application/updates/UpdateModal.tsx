@@ -115,7 +115,8 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const recommendedAsset = release.recommendedAsset;
+  const asarAsset = release?.assets.find((a) => a.name.toLowerCase().endsWith(".asar"));
+  const recommendedAsset = (isDesktop && asarAsset) ? asarAsset : release?.recommendedAsset;
 
   return createPortal(
     <div

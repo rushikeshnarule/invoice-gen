@@ -62,6 +62,13 @@ This document stores persistent project knowledge, current architecture, environ
    - **Laptops & Desktops (≥ 1024px):** Dual-pane layout (Form on left, live responsive A4 preview on right).
    - **Smartphones (< 1024px):** Single-pane layout with persistent segmented toggle between `✍️ Edit Invoice` and `👁️ Live Preview`.
 
+4. **In-App Hot Updates (.asar Strict Priority):**
+   - On Electron desktop runtimes (`isDesktopEnvironment() === true`), the updater strictly resolves to `Invoice-Gen-Update-*.asar` over `.exe` installers.
+   - Updates download in-place and replace `app.asar` via detached helper script, relaunching cleanly without triggering setup wizard prompts.
+
+5. **Commercial Advertising Dossier:**
+   - Master advertising, copywriting, and video commercial script documentation is cataloged for marketing campaigns.
+
 ---
 
 ## 5. Directory Structure Reference

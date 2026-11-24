@@ -82,6 +82,17 @@ export function compareSemver(v1: string, v2: string): number {
  * Detects the client's operating system environment.
  */
 export function detectPlatform(): { platform: "windows" | "macos" | "android" | "web" | "linux"; arch?: string } {
+  // 1. Prioritize native desktop bridge if running inside Electron
+  if (typeof window !== "undefined") {
+    const desktop = (window as unknown as { invoiceDesktop?: { platform?: string; isDesktop?: boolean } }).invoiceDesktop;
+    if (desktop?.platform === "win32") {
+      return { platform: "windows", arch: "x64" };
+    }
+    if (desktop?.platform === "darwin") {
+      return { platform: "macos", arch: "arm64" };
+    }
+  }
+
   const ua = typeof navigator !== "undefined" ? navigator.userAgent.toLowerCase() : "";
 
   // Check Android
@@ -114,11 +125,12 @@ export function detectPlatform(): { platform: "windows" | "macos" | "android" | 
  * so users can update seamlessly without re-running setup installers.
  */
 export function getRecommendedAsset(assets: ReleaseAsset[]): ReleaseAsset | null {
+  const isDesktop = isDesktopEnvironment();
   const { platform, arch } = detectPlatform();
 
-  // 1. For Desktop (Windows or macOS), prioritize seamless in-app update bundle (.asar)
+  // 1. For Desktop (Electron runtime, Windows or macOS), strictly prioritize seamless in-app update bundle (.asar)
   // This updates the workstation in-place without running setup or installer wizards
-  if (platform === "windows" || platform === "macos") {
+  if (isDesktop || platform === "windows" || platform === "macos") {
     const updateAsar = assets.find(
       (a) => a.name.toLowerCase().endsWith(".asar") && a.name.toLowerCase().includes("update")
     ) || assets.find((a) => a.name.toLowerCase().endsWith(".asar"));

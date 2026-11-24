@@ -125,3 +125,11 @@ This document records technical defects, debugging insights, architectural lesso
 - **Permanent Solution:**
   - Increment Android `versionCode` atomically with each release.
   - Standardize major/minor/patch SemVer progression across `package.json`, `android/app/build.gradle`, `updateService.ts`, and release manifests.
+
+### Lesson 5.9: In-App Desktop Update Asset Prioritization (.asar vs Setup Installer Exe)
+- **Defect:** Updating from an installed Electron desktop app downloaded and launched `Invoice-Gen-Setup-1.5.0.exe` instead of `Invoice-Gen-Update-1.5.0.asar`, displaying the setup installer wizard.
+- **Root Cause:** Legacy `getRecommendedAsset` prioritized `.exe` installers when platform was `"windows"`, and `detectPlatform()` relied solely on `navigator.userAgent` which could misclassify desktop environments or fall back to `.exe` when both were present.
+- **Permanent Solution:**
+  1. Updated `detectPlatform()` to check the native desktop bridge (`window.invoiceDesktop.platform`) first.
+  2. Enforced strict `.asar` bundle resolution in `getRecommendedAsset()`, `UpdateModal.tsx`, and `settings-updates-tab.tsx` whenever `isDesktopEnvironment()` is true.
+  3. Guaranteed that clicking "Update Now" on Windows and macOS workstations always pulls `Invoice-Gen-Update-*.asar` for seamless in-place hot reloads without installer wizards.
