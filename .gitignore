@@ -32,6 +32,7 @@ scripts/package-mac.py
 test_symlink
 .cursor/
 .gemini/
+.cache/
 
 # Editor directories and files
 .vscode/*

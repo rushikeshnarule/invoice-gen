@@ -202,7 +202,7 @@ public class MainActivity extends BridgeActivity {
                         connection.setInstanceFollowRedirects(true);
                         connection.setConnectTimeout(15000);
                         connection.setReadTimeout(30000);
-                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) InvoiceGen/1.5.0");
+                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) InvoiceGen/1.5.1");
                         connection.connect();
                         int responseCode = connection.getResponseCode();
                         if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||

@@ -4,7 +4,7 @@ All notable changes to **Invoice Gen** are documented in this file.
 
 ---
 
-## [1.5.0] - 2026-11-24
+## [1.5.1] - 2026-11-24
 
 ### 🔄 Universal In-App OTA Update System (Windows, macOS & Android)
 * **Zero Browser, Zero File Hunting**: Completed full in-app OTA update system across Windows, macOS, and Android. Every platform follows the exact same seamless flow: detect update → download in-app with real-time percentage, byte count, and speed progress bar → install → relaunch on the new version.
@@ -19,6 +19,10 @@ All notable changes to **Invoice Gen** are documented in this file.
   - Added `onResume()` permission listener to automatically launch the installer prompt once the user returns from granting unknown sources permission.
   - Eliminated all external browser redirects and `<a target="_system">` links.
 * **Automated Test Coverage**: Expanded Vitest suite to **196 passed tests across 17 test files (100% pass rate)** including native Android OTA bridge simulation.
+
+---
+
+## [1.5.0] - 2026-11-23
 
 ### 🔢 Invoice Numbering Sequence
 * **Strict Sequential Starting Sequence (`INV-001`)**: Sequential generator now starts strictly with `INV-001` (followed by `INV-002`, `INV-003`, etc.) across all new installations, setups, and sample datasets, adhering to statutory commercial standards.
