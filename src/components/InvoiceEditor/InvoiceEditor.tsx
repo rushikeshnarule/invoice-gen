@@ -22,7 +22,17 @@ import { generateInvoicePdf } from '../../services/pdfGeneratorService';
 import { exportAndSaveFile } from '../../services/fileExportService';
 import { ColorPickerField } from '../ThemeOptions/ColorPickerField';
 import { recalculate } from '../../utils/buildRenderData';
-import { formatCurrency, formatNumber, exportInvoiceToExcel } from '../../utils';
+import {
+  formatCurrency,
+  formatNumber,
+  exportInvoiceToExcel,
+  US_UNITS,
+  IN_UNITS,
+  ALL_KNOWN_UNITS,
+  IN_GST_RATES,
+  isDefaultPlaceholderItem,
+  productToLineItem,
+} from '../../utils';
 import { extractStateCode } from '../../utils/gst';
 import { useNativeBackButton } from '../../hooks/useNativeBackButton';
 import { haptics } from '../../services/nativeMobileService';
@@ -70,6 +80,7 @@ import {
   RiCalendarLine,
   RiQrCodeLine,
   RiMoreFill,
+  RiPriceTag3Line,
 } from '@remixicon/react';
 
 function getMonthNameAndYear(ym: string): string {
@@ -89,7 +100,7 @@ interface InvoiceEditorProps {
 }
 
 export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack }) => {
-  const { getInvoice, updateInvoice, clients, businessProfile, updateBusinessProfile, saveClient } = useInvoices();
+  const { getInvoice, updateInvoice, clients, products, businessProfile, updateBusinessProfile, saveClient, saveProduct } = useInvoices();
   const {
     currentThemeId,
     getOptionsForTheme,
@@ -467,6 +478,66 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
       return { ...prev, items: [...prev.items, newItem], gstType: isUS ? 'none' : nextGstType };
     });
+  };
+
+  const handleSelectProduct = (productId: string) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+    haptics.selection();
+
+    setInvoiceData((prev) => {
+      const isBlankFirstItem = prev.items.length === 1 && isDefaultPlaceholderItem(prev.items[0]);
+      const targetSno = isBlankFirstItem ? 1 : prev.items.length + 1;
+      const targetId = isBlankFirstItem
+        ? prev.items[0].id
+        : `item-${Date.now()}-${prev.items.length + 1}`;
+      const fallbackDate =
+        prev.invoiceType === 'monthly'
+          ? (prev.billingMonth ? `${prev.billingMonth}-01` : prev.invoiceDate)
+          : prev.invoiceDate;
+      const targetDate = isBlankFirstItem
+        ? (prev.items[0].date || fallbackDate)
+        : fallbackDate;
+
+      const loadedItem = productToLineItem(product, {
+        isUS,
+        isClientTaxExempt: Boolean(prev.client?.taxExempt),
+        sno: targetSno,
+        id: targetId,
+        date: targetDate,
+      });
+
+      let nextGstType = prev.gstType;
+      if (!isUS && nextGstType === 'none' && loadedItem.gstRate > 0) {
+        nextGstType = 'cgst_sgst';
+      }
+
+      const nextItems = isBlankFirstItem ? [loadedItem] : [...prev.items, loadedItem];
+      return { ...prev, items: nextItems, gstType: isUS ? 'none' : nextGstType };
+    });
+
+    toast.success(`Loaded "${product.name}" into invoice`);
+  };
+
+  const handleSaveItemToCatalog = (item: LineItem) => {
+    const desc = (item.description || '').trim();
+    if (!desc) {
+      toast.error('Enter an item description before saving to Product Catalog');
+      return;
+    }
+    const saved = saveProduct({
+      name: desc,
+      hsnSac: isUS ? undefined : (item.hsnSac || undefined),
+      sku: isUS ? (item.sku || item.hsnSac || undefined) : undefined,
+      unit: item.unit || (isUS ? 'ea' : 'Nos'),
+      rate: Number(item.rate) || 0,
+      defaultQuantity: Number(item.quantity) > 0 ? Number(item.quantity) : 1,
+      discount: Number(item.discount) > 0 ? Number(item.discount) : undefined,
+      gstRate: Number(item.gstRate) || 0,
+      taxable: item.taxable !== undefined ? item.taxable : (Number(item.gstRate) || 0) > 0,
+    });
+    haptics.success();
+    toast.success(`Saved "${saved.name}" to Product Catalog`);
   };
 
   const handleDuplicateItem = (index: number) => {
@@ -1067,17 +1138,41 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                   )}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-700">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-700 shrink-0">
                     Line items ({invoiceData.items.length})
                   </span>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+                    <select
+                      aria-label="Select the Product"
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleSelectProduct(e.target.value);
+                        }
+                      }}
+                      className="text-xs bg-white border border-blue-200 hover:border-blue-400 rounded-lg px-2.5 py-1.5 text-blue-700 font-semibold cursor-pointer outline-none focus:border-blue-600 max-w-full sm:max-w-[240px] truncate"
+                    >
+                      <option value="">Select the Product</option>
+                      {products.length === 0 ? (
+                        <option value="" disabled>
+                          No products saved yet (add in Products menu)
+                        </option>
+                      ) : (
+                        products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({formatCurrency(p.rate, currencySymbol)} / {p.unit})
+                          </option>
+                        ))
+                      )}
+                    </select>
+
                     <Button
                       size="small"
                       variant="secondary"
                       leadingIcon={RiAddLine}
                       onClick={() => handleAddItem()}
-                      className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/70"
+                      className="text-xs font-semibold text-blue-700 border-blue-200 bg-blue-50/60 hover:bg-blue-100/70 shrink-0"
                     >
                       Add Item
                     </Button>
@@ -1105,6 +1200,14 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                         />
 
                         <div className="flex items-center gap-1">
+                          <IconButton
+                            size="small"
+                            icon={RiPriceTag3Line}
+                            aria-label="Save item to Product Catalog"
+                            title="Save item to Product Catalog"
+                            onClick={() => handleSaveItemToCatalog(item)}
+                            className="text-slate-500 hover:text-blue-600 hover:border-blue-200"
+                          />
                           <IconButton
                             size="small"
                             icon={RiFileCopyLine}
@@ -1210,44 +1313,12 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                             onChange={(e) => handleUpdateItem(index, { unit: e.target.value })}
                             className="w-full bg-white border border-slate-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
                           >
-                            {isUS ? (
-                              <>
-                                <option value="ea">ea (each)</option>
-                                <option value="hrs">hrs (hours)</option>
-                                <option value="days">days</option>
-                                <option value="units">units</option>
-                                <option value="box">box</option>
-                                <option value="pk">pk (pack)</option>
-                                <option value="lbs">lbs</option>
-                                <option value="sq ft">sq ft</option>
-                                <option value="ft">ft</option>
-                                <option value="Nos">Nos</option>
-                                <option value="Pcs">Pcs</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="Nos">Nos</option>
-                                <option value="Pcs">Pcs</option>
-                                <option value="Brass">Brass</option>
-                                <option value="Sqft">Sqft</option>
-                                <option value="Sqm">Sqm</option>
-                                <option value="Mtr">Mtr</option>
-                                <option value="Feet">Feet</option>
-                                <option value="Ton">Ton</option>
-                                <option value="Bags">Bags</option>
-                                <option value="Boxes">Boxes</option>
-                                <option value="Kg">Kg</option>
-                                <option value="Ltr">Ltr</option>
-                                <option value="Hrs">Hrs</option>
-                                <option value="Days">Days</option>
-                                <option value="Job">Job</option>
-                                <option value="Lic">Lic</option>
-                                <option value="Roll">Roll</option>
-                                <option value="Packet">Packet</option>
-                                <option value="Set">Set</option>
-                              </>
-                            )}
-                            {item.unit && !['ea','hrs','days','units','box','pk','lbs','sq ft','ft','Nos','Pcs','Brass','Sqft','Sqm','Mtr','Feet','Ton','Bags','Boxes','Kg','Ltr','Hrs','Days','Job','Lic','Roll','Packet','Set'].includes(item.unit) && (
+                            {(isUS ? US_UNITS : IN_UNITS).map((u) => (
+                              <option key={u.value} value={u.value}>
+                                {u.label}
+                              </option>
+                            ))}
+                            {item.unit && !ALL_KNOWN_UNITS.includes(item.unit) && (
                               <option value={item.unit}>{item.unit}</option>
                             )}
                           </select>
@@ -1297,13 +1368,16 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                                 </option>
                               ))
                             ) : (
-                              <>
-                                <option value="0">0% (Nil)</option>
-                                <option value="5">5%</option>
-                                <option value="12">12%</option>
-                                <option value="18">18%</option>
-                                <option value="28">28%</option>
-                              </>
+                              IN_GST_RATES.map((rate) => (
+                                <option key={rate} value={rate}>
+                                  {rate === 0 ? '0% (Nil)' : `${rate}%`}
+                                </option>
+                              ))
+                            )}
+                            {!(isUS
+                              ? US_TAX_PRESETS.some((p) => p.rate === Number(item.gstRate))
+                              : IN_GST_RATES.includes(Number(item.gstRate) as (typeof IN_GST_RATES)[number])) && (
+                              <option value={item.gstRate}>{item.gstRate}%</option>
                             )}
                           </select>
                         </div>

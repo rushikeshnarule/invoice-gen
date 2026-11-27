@@ -7,7 +7,7 @@ This document stores persistent project knowledge, current architecture, environ
 ## 1. Project Identification & Versioning
 
 - **Application Name:** Invoice Gen
-- **Current Version:** `1.5.1`
+- **Current Version:** `1.5.1.1`
 - **Application ID:** `com.invoicegen.desktop` (Electron) / `com.invoicegen.app` (Android Capacitor)
 - **License Model:** Commercial Standalone / Fully Offline Workstation
 - **Default Invoice Numbering:** Starts at `INV-001` (e.g., `INV-001`, `INV-002`, `INV-003`).
@@ -41,8 +41,8 @@ This document stores persistent project knowledge, current architecture, environ
 | **Desktop Runtime** | Electron 33+ | Desktop window management, native file dialogues, IPC storage, auto-updates. |
 | **PDF Engine** | `pdfGeneratorService.ts` | 100% deterministic pure vector PDF generation. Zero DOM/canvas dependency. Multi-page support. |
 | **Excel Engine** | `exportToExcel.ts` via ExcelJS | Publication-grade OpenXML spreadsheets with A4 portrait Fit-to-Page settings. |
-| **Data Layer** | LocalStorage + `systemStorage.ts` | Complete offline resilience with zero external cloud requirements. |
-| **Test Engine** | Vitest + jsdom + testing-library | 17 test suites, 196 unit and integration tests (100% pass). |
+| **Data Layer** | LocalStorage + `systemStorage.ts` | Complete offline resilience with zero external cloud requirements (invoices, clients, products, business profile). |
+| **Test Engine** | Vitest + jsdom + testing-library | Full unit and integration coverage across billing, tax, clients, products, exports, and OTA updates. |
 | **Security / SAST** | OWASP Top 10 + CWE Compliance | Safe JSON deserialization, IPC updater verification, zero high CVEs. |
 
 ---
@@ -90,10 +90,10 @@ Invoice Gen/
 │   │   ├── ShareInvoiceModal/       # PDF/Excel/WhatsApp share sheet modal
 │   │   ├── application/settings/    # Multi-tab business settings modal
 │   │   └── ErrorBoundary/           # Root crash isolation error boundary
-│   ├── routes/                      # Views: InvoicesView, ClientsView, PrintInvoice
+│   ├── routes/                      # Views: InvoicesView, ClientsView, ProductsView, PrintInvoice
 │   ├── services/                    # fileExportService, pdfGeneratorService, nativeMobileService
 │   ├── themes/                      # 18 commercial invoice rendering templates
-│   ├── utils/                       # Calculations, tax rules, Excel exports
-│   └── test/                        # 17 Vitest test suites (194 tests)
+│   ├── utils/                       # Calculations, tax rules, productCatalog, Excel exports
+│   └── test/                        # Vitest unit & integration suites
 └── dist/                            # Production web bundle
 ```

@@ -4,6 +4,16 @@ All notable changes to **Invoice Gen** are documented in this file.
 
 ---
 
+## [1.5.1.1] - 2026-11-27
+
+### 📦 Product & Service Catalog + One-Click Invoice Loading
+* **Left Menu Bar & Mobile Navigation**: Added **Products** (`/products`) directly below **Clients** in the desktop sidebar, mobile bottom navigation bar (responsive 5-item layout), and `Ctrl+K` Command Palette (`G P`).
+* **Products & Service Catalog View (`ProductsView.tsx`)**: Full offline CRUD management for reusable products and services (name, details/specs, category, HSN/SAC or SKU, unit, default quantity, unit rate, default discount %, and GST/Sales Tax rate), search & category filtering, summary KPI cards, and one-click **New Bill** creation.
+* **Invoice Editor `"Select the Product"` Dropdown**: Added a `"Select the Product"` selector directly in the Invoice Editor Line Items bar that auto-loads all product details and recalculates totals immediately (replacing an untouched blank placeholder row on new invoices or appending additional line items), plus one-click saving of any invoice line item into the Product Catalog.
+* **Dual-Layer Persistence & Backup**: Synchronizes `products` across `localStorage` (`offline-software-products-v1`), `Documents/Invoice Gen Data/database.json` via `systemStorage`, and offline JSON backups.
+
+---
+
 ## [1.5.1] - 2026-11-24
 
 ### 🔄 Universal In-App OTA Update System (Windows, macOS & Android)

@@ -19,6 +19,7 @@ import {
   RiFileTextLine,
   RiPaletteLine,
   RiUserSharedLine,
+  RiBox3Line,
   RiAddLine,
   RiSparklingFill,
 } from "@remixicon/react";
@@ -419,7 +420,7 @@ export function DashboardSidebar({
         isOpen={commandPaletteOpen}
         onOpenChange={setCommandPaletteOpen}
         shortcut="k"
-        placeholder="Type a command or search invoices, clients..."
+        placeholder="Type a command or search invoices, clients, products..."
       >
         <CommandPaletteSection title="Navigation">
           <CommandPaletteItem
@@ -454,6 +455,17 @@ export function DashboardSidebar({
             }}
           >
             Client Directory &amp; Ledger
+          </CommandPaletteItem>
+          <CommandPaletteItem
+            id="nav-products"
+            icon={RiBox3Line}
+            shortcut="G P"
+            onAction={() => {
+              setCommandPaletteOpen(false);
+              navigate('/products');
+            }}
+          >
+            Products Catalog
           </CommandPaletteItem>
         </CommandPaletteSection>
 

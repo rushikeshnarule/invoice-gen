@@ -51,6 +51,7 @@ export interface ClientInfo {
 export interface LineItem {
   id: string;
   sno: number;
+  productId?: string;       // Linked catalog ProductItem ID (if loaded from Product Catalog)
   date?: string;            // Date of purchase/delivery for this item (crucial for monthly invoices)
   description: string;
   hsnSac?: string;          // Indian HSN/SAC code
@@ -65,6 +66,23 @@ export interface LineItem {
   gstRate: number;          // percentage (serves as Sales Tax % in US mode)
   gstAmount: number;        // tax amount (serves as Sales Tax in US mode)
   total: number;
+}
+
+export interface ProductItem {
+  id: string;
+  name: string;
+  description?: string;
+  hsnSac?: string;
+  sku?: string;
+  unit: string;
+  rate: number;
+  gstRate: number;
+  defaultQuantity?: number;
+  discount?: number;
+  taxable?: boolean;
+  category?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TaxSummaryRow {

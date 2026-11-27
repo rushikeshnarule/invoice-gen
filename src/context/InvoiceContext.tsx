@@ -3,7 +3,7 @@
 // Stores real commercial invoices, client profiles, and business settings locally.
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { BusinessInfo, BankDetails, ClientInfo, InvoiceRenderData, LineItem } from '../types';
+import type { BusinessInfo, BankDetails, ClientInfo, InvoiceRenderData, LineItem, ProductItem } from '../types';
 import type {
   InvoiceRecord,
 } from '../utils/initialOfflineData';
@@ -115,6 +115,7 @@ interface InvoiceContextValue {
   invoices: InvoiceRecord[];
   businessProfile: BusinessInfo & { bankDetails: BankDetails };
   clients: ClientInfo[];
+  products: ProductItem[];
   activeInvoiceId: string | null;
   setActiveInvoiceId: (id: string | null) => void;
 
@@ -142,6 +143,9 @@ interface InvoiceContextValue {
   saveClient: (client: ClientInfo) => void;
   updateClient: (originalName: string, updated: ClientInfo) => void;
   deleteClient: (clientName: string) => void;
+  saveProduct: (product: Omit<ProductItem, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => ProductItem;
+  updateProduct: (id: string, updated: Partial<ProductItem>) => void;
+  deleteProduct: (id: string) => void;
 
   // Offline Backups & Export
   exportOfflineBackup: () => string;
@@ -165,9 +169,43 @@ export const InvoiceContext = createContext<InvoiceContextValue | null>(null);
 const STORAGE_INVOICES_KEY = 'offline-software-invoices-v2';
 const STORAGE_BUSINESS_KEY = 'offline-software-business-profile-v2';
 const STORAGE_CLIENTS_KEY = 'offline-software-clients-v2';
+const STORAGE_PRODUCTS_KEY = 'offline-software-products-v1';
 const STORAGE_SETUP_KEY = 'offline-software-setup-completed-v1';
 export const CURRENT_APP_VERSION = getAppVersion();
 export const STORAGE_APP_VERSION_KEY = 'offline-software-app-version';
+
+function createProductId(): string {
+  return `prod-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function normalizeProductItem(raw: Partial<ProductItem> & { name: string }): ProductItem {
+  const rateNum = Number(raw.rate);
+  const gstNum = Number(raw.gstRate);
+  const qtyNum = Number(raw.defaultQuantity);
+  const discountNum = Number(raw.discount);
+  const safeRate = Number.isFinite(rateNum) && rateNum >= 0 ? rateNum : 0;
+  const safeGst = Number.isFinite(gstNum) && gstNum >= 0 ? gstNum : 0;
+  const safeQty = Number.isFinite(qtyNum) && qtyNum > 0 ? qtyNum : 1;
+  const safeDiscount = Number.isFinite(discountNum) && discountNum > 0 ? Math.min(100, discountNum) : 0;
+  const nowIso = new Date().toISOString();
+
+  return {
+    id: raw.id?.trim() || createProductId(),
+    name: raw.name.trim(),
+    description: raw.description?.trim() || undefined,
+    hsnSac: raw.hsnSac?.trim() || undefined,
+    sku: raw.sku?.trim() || undefined,
+    unit: raw.unit?.trim() || 'Nos',
+    rate: safeRate,
+    gstRate: safeGst,
+    defaultQuantity: safeQty,
+    discount: safeDiscount > 0 ? safeDiscount : undefined,
+    taxable: raw.taxable !== undefined ? Boolean(raw.taxable) : safeGst > 0,
+    category: raw.category?.trim() || undefined,
+    createdAt: raw.createdAt || nowIso,
+    updatedAt: nowIso,
+  };
+}
 
 function loadFromStorage<T>(key: string, fallback: () => T): T {
   try {
@@ -238,6 +276,22 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return [];
   });
 
+  const [products, setProducts] = useState<ProductItem[]>(() => {
+    const raw = localStorage.getItem(STORAGE_PRODUCTS_KEY);
+    if (!raw) return [];
+    try {
+      const records = JSON.parse(raw);
+      if (Array.isArray(records)) {
+        return records
+          .filter((p) => p && typeof p === 'object' && typeof p.name === 'string' && p.name.trim().length > 0)
+          .map((p) => normalizeProductItem(p));
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+
   const [hasCompletedSetup, setHasCompletedSetup] = useState<boolean>(() => {
     if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
       const isCompleted = loadFromStorage(STORAGE_SETUP_KEY, () => null);
@@ -299,6 +353,13 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (Array.isArray(sysDb.clients)) {
         setClients(sysDb.clients);
       }
+      if (Array.isArray(sysDb.products)) {
+        setProducts(
+          sysDb.products
+            .filter((p) => p && typeof p === 'object' && typeof p.name === 'string' && p.name.trim().length > 0)
+            .map((p) => normalizeProductItem(p))
+        );
+      }
     });
     return () => {
       cancelledRef.current = true;
@@ -327,10 +388,11 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       invoices,
       businessProfile,
       clients,
+      products,
       hasCompletedSetup,
       themeSettings,
     });
-  }, [invoices, businessProfile, clients, hasCompletedSetup]);
+  }, [invoices, businessProfile, clients, products, hasCompletedSetup]);
 
   const getInvoice = useCallback(
     (id: string) => invoices.find((inv) => inv.id === id),
@@ -915,16 +977,62 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
+  const saveProduct = useCallback(
+    (productInput: Omit<ProductItem, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): ProductItem => {
+      const normalized = normalizeProductItem(productInput);
+      setProducts((prev) => {
+        const idx = prev.findIndex((p) => p.id === normalized.id);
+        let next: ProductItem[];
+        if (idx >= 0) {
+          next = [...prev];
+          next[idx] = { ...prev[idx], ...normalized, createdAt: prev[idx].createdAt };
+        } else {
+          next = [normalized, ...prev];
+        }
+        saveToStorage(STORAGE_PRODUCTS_KEY, next);
+        return next;
+      });
+      return normalized;
+    },
+    []
+  );
+
+  const updateProduct = useCallback((id: string, updated: Partial<ProductItem>) => {
+    setProducts((prev) => {
+      const next = prev.map((p) => {
+        if (p.id !== id) return p;
+        return normalizeProductItem({
+          ...p,
+          ...updated,
+          id: p.id,
+          name: updated.name !== undefined ? updated.name : p.name,
+          createdAt: p.createdAt,
+        });
+      });
+      saveToStorage(STORAGE_PRODUCTS_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const deleteProduct = useCallback((id: string) => {
+    setProducts((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      saveToStorage(STORAGE_PRODUCTS_KEY, next);
+      return next;
+    });
+  }, []);
+
   const exportOfflineBackup = useCallback(() => {
     const backup = {
       version: '2.0-offline',
       exportedAt: new Date().toISOString(),
       businessProfile,
       clients,
+      products,
       invoices,
     };
     return JSON.stringify(backup, null, 2);
-  }, [businessProfile, clients, invoices]);
+  }, [businessProfile, clients, products, invoices]);
 
   const importOfflineBackup = useCallback((json: string): boolean => {
     try {
@@ -950,7 +1058,9 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
       }
 
-      if (cleanInvoices.length === 0) return false;
+      const hasValidProducts = Array.isArray(parsed.products) && parsed.products.length > 0;
+      const hasValidClients = Array.isArray(parsed.clients) && parsed.clients.length > 0;
+      if (cleanInvoices.length === 0 && !hasValidProducts && !hasValidClients) return false;
 
       let updatedProfile = businessProfile;
       if (parsed.businessProfile && typeof parsed.businessProfile === 'object') {
@@ -963,6 +1073,14 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updatedClients = parsed.clients;
         setClients(updatedClients);
         saveToStorage(STORAGE_CLIENTS_KEY, updatedClients);
+      }
+      let updatedProducts = products;
+      if (Array.isArray(parsed.products)) {
+        updatedProducts = parsed.products
+          .filter((p: any) => p && typeof p === 'object' && typeof p.name === 'string' && p.name.trim().length > 0)
+          .map((p: any) => normalizeProductItem(p));
+        setProducts(updatedProducts);
+        saveToStorage(STORAGE_PRODUCTS_KEY, updatedProducts);
       }
       setInvoices(cleanInvoices);
       saveToStorage(STORAGE_INVOICES_KEY, cleanInvoices);
@@ -977,6 +1095,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           invoices: cleanInvoices,
           businessProfile: updatedProfile,
           clients: updatedClients,
+          products: updatedProducts,
           hasCompletedSetup: true,
         },
         true
@@ -985,7 +1104,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {
       return false;
     }
-  }, [businessProfile, clients]);
+  }, [businessProfile, clients, products]);
 
   const resetToDefaultRealData = useCallback(() => {
     const initial = getInitialInvoices();
@@ -1026,6 +1145,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Any pre-seeded demo invoices or demo clients are completely purged.
       const realInvoices = shouldCleanLedger ? [] : invoices.filter((inv) => !isDemoInvoice(inv));
       const realClients = shouldCleanLedger ? [] : clients.filter((c) => !isDemoClient(c));
+      const realProducts = shouldCleanLedger ? [] : products;
 
       // Propagate user business profile to remaining non-demo invoices synchronously
       const updatedInvoices = realInvoices.map((inv) => {
@@ -1057,6 +1177,8 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       saveToStorage(STORAGE_INVOICES_KEY, updatedInvoices);
       setClients(realClients);
       saveToStorage(STORAGE_CLIENTS_KEY, realClients);
+      setProducts(realProducts);
+      saveToStorage(STORAGE_PRODUCTS_KEY, realProducts);
       saveToStorage(STORAGE_SETUP_KEY, true);
       try {
         localStorage.setItem(STORAGE_APP_VERSION_KEY, CURRENT_APP_VERSION);
@@ -1068,12 +1190,13 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           invoices: updatedInvoices,
           businessProfile: nextProfile,
           clients: realClients,
+          products: realProducts,
           hasCompletedSetup: true,
         },
         true
       );
     },
-    [businessProfile, clients, invoices, updateBusinessProfile]
+    [businessProfile, clients, products, invoices, updateBusinessProfile]
   );
 
   const restorePreviousSession = useCallback(async (): Promise<boolean> => {
@@ -1126,6 +1249,18 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveToStorage(STORAGE_CLIENTS_KEY, []);
       }
 
+      let cleanProducts: ProductItem[] = [];
+      if (Array.isArray(sysDb.products) && sysDb.products.length > 0) {
+        cleanProducts = sysDb.products
+          .filter((p) => p && typeof p === 'object' && typeof p.name === 'string' && p.name.trim().length > 0)
+          .map((p) => normalizeProductItem(p));
+        setProducts(cleanProducts);
+        saveToStorage(STORAGE_PRODUCTS_KEY, cleanProducts);
+      } else {
+        setProducts([]);
+        saveToStorage(STORAGE_PRODUCTS_KEY, []);
+      }
+
       if (sysDb.themeSettings) {
         try {
           if (sysDb.themeSettings.currentThemeId) {
@@ -1153,6 +1288,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           invoices: cleanInvoices,
           businessProfile: nextProfile,
           clients: cleanClients,
+          products: cleanProducts,
           hasCompletedSetup: true,
           themeSettings: sysDb.themeSettings,
         },
@@ -1179,6 +1315,7 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     invoices,
     businessProfile,
     clients,
+    products,
     activeInvoiceId,
     setActiveInvoiceId,
     getInvoice,
@@ -1193,6 +1330,9 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     saveClient,
     updateClient,
     deleteClient,
+    saveProduct,
+    updateProduct,
+    deleteProduct,
     exportOfflineBackup,
     importOfflineBackup,
     resetToDefaultRealData,

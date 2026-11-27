@@ -1,6 +1,6 @@
 # Product Features & Functional Capabilities — Invoice Gen
 
-**Invoice Gen** (Active Release: **v1.5.0**) is a commercial offline invoice and billing workstation designed for high-speed, zero-cloud invoicing across Windows, macOS, Android, and Web.
+**Invoice Gen** (Active Release: **v1.5.1.1**) is a commercial offline invoice and billing workstation designed for high-speed, zero-cloud invoicing across Windows, macOS, Android, and Web.
 
 ---
 
@@ -72,11 +72,17 @@
 
 ---
 
-## 5. Offline Client Directory & Commercial Ledger
+## 5. Offline Client & Product Directories
 
+### 5.1 Client Directory & Commercial Ledger
 - **Client Directory:** Local database of corporate buyers, GSTINs, addresses, phone numbers, and email contacts.
 - **Customer Transaction Ledger:** Tracks total invoices issued, cumulative revenue billed, payments collected, and outstanding receivables per client.
 - **History View:** One-click drill down to inspect previous bills and materials purchased by any client.
+
+### 5.2 Product & Service Catalog (`/products`)
+- **Catalog Management:** Dedicated `Products` view in the left sidebar (directly below `Clients`) and mobile bottom navigation for adding, editing, searching, categorizing, and deleting reusable products and services.
+- **Full Tax & Regional Support:** Stores product name, specifications/details, category, HSN/SAC (India) or SKU (US), unit, unit rate, default quantity, default discount %, and GST / Sales Tax rate.
+- **One-Click Invoice Loading:** Inside `InvoiceEditor`, the **"Select the Product"** dropdown loads all saved product details automatically into the invoice (replacing an untouched placeholder row on fresh invoices or appending subsequent items), plus one-click saving of custom line items back into the catalog and quick `"New Bill"` launch from any product card.
 
 ---
 

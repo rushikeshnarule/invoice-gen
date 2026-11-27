@@ -9,6 +9,7 @@ import { initAutoSyncListener, REMOTE_TEMPLATES_UPDATED_EVENT } from './services
 import { ThemePicker } from './components/ThemePicker/ThemePicker';
 import { InvoicesView } from './routes/InvoicesView';
 import { ClientsView } from './routes/ClientsView';
+import { ProductsView } from './routes/ProductsView';
 import { PrintInvoice } from './routes/PrintInvoice';
 import { SetupScreen } from './components/SetupScreen/SetupScreen';
 import {
@@ -26,6 +27,7 @@ import {
   RiPaletteLine,
   RiFileTextLine,
   RiUserSharedLine,
+  RiBox3Line,
   RiSettings4Line,
 } from '@remixicon/react';
 
@@ -34,7 +36,7 @@ const SaasAppShell: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isPrint = location.pathname.startsWith('/print');
-  const { invoices, businessProfile, hasCompletedSetup, completeSetup, importOfflineBackup, activeInvoiceId } = useInvoices();
+  const { invoices, products, businessProfile, hasCompletedSetup, completeSetup, importOfflineBackup, activeInvoiceId } = useInvoices();
   const [templateCount, setTemplateCount] = useState(() => getAllThemes().length);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -114,6 +116,8 @@ const SaasAppShell: React.FC = () => {
     ? 'invoices'
     : location.pathname.includes('/clients')
     ? 'clients'
+    : location.pathname.includes('/products')
+    ? 'products'
     : 'design';
 
   // Primary Navigation Items
@@ -140,6 +144,14 @@ const SaasAppShell: React.FC = () => {
       icon: RiUserSharedLine,
       href: '/clients',
       onClick: () => navigate('/clients'),
+    },
+    {
+      key: 'products',
+      label: 'Products',
+      icon: RiBox3Line,
+      href: '/products',
+      badge: products.length > 0 ? products.length : undefined,
+      onClick: () => navigate('/products'),
     },
   ];
 
@@ -197,13 +209,14 @@ const SaasAppShell: React.FC = () => {
           <Route path="/design" element={<ThemePicker />} />
           <Route path="/settings/design" element={<ThemePicker />} />
           <Route path="/clients" element={<ClientsView />} />
+          <Route path="/products" element={<ProductsView />} />
           <Route path="*" element={<Navigate to="/invoices" replace />} />
         </Routes>
       </main>
 
       {/* ─── NATIVE MOBILE BOTTOM NAVIGATION BAR ─── */}
       {!activeInvoiceId && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around py-1 px-3 md:hidden shadow-lg safe-area-bottom pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 flex items-center justify-around py-1 px-1.5 sm:px-3 md:hidden shadow-lg safe-area-bottom pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
           {[
             ...navItems,
             {
@@ -227,19 +240,19 @@ const SaasAppShell: React.FC = () => {
                   haptics.selection();
                   item.onClick?.();
                 }}
-                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative ${
+                className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-1 sm:px-3 rounded-xl transition-all relative ${
                   isActive ? 'text-blue-600 font-semibold' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 <div className="relative">
-                  <Icon className={`size-5.5 transition-transform ${isActive ? 'scale-110' : ''}`} />
+                  <Icon className={`size-5 sm:size-5.5 transition-transform ${isActive ? 'scale-110' : ''}`} />
                   {showBadge && (
                     <span className="absolute -top-1 -right-2.5 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-4 text-center leading-tight">
                       {item.badge}
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] mt-0.5 tracking-tight">{item.label}</span>
+                <span className="text-[10px] sm:text-[11px] mt-0.5 tracking-tight truncate max-w-full">{item.label}</span>
               </button>
             );
           })}

@@ -35,9 +35,10 @@ This document outlines the operational rules, responsibilities, architectural st
 3. **Strict Validation & Quality Gates:**
    - Before declaring any task complete or committing code:
      - `npx tsc -b`: Must exit with code 0 (zero type errors).
-     - `npm test`: Must pass 100% of test suites across all 17 test files (196 tests).
+     - `npm test`: Must pass 100% of Vitest test suites.
      - `npm audit`: Zero high or critical vulnerabilities.
      - `npm run lint`: Zero lint errors.
+     - `npm run build`: Clean production bundle build.
      - Check mobile responsiveness across standard phone viewports (360px–412px width).
      - Test native features directly on physical hardware (e.g., OnePlus 8T via ADB) when connected.
 
@@ -68,7 +69,7 @@ This document outlines the operational rules, responsibilities, architectural st
 ### B. Desktop Packaging (Electron)
 - **Windows:** `npm run package:exe` (`electron-builder --win nsis`).
 - **macOS:** `npm run package:mac` (`electron-builder --mac pkg`).
-- **Version Control:** Ensure `package.json`, `README.md`, and all update channels reflect the active version (currently `1.5.0`).
+- **Version Control:** Ensure `package.json`, `README.md`, and all update channels reflect the active version (currently `1.5.1.1`).
 
 ### C. Testing Standard
 - Unit & Integration: `npx vitest run`

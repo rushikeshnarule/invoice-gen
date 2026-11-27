@@ -6,7 +6,7 @@
 // 1. Primary: Documents/Invoice Gen Data/database.json on the user's PC filesystem.
 // 2. Synchronous cache: localStorage on fixed loopback origin.
 
-import type { BusinessInfo, BankDetails, ClientInfo } from '../types';
+import type { BusinessInfo, BankDetails, ClientInfo, ProductItem } from '../types';
 import type { InvoiceRecord } from '../utils/initialOfflineData';
 import { isDemoInvoice } from '../utils/initialOfflineData';
 
@@ -14,6 +14,7 @@ export interface SystemStorageDatabase {
   invoices: InvoiceRecord[];
   businessProfile: BusinessInfo & { bankDetails: BankDetails };
   clients: ClientInfo[];
+  products?: ProductItem[];
   hasCompletedSetup: boolean;
   themeSettings?: {
     currentThemeId?: string;
@@ -37,6 +38,7 @@ export interface SystemMemoryInfo {
 const STORAGE_INVOICES_KEY = 'offline-software-invoices-v2';
 const STORAGE_BUSINESS_KEY = 'offline-software-business-profile-v2';
 const STORAGE_CLIENTS_KEY = 'offline-software-clients-v2';
+const STORAGE_PRODUCTS_KEY = 'offline-software-products-v1';
 const STORAGE_SETUP_KEY = 'offline-software-setup-completed-v1';
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -155,13 +157,15 @@ export async function loadSystemMemory(): Promise<SystemStorageDatabase | null> 
     const rawInvoices = localStorage.getItem(STORAGE_INVOICES_KEY);
     const rawBusiness = localStorage.getItem(STORAGE_BUSINESS_KEY);
     const rawClients = localStorage.getItem(STORAGE_CLIENTS_KEY);
+    const rawProducts = localStorage.getItem(STORAGE_PRODUCTS_KEY);
     const rawSetup = localStorage.getItem(STORAGE_SETUP_KEY);
 
-    if (rawBusiness || rawInvoices) {
+    if (rawBusiness || rawInvoices || rawProducts) {
       return {
         invoices: rawInvoices ? JSON.parse(rawInvoices) : [],
         businessProfile: rawBusiness ? JSON.parse(rawBusiness) : null,
         clients: rawClients ? JSON.parse(rawClients) : [],
+        products: rawProducts ? JSON.parse(rawProducts) : [],
         hasCompletedSetup: rawSetup === 'true',
         updatedAt: new Date().toISOString(),
         version: 2,
@@ -183,6 +187,7 @@ export function saveSystemMemory(
     invoices: InvoiceRecord[];
     businessProfile: BusinessInfo & { bankDetails: BankDetails };
     clients: ClientInfo[];
+    products?: ProductItem[];
     hasCompletedSetup: boolean;
     themeSettings?: {
       currentThemeId?: string;
@@ -197,6 +202,9 @@ export function saveSystemMemory(
     localStorage.setItem(STORAGE_INVOICES_KEY, JSON.stringify(payload.invoices));
     localStorage.setItem(STORAGE_BUSINESS_KEY, JSON.stringify(payload.businessProfile));
     localStorage.setItem(STORAGE_CLIENTS_KEY, JSON.stringify(payload.clients));
+    if (payload.products !== undefined) {
+      localStorage.setItem(STORAGE_PRODUCTS_KEY, JSON.stringify(payload.products));
+    }
     localStorage.setItem(STORAGE_SETUP_KEY, JSON.stringify(payload.hasCompletedSetup));
     if (payload.themeSettings) {
       if (payload.themeSettings.currentThemeId) {

@@ -161,3 +161,18 @@ This document records technical defects, debugging insights, architectural lesso
   3. Saved the update APK into `context.getCacheDir()` (mapped in `file_paths.xml`) and launched `Intent.ACTION_VIEW` with `FileProvider.getUriForFile()` and `FLAG_GRANT_READ_URI_PERMISSION`.
   4. Added `onResume()` permission detection in `MainActivity.java` so if the user grants "Install unknown apps", the installer prompt appears immediately upon returning to the app.
   5. Connected `downloadUpdate()` and `installUpdate()` in `updateService.ts` to `window.invoiceAndroid`, providing the exact same progress bar and seamless in-app experience on Android as on desktop.
+
+---
+
+## 7. Product Catalog & Editor Ergonomics
+
+### Lesson 7.1: Placeholder Replacement vs. Append When Loading Catalog Products
+- **Context:** Newly created invoices initialize with a single blank `₹0` placeholder row (`"Goods Supply"` / `"Consulting & Professional Services"` / `"Retail Item"`). Appending a selected catalog product unconditionally would leave an unused `₹0` dummy row at line 1, while checking only `rate === 0` would wrongly overwrite a real zero-rated catalog item on the second selection.
+- **Permanent Solution:**
+  - Tagged catalog-loaded `LineItem` entries with optional `productId`.
+  - `isDefaultPlaceholderItem()` in `src/utils/productCatalog.ts` matches only `!item.productId && Number(item.rate) === 0` with default placeholder descriptions, replacing row 1 cleanly on first selection and appending cleanly on all subsequent selections.
+
+### Lesson 7.2: Backup Restoration With Empty Invoice Ledgers
+- **Defect:** `importOfflineBackup()` rejected valid JSON backups whenever `cleanInvoices.length === 0`, preventing restoration of backups containing only saved `products` or `clients`.
+- **Permanent Solution:**
+  - Allowed restoration when a backup has valid `invoices`, `products`, or `clients`.

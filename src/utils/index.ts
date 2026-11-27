@@ -14,6 +14,15 @@ export { QRCodeView, generateQRCodeSvg } from './qrcode';
 export { exportInvoiceToExcel, exportInvoicesLedgerToExcel } from './exportToExcel';
 export { sanitizeTemplateCss } from './sanitize';
 export {
+  US_UNITS,
+  IN_UNITS,
+  ALL_KNOWN_UNITS,
+  IN_GST_RATES,
+  isDefaultPlaceholderItem,
+  formatProductLineDescription,
+  productToLineItem,
+} from './productCatalog';
+export {
   US_STATES,
   US_STATES_LIST,
   US_TAX_PRESETS,
