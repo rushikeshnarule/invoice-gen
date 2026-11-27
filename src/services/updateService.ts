@@ -52,7 +52,7 @@ export function getAppVersion(): string {
   if (typeof __APP_VERSION__ !== "undefined" && __APP_VERSION__) {
     return String(__APP_VERSION__).replace(/^v/i, "").trim();
   }
-  return "1.5.1.1";
+  return "1.5.1.2";
 }
 
 export const CURRENT_APP_VERSION = getAppVersion();

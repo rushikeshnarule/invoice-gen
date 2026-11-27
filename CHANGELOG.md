@@ -4,6 +4,15 @@ All notable changes to **Invoice Gen** are documented in this file.
 
 ---
 
+## [1.5.1.2] - 2026-11-27
+
+### ✨ Invoice Editor Top Bar Refinement & Maintenance Release
+* **Streamlined Workstation Top Bar (`InvoiceEditor.tsx`)**: Compacted the editor header bar for zero horizontal scroll on desktop viewports while retaining quick access to navigation, invoice number, status, template selector, `Customize`, `Save Draft`, `Save PDF`, and the `More` actions menu.
+* **Calculation Summary Region Switcher**: Added quick `🇮🇳 IN` / `🇺🇸 US` switching inside the `More` menu and placed the full `🇮🇳 India (GST)` / `🇺🇸 US (Sales Tax)` segmented control inside the Calculation Summary Strip.
+* **Version Bump (`1.5.1.2`)**: Updated `package.json`, Capacitor Android metadata (`versionCode 6`, `versionName "1.5.1.2"`), Android OTA `User-Agent`, update service fallback, and documentation.
+
+---
+
 ## [1.5.1.1] - 2026-11-27
 
 ### 📦 Product & Service Catalog + One-Click Invoice Loading

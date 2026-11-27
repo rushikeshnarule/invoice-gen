@@ -64,8 +64,6 @@ import {
   RiAddLine,
   RiDeleteBinLine,
   RiFileCopyLine,
-  RiZoomInLine,
-  RiZoomOutLine,
   RiUserLine,
   RiImageLine,
   RiShieldCheckLine,
@@ -704,9 +702,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
-      {/* ─── WORKSTATION TOP BAR ─── */}
-      <div className="h-14 px-3 sm:px-4 lg:px-5 border-b border-slate-200 bg-white flex items-center justify-between gap-2 shrink-0 z-20 min-w-0 overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      {/* ─── WORKSTATION TOP BAR (STREAMLINED, ZERO HORIZONTAL SCROLL ON DESKTOP) ─── */}
+      <div className="h-14 px-3 sm:px-4 lg:px-5 border-b border-slate-200 bg-white flex items-center justify-between gap-2 shrink-0 z-20 min-w-0 overflow-x-auto md:overflow-visible no-scrollbar">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <Button
             size="small"
             variant="secondary"
@@ -716,25 +714,25 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
               onBack();
             }}
             className="text-xs shrink-0"
+            aria-label="Back to Invoices"
           >
-            Invoices
+            <span className="hidden sm:inline">Invoices</span>
           </Button>
 
           <div className="h-5 w-px bg-slate-200 hidden sm:block shrink-0" />
 
           {/* Invoice Number Input */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-xs font-semibold text-slate-500 hidden sm:inline">Invoice:</span>
-            <input
-              type="text"
-              value={invoiceData.invoiceNumber}
-              onChange={(e) => setInvoiceData({ ...invoiceData, invoiceNumber: e.target.value })}
-              className="font-bold text-xs sm:text-sm text-slate-900 border border-slate-200 hover:border-slate-300 focus:border-blue-600 rounded-lg px-2 sm:px-2.5 py-1 bg-slate-50 outline-none w-28 sm:w-36"
-            />
-          </div>
+          <input
+            type="text"
+            aria-label="Invoice number"
+            value={invoiceData.invoiceNumber}
+            onChange={(e) => setInvoiceData({ ...invoiceData, invoiceNumber: e.target.value })}
+            className="font-bold text-xs sm:text-sm text-slate-900 border border-slate-200 hover:border-slate-300 focus:border-blue-600 rounded-lg px-2 py-1 bg-slate-50 outline-none w-24 sm:w-28"
+          />
 
           {/* Status Dropdown */}
           <select
+            aria-label="Invoice status"
             value={invoiceData.status}
             onChange={(e) => handleStatusChange(e.target.value as any)}
             className="text-xs font-semibold px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-800 outline-none cursor-pointer shrink-0"
@@ -744,39 +742,21 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             <option value="paid">Paid</option>
             <option value="overdue">Overdue</option>
           </select>
-
-          {/* Regional Edition Switcher: 🇮🇳 India (GST) vs 🇺🇸 US (Sales Tax) */}
-          <SegmentedControl
-            aria-label="Select invoice region"
-            selectedKeys={new Set([isUS ? 'US' : 'IN'])}
-            onSelectionChange={(keys) => {
-              const val = Array.from(keys)[0];
-              if (val === 'IN' || val === 'US') handleToggleRegion(val);
-            }}
-            className="bg-slate-100 p-0.5 shrink-0"
-          >
-            <SegmentedControlItem id="IN" className="text-[11px] px-2 py-0.5 font-bold">
-              <span>🇮🇳 India (GST)</span>
-            </SegmentedControlItem>
-            <SegmentedControlItem id="US" className="text-[11px] px-2 py-0.5 font-bold">
-              <span>🇺🇸 US (Sales Tax)</span>
-            </SegmentedControlItem>
-          </SegmentedControl>
         </div>
 
-        {/* Center / Right: Template & Actions */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
-          {/* Theme Dropdown */}
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-50 border border-slate-200 px-2 sm:px-2.5 py-1 rounded-xl text-xs shrink-0">
-            <span className="text-slate-500 font-medium hidden sm:inline">Theme:</span>
+        {/* Right: Essential Top Bar Actions Only */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
+          {/* Compact Theme Selector + Customize */}
+          <div className="hidden md:flex items-center gap-1 bg-slate-50 border border-slate-200 px-1.5 py-1 rounded-xl text-xs shrink-0">
             <select
+              aria-label="Invoice template"
               value={themeId}
               onChange={(e) => {
                 const nextTheme = e.target.value;
                 setThemeId(nextTheme);
                 if (nextTheme === 'thermal') setZoomLevel(1.0);
               }}
-              className="bg-white text-blue-900 font-bold px-2 py-0.5 rounded-lg border border-blue-200 outline-none cursor-pointer text-xs max-w-[125px] sm:max-w-[170px] md:max-w-[200px] truncate"
+              className="bg-white text-blue-900 font-bold px-2 py-0.5 rounded-lg border border-blue-200 outline-none cursor-pointer text-xs max-w-[135px] lg:max-w-[155px] truncate"
             >
               {themes.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -796,96 +776,19 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
             </Button>
           </div>
 
-          {/* Zoom Controls: Visible on xl+ screens (>= 1280px) */}
-          <div className="hidden xl:flex items-center gap-1 bg-slate-100 px-1.5 py-1 rounded-lg border border-slate-200 shrink-0">
-            <IconButton
-              size="small"
-              icon={RiZoomOutLine}
-              aria-label="Zoom Out"
-              title="Zoom Out"
-              onClick={() =>
-                setZoomLevel((z) => {
-                  const current = typeof z === 'number' ? z : 0.85;
-                  return Math.max(0.4, Number((current - 0.1).toFixed(2)));
-                })
-              }
-            />
-            <span className="text-xs font-mono font-medium min-w-10 text-center text-slate-700 tabular-nums">
-              {typeof zoomLevel === 'number' ? `${Math.round(zoomLevel * 100)}%` : 'Auto'}
-            </span>
-            <IconButton
-              size="small"
-              icon={RiZoomInLine}
-              aria-label="Zoom In"
-              title="Zoom In"
-              onClick={() =>
-                setZoomLevel((z) => {
-                  const current = typeof z === 'number' ? z : 0.85;
-                  return Math.min(1.5, Number((current + 0.1).toFixed(2)));
-                })
-              }
-            />
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() => setZoomLevel('auto')}
-              className={`text-xs font-semibold ${
-                zoomLevel === 'auto' ? 'text-blue-600 bg-white shadow-2xs' : 'text-slate-600'
-              }`}
-            >
-              Fit
-            </Button>
-          </div>
-
-          {/* Primary Action CTA: Save Draft (Always visible) */}
+          {/* Primary Action CTA: Save Draft (Always visible on desktop/laptop without scrolling) */}
           <Button
             size="small"
             variant="secondary"
             leadingIcon={RiSave3Line}
             onClick={handleSave}
-            className="text-xs font-medium shrink-0"
+            className="hidden sm:inline-flex text-xs font-medium shrink-0"
           >
             Save Draft
           </Button>
 
-          {/* Secondary Actions: Visible on xl+ screens (>= 1280px), collapsed below xl to prevent 1366x768 workstation clipping */}
-          <div className="hidden xl:flex items-center gap-2 shrink-0">
-            <Button
-              size="small"
-              variant="secondary"
-              leadingIcon={RiFileExcel2Line}
-              onClick={handleExportExcel}
-              className="text-xs font-semibold shrink-0 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border-emerald-200"
-            >
-              Export Excel
-            </Button>
-
-            <Button
-              size="small"
-              variant="secondary"
-              leadingIcon={RiShareForwardLine}
-              onClick={() => {
-                updateInvoice(invoiceId, calculatedData, themeId);
-                setShowShareModal(true);
-              }}
-              className="text-xs font-semibold shrink-0"
-            >
-              Share
-            </Button>
-
-            <Button
-              size="small"
-              variant="secondary"
-              leadingIcon={RiPrinterLine}
-              onClick={handlePrint}
-              className="text-xs font-semibold shrink-0"
-            >
-              Print
-            </Button>
-          </div>
-
-          {/* Responsive Action Menu for < xl (including 1366x768 laptops) */}
-          <div className="relative xl:hidden shrink-0">
+          {/* Secondary Actions Dropdown (Export Excel, Share, Print, Region) */}
+          <div className="relative shrink-0">
             <Button
               size="small"
               variant="secondary"
@@ -894,7 +797,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
               className="text-xs font-semibold shrink-0"
               aria-label="More actions"
             >
-              Actions
+              <span className="hidden sm:inline">More</span>
             </Button>
 
             {showActionMenu && (
@@ -903,7 +806,19 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                   className="fixed inset-0 z-40"
                   onClick={() => setShowActionMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionMenu(false);
+                      handleSave();
+                    }}
+                    className="w-full flex sm:hidden items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 text-left cursor-pointer"
+                  >
+                    <RiSave3Line className="size-4 text-slate-600" />
+                    <span>Save Draft</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -943,43 +858,33 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                   <div className="h-px bg-slate-100 my-1" />
 
-                  {/* Compact Zoom Controls inside dropdown */}
+                  {/* Quick Tax Region Switcher */}
                   <div className="px-3 py-1.5 flex items-center justify-between text-xs text-slate-600">
-                    <span className="font-semibold text-[11px]">Zoom:</span>
-                    <div className="flex items-center gap-1">
+                    <span className="font-semibold text-[11px]">Region:</span>
+                    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
                       <button
                         type="button"
-                        onClick={() =>
-                          setZoomLevel((z) => {
-                            const current = typeof z === 'number' ? z : 0.85;
-                            return Math.max(0.4, Number((current - 0.1).toFixed(2)));
-                          })
-                        }
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-xs font-bold"
+                        onClick={() => {
+                          handleToggleRegion('IN');
+                          setShowActionMenu(false);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+                          !isUS ? 'bg-white text-blue-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                        }`}
                       >
-                        -
-                      </button>
-                      <span className="font-mono text-[11px] tabular-nums min-w-8 text-center">
-                        {typeof zoomLevel === 'number' ? `${Math.round(zoomLevel * 100)}%` : 'Auto'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setZoomLevel((z) => {
-                            const current = typeof z === 'number' ? z : 0.85;
-                            return Math.min(1.5, Number((current + 0.1).toFixed(2)));
-                          })
-                        }
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-xs font-bold"
-                      >
-                        +
+                        🇮🇳 IN
                       </button>
                       <button
                         type="button"
-                        onClick={() => setZoomLevel('auto')}
-                        className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-blue-600 ml-1"
+                        onClick={() => {
+                          handleToggleRegion('US');
+                          setShowActionMenu(false);
+                        }}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-colors ${
+                          isUS ? 'bg-white text-blue-700 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                        }`}
                       >
-                        Fit
+                        🇺🇸 US
                       </button>
                     </div>
                   </div>
@@ -1401,6 +1306,27 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
 
                 {/* Calculation Summary Strip */}
                 <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2 font-medium text-slate-600">
+                  {/* Tax Region Switcher */}
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 text-xs">
+                    <span className="font-semibold text-slate-700">Tax Region:</span>
+                    <SegmentedControl
+                      aria-label="Select invoice region"
+                      selectedKeys={new Set([isUS ? 'US' : 'IN'])}
+                      onSelectionChange={(keys) => {
+                        const val = Array.from(keys)[0];
+                        if (val === 'IN' || val === 'US') handleToggleRegion(val);
+                      }}
+                      className="bg-slate-200/70 p-0.5 shrink-0"
+                    >
+                      <SegmentedControlItem id="IN" className="text-[11px] px-2 py-0.5 font-bold">
+                        <span>🇮🇳 India (GST)</span>
+                      </SegmentedControlItem>
+                      <SegmentedControlItem id="US" className="text-[11px] px-2 py-0.5 font-bold">
+                        <span>🇺🇸 US (Sales Tax)</span>
+                      </SegmentedControlItem>
+                    </SegmentedControl>
+                  </div>
+
                   {/* Tax Treatment Selector */}
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 text-xs">
                     <span className="font-semibold text-slate-700">Tax Type:</span>

@@ -35,18 +35,18 @@ Available as a native **Windows application**, **macOS PKG installer & DMG**, **
 
 ---
 
-## 📥 Downloads (Latest Release v1.5.1.1)
+## 📥 Downloads (Latest Release v1.5.1.2)
 
 Choose your operating system to download the latest production build:
 
 | Operating System | Architecture | Package Format | Download Link |
 | :--- | :--- | :--- | :--- |
-| **⚡ All Desktop (Win/Mac)** | Universal | **In-App Hot Update (.asar)** | [⬇️ Download `Invoice-Gen-Update-1.5.1.1.asar`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.1/Invoice-Gen-Update-1.5.1.1.asar) |
-| **🪟 Windows** | x64 | **NSIS Setup Wizard** | [⬇️ Download `Invoice-Gen-Setup-1.5.1.1.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.1/Invoice-Gen-Setup-1.5.1.1.exe) |
-| **🪟 Windows** | x64 | **Portable (Zero-Install)** | [⬇️ Download `Invoice Gen 1.5.1.1.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.1/Invoice.Gen.1.5.1.1.exe) |
-| **🍏 macOS** | Apple Silicon (`arm64`) | **DMG Disk Image** | [⬇️ Download `Invoice-Gen-1.5.1.1-mac-arm64.dmg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.1/Invoice-Gen-1.5.1.1-mac-arm64.dmg) |
-| **🍏 macOS** | Intel (`x64`) | **DMG Disk Image** | [⬇️ Download `Invoice-Gen-1.5.1.1-mac-x64.dmg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.1/Invoice-Gen-1.5.1.1-mac-x64.dmg) |
-| **🤖 Android** | Universal | **Android APK** | [⬇️ Download `Invoice-Gen-1.5.1.1.apk`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.1/Invoice-Gen-1.5.1.1.apk) |
+| **⚡ All Desktop (Win/Mac)** | Universal | **In-App Hot Update (.asar)** | [⬇️ Download `Invoice-Gen-Update-1.5.1.2.asar`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.2/Invoice-Gen-Update-1.5.1.2.asar) |
+| **🪟 Windows** | x64 | **NSIS Setup Wizard** | [⬇️ Download `Invoice-Gen-Setup-1.5.1.2.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.2/Invoice-Gen-Setup-1.5.1.2.exe) |
+| **🪟 Windows** | x64 | **Portable (Zero-Install)** | [⬇️ Download `Invoice Gen 1.5.1.2.exe`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.2/Invoice.Gen.1.5.1.2.exe) |
+| **🍏 macOS** | Apple Silicon (`arm64`) | **DMG Disk Image** | [⬇️ Download `Invoice-Gen-1.5.1.2-mac-arm64.dmg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.2/Invoice-Gen-1.5.1.2-mac-arm64.dmg) |
+| **🍏 macOS** | Intel (`x64`) | **DMG Disk Image** | [⬇️ Download `Invoice-Gen-1.5.1.2-mac-x64.dmg`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.2/Invoice-Gen-1.5.1.2-mac-x64.dmg) |
+| **🤖 Android** | Universal | **Android APK** | [⬇️ Download `Invoice-Gen-1.5.1.2.apk`](https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.2/Invoice-Gen-1.5.1.2.apk) |
 
 > 📁 Looking for previous releases? Check out the [All Releases Archive](#-releases--version-history) or visit [GitHub Releases](https://github.com/rushikeshnarule/invoice-gen/releases).
 
@@ -238,6 +238,7 @@ All builds and releases are hosted directly on [GitHub Releases](https://github.
 
 | Version | Release Date | Highlights | Supported Platforms | Direct Links |
 | :--- | :--- | :--- | :--- | :--- |
+| **v1.5.1.2** | 2026-11-27 | Streamlined Desktop Invoice Editor Top Bar, Calculation Strip Tax Region Switcher, Version `1.5.1.2` Alignment | Windows, macOS, Android, Web | [Release Notes](CHANGELOG.md#1512---2026-11-27) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.5.1.2) |
 | **v1.5.1.1** | 2026-11-27 | Product & Service Catalog Menu, One-Click `"Select the Product"` Invoice Loading, Dual-Layer Product Persistence | Windows, macOS, Android, Web | [Release Notes](CHANGELOG.md#1511---2026-11-27) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.5.1.1) |
 | **v1.5.1** | 2026-11-24 | Universal In-App OTA Updates (Windows, macOS & Android), Zero Background Lock Errors | Windows, macOS, Android, Web | [Release Notes](CHANGELOG.md#151---2026-11-24) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.5.1) |
 | **v1.5.0** | 2026-11-23 | Seamless In-App Hot Updates (Zero Wizard), Full SAST Security Hardening, Zero High CVEs, Strict INV-001 Numbering, Physical Android Verification | Windows, macOS, Android, Web | [Release Notes](CHANGELOG.md#150---2026-11-23) • [Assets](https://github.com/rushikeshnarule/invoice-gen/releases/tag/v1.5.0) |

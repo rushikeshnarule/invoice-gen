@@ -7,7 +7,7 @@ This document stores persistent project knowledge, current architecture, environ
 ## 1. Project Identification & Versioning
 
 - **Application Name:** Invoice Gen
-- **Current Version:** `1.5.1.1`
+- **Current Version:** `1.5.1.2`
 - **Application ID:** `com.invoicegen.desktop` (Electron) / `com.invoicegen.app` (Android Capacitor)
 - **License Model:** Commercial Standalone / Fully Offline Workstation
 - **Default Invoice Numbering:** Starts at `INV-001` (e.g., `INV-001`, `INV-002`, `INV-003`).
