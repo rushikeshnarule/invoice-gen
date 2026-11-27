@@ -10,6 +10,7 @@ All notable changes to **Invoice Gen** are documented in this file.
 * **Streamlined Workstation Top Bar (`InvoiceEditor.tsx`)**: Compacted the editor header bar for zero horizontal scroll on desktop viewports while retaining quick access to navigation, invoice number, status, template selector, `Customize`, `Save Draft`, `Save PDF`, and the `More` actions menu.
 * **Calculation Summary Region Switcher**: Added quick `🇮🇳 IN` / `🇺🇸 US` switching inside the `More` menu and placed the full `🇮🇳 India (GST)` / `🇺🇸 US (Sales Tax)` segmented control inside the Calculation Summary Strip.
 * **Version Bump (`1.5.1.2`)**: Updated `package.json`, Capacitor Android metadata (`versionCode 6`, `versionName "1.5.1.2"`), Android OTA `User-Agent`, update service fallback, and documentation.
+* **Electron `.asar` Updater Fix (`original-fs`) & Silent Installer Fallback**: Fixed `"Invalid package ...asar"` in `electron/main.cjs` by writing `.asar` downloads to `.part` via `original-fs` + validating ASAR headers before restart, added automatic native-installer fallback in `updateService.ts`, and shipped `v1.5.1.2` with full native installers so existing `v1.5.1.1` desktop installs auto-upgrade cleanly via silent `/S` setup.
 
 ---
 

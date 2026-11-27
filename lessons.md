@@ -162,6 +162,14 @@ This document records technical defects, debugging insights, architectural lesso
   4. Added `onResume()` permission detection in `MainActivity.java` so if the user grants "Install unknown apps", the installer prompt appears immediately upon returning to the app.
   5. Connected `downloadUpdate()` and `installUpdate()` in `updateService.ts` to `window.invoiceAndroid`, providing the exact same progress bar and seamless in-app experience on Android as on desktop.
 
+### Lesson 6.3: Electron ASAR Virtual-FS Interception (`"Invalid package ...asar"`) During In-App OTA Updates
+- **Defect:** Downloading `Invoice-Gen-Update-*.asar` from within the Electron desktop app threw `Invalid package C:\Users\<user>\AppData\Local\Temp\Invoice-Gen-Update-*.asar` immediately when creating the write stream.
+- **Root Cause:** Electron monkey-patches Node's `fs` module so that paths ending in `.asar` are interpreted as read-only virtual ASAR archives (`fs.createWriteStream`, `fs.existsSync`, `fs.unlinkSync`). Writing a fresh `.asar` update file via patched `fs` fails before any bytes are written. In addition, prior releases still running unpatched `electron/main.cjs` pick `.asar` first if attached to a GitHub Release, hitting the same error unless the upgrade release omits `.asar` and delivers silent `.exe` / `.dmg` / `.apk` installers.
+- **Permanent Solution:**
+  1. In `electron/main.cjs`, imported `original-fs` (`const originalFs = require('original-fs')`), staged update downloads to `${destPath}.part` via `originalFs.createWriteStream`, verified the Chromium Pickle ASAR header (`validateAsarPackage`), and replaced `fs.existsSync`/`unlinkSync` in update handlers with `originalFs`.
+  2. Added `getFallbackInstallerAsset()` and `runInAppUpdate()` in `src/services/updateService.ts` (shared across `UpdateModal.tsx` and `settings-updates-tab.tsx`) so install errors are surfaced and failed `.asar` updates automatically fall back to the native platform installer.
+  3. Shipped `v1.5.1.2` as a silent-installer transition release (no `.asar` attached on `v1.5.1.2`) so `v1.5.1.1` installs upgrade seamlessly via `Invoice-Gen-Setup-1.5.1.2.exe /S` (and `.dmg`/`.apk`), unlocking `.asar` hot-updates for `v1.5.1.3+`.
+
 ---
 
 ## 7. Product Catalog & Editor Ergonomics

@@ -177,6 +177,21 @@ export function isAsarAsset(asset?: ReleaseAsset | null): boolean {
 }
 
 /**
+ * Resolves a full native installer fallback (.exe / .pkg / .dmg) if a desktop
+ * .asar hot-update fails or is unavailable on the release.
+ */
+export function getFallbackInstallerAsset(
+  assets: ReleaseAsset[],
+  excludedAssetName?: string
+): ReleaseAsset | null {
+  const nonAsar = assets.filter(
+    (a) => !isAsarAsset(a) && (!excludedAssetName || a.name !== excludedAssetName)
+  );
+  if (nonAsar.length === 0) return null;
+  return getRecommendedAsset(nonAsar);
+}
+
+/**
  * Retrieves update preferences from local storage.
  */
 export function getUpdatePreferences(): UpdatePreferences {
@@ -464,4 +479,85 @@ export async function installUpdate(filePath: string): Promise<{ success: boolea
   }
 
   return { success: false, error: "Auto-install is available on Windows, macOS, and Android editions" };
+}
+
+/**
+ * Downloads and triggers installation for an update asset, automatically falling
+ * back once to the platform installer (.exe / .pkg / .dmg) if an .asar hot-update fails.
+ */
+export async function runInAppUpdate(options: {
+  asset: ReleaseAsset;
+  assets?: ReleaseAsset[];
+  installDelayMs?: number;
+  onProgress?: (progress: DownloadProgress) => void;
+  onStateChange?: (state: "downloading" | "downloaded" | "installing", filePath?: string) => void;
+}): Promise<{ success: boolean; filePath?: string; usedAsset: ReleaseAsset; error?: string }> {
+  const { asset, assets = [], installDelayMs = 1500, onProgress, onStateChange } = options;
+
+  const attemptInstall = async (candidate: ReleaseAsset) => {
+    onStateChange?.("downloading");
+    onProgress?.({ percent: 0, bytesReceived: 0, totalBytes: candidate.size || 0, speed: 0 });
+
+    const downloadRes = await downloadUpdate(candidate, onProgress);
+    if (!downloadRes.success) {
+      return { success: false, error: downloadRes.error || "Failed to download update package" };
+    }
+
+    onStateChange?.("downloaded", downloadRes.filePath);
+    if (!downloadRes.filePath) {
+      return { success: true, filePath: downloadRes.filePath };
+    }
+
+    onStateChange?.("installing", downloadRes.filePath);
+    if (installDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, installDelayMs));
+    }
+
+    const installRes = await installUpdate(downloadRes.filePath);
+    if (!installRes.success) {
+      return {
+        success: false,
+        filePath: downloadRes.filePath,
+        error: installRes.error || "Failed to install downloaded update package",
+      };
+    }
+
+    return { success: true, filePath: downloadRes.filePath };
+  };
+
+  let primaryError = "";
+  try {
+    const primaryRes = await attemptInstall(asset);
+    if (primaryRes.success) {
+      return { ...primaryRes, usedAsset: asset };
+    }
+    primaryError = primaryRes.error || "Update failed";
+  } catch (err: unknown) {
+    primaryError = err instanceof Error ? err.message : "Update failed";
+  }
+
+  if (isAsarAsset(asset) && assets.length > 0) {
+    const fallbackAsset = getFallbackInstallerAsset(assets, asset.name);
+    if (fallbackAsset) {
+      try {
+        const fallbackRes = await attemptInstall(fallbackAsset);
+        if (fallbackRes.success) {
+          return { ...fallbackRes, usedAsset: fallbackAsset };
+        }
+        return {
+          success: false,
+          usedAsset: fallbackAsset,
+          error: fallbackRes.error || primaryError,
+        };
+      } catch (fallbackErr: unknown) {
+        return {
+          success: false,
+          usedAsset: fallbackAsset,
+          error: fallbackErr instanceof Error ? fallbackErr.message : primaryError,
+        };
+      }
+    }
+  }
+
+  return { success: false, usedAsset: asset, error: primaryError };
 }

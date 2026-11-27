@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   compareSemver,
   getRecommendedAsset,
+  getFallbackInstallerAsset,
+  runInAppUpdate,
   getUpdatePreferences,
   saveUpdatePreferences,
   checkForUpdates,
@@ -185,6 +187,96 @@ describe("Update Service Suite", () => {
       const installRes = await installUpdate("/data/user/0/com.invoicegen.app/cache/update.apk");
       expect(installMock).toHaveBeenCalledWith("/data/user/0/com.invoicegen.app/cache/update.apk");
       expect(installRes.success).toBe(true);
+    });
+  });
+
+  describe("ASAR fallback and runInAppUpdate", () => {
+    afterEach(() => {
+      delete (window as unknown as { invoiceDesktop?: unknown }).invoiceDesktop;
+    });
+
+    it("selects non-.asar setup installer as fallback when .asar fails", () => {
+      (window as unknown as { invoiceDesktop?: unknown }).invoiceDesktop = {
+        isDesktop: true,
+        platform: "win32",
+      };
+      const assets: ReleaseAsset[] = [
+        { name: "Invoice-Gen-Update-1.5.1.2.asar", size: 30000000, downloadUrl: "https://example.com/u.asar", contentType: "application/octet-stream" },
+        { name: "Invoice-Gen-Setup-1.5.1.2.exe", size: 178000000, downloadUrl: "https://example.com/setup.exe", contentType: "application/octet-stream" },
+        { name: "Invoice.Gen.1.5.1.2.exe", size: 146000000, downloadUrl: "https://example.com/portable.exe", contentType: "application/octet-stream" },
+      ];
+
+      const fallback = getFallbackInstallerAsset(assets, "Invoice-Gen-Update-1.5.1.2.asar");
+      expect(fallback?.name).toBe("Invoice-Gen-Setup-1.5.1.2.exe");
+    });
+
+    it("automatically falls back to Setup .exe when .asar download throws Invalid package", async () => {
+      const downloadUpdateMock = vi.fn(async ({ fileName }: { fileName: string }) => {
+        if (fileName.endsWith(".asar")) {
+          return { success: false, error: `Invalid package C:\\Temp\\${fileName}` };
+        }
+        return { success: true, filePath: `C:\\Temp\\${fileName}` };
+      });
+      const installUpdateMock = vi.fn(async () => ({ success: true }));
+
+      (window as unknown as { invoiceDesktop?: unknown }).invoiceDesktop = {
+        isDesktop: true,
+        platform: "win32",
+        downloadUpdate: downloadUpdateMock,
+        installUpdate: installUpdateMock,
+      };
+
+      const asarAsset: ReleaseAsset = {
+        name: "Invoice-Gen-Update-1.5.1.2.asar",
+        size: 30000000,
+        downloadUrl: "https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.2/Invoice-Gen-Update-1.5.1.2.asar",
+        contentType: "application/octet-stream",
+      };
+      const exeAsset: ReleaseAsset = {
+        name: "Invoice-Gen-Setup-1.5.1.2.exe",
+        size: 178000000,
+        downloadUrl: "https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.2/Invoice-Gen-Setup-1.5.1.2.exe",
+        contentType: "application/octet-stream",
+      };
+
+      const states: string[] = [];
+      const res = await runInAppUpdate({
+        asset: asarAsset,
+        assets: [asarAsset, exeAsset],
+        installDelayMs: 0,
+        onStateChange: (s) => states.push(s),
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.usedAsset.name).toBe("Invoice-Gen-Setup-1.5.1.2.exe");
+      expect(downloadUpdateMock).toHaveBeenCalledTimes(2);
+      expect(installUpdateMock).toHaveBeenCalledWith({ filePath: "C:\\Temp\\Invoice-Gen-Setup-1.5.1.2.exe" });
+      expect(states).toContain("installing");
+    });
+
+    it("surfaces installUpdate errors cleanly instead of leaving UI stuck installing", async () => {
+      (window as unknown as { invoiceDesktop?: unknown }).invoiceDesktop = {
+        isDesktop: true,
+        platform: "win32",
+        downloadUpdate: vi.fn(async () => ({ success: true, filePath: "C:\\Temp\\Invoice-Gen-Setup-1.5.1.2.exe" })),
+        installUpdate: vi.fn(async () => ({ success: false, error: "Installer blocked by antivirus" })),
+      };
+
+      const exeAsset: ReleaseAsset = {
+        name: "Invoice-Gen-Setup-1.5.1.2.exe",
+        size: 178000000,
+        downloadUrl: "https://github.com/rushikeshnarule/invoice-gen/releases/download/v1.5.1.2/Invoice-Gen-Setup-1.5.1.2.exe",
+        contentType: "application/octet-stream",
+      };
+
+      const res = await runInAppUpdate({
+        asset: exeAsset,
+        assets: [exeAsset],
+        installDelayMs: 0,
+      });
+
+      expect(res.success).toBe(false);
+      expect(res.error).toBe("Installer blocked by antivirus");
     });
   });
 });

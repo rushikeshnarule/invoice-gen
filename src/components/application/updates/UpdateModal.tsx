@@ -17,9 +17,9 @@ import type { ReleaseInfo, ReleaseAsset, DownloadProgress } from "@/services/upd
 import {
   detectPlatform,
   saveUpdatePreferences,
-  downloadUpdate,
   installUpdate,
   isDesktopEnvironment,
+  runInAppUpdate,
 } from "@/services/updateService";
 
 interface UpdateModalProps {
@@ -81,33 +81,20 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   };
 
   const handleStartInAppUpdate = async (asset: ReleaseAsset) => {
-    setDownloadState("downloading");
     setDownloadError("");
-    setDownloadProgress({ percent: 0, bytesReceived: 0, totalBytes: asset.size || 0, speed: 0 });
+    const result = await runInAppUpdate({
+      asset,
+      assets: release.assets,
+      onProgress: (p) => setDownloadProgress(p),
+      onStateChange: (state, filePath) => {
+        setDownloadState(state);
+        if (filePath) setDownloadedFilePath(filePath);
+      },
+    });
 
-    try {
-      const result = await downloadUpdate(asset, (p) => {
-        setDownloadProgress(p);
-      });
-
-      if (!result.success) {
-        setDownloadState("error");
-        setDownloadError(result.error || "Failed to download update package");
-        return;
-      }
-
-      setDownloadState("downloaded");
-      if (result.filePath) {
-        setDownloadedFilePath(result.filePath);
-        // Automatically proceed to launch installer after brief confirmation
-        setDownloadState("installing");
-        setTimeout(async () => {
-          await installUpdate(result.filePath!);
-        }, 1500);
-      }
-    } catch (err: unknown) {
+    if (!result.success) {
       setDownloadState("error");
-      setDownloadError(err instanceof Error ? err.message : "Download failed");
+      setDownloadError(result.error || "Failed to install update package");
     }
   };
 
@@ -250,9 +237,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
 
                   {downloadState === "downloaded" && downloadedFilePath && (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setDownloadState("installing");
-                        installUpdate(downloadedFilePath);
+                        const res = await installUpdate(downloadedFilePath);
+                        if (!res.success) {
+                          setDownloadState("error");
+                          setDownloadError(res.error || "Failed to launch update installer");
+                        }
                       }}
                       className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
                     >

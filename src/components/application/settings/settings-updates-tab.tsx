@@ -18,9 +18,9 @@ import {
   saveUpdatePreferences,
   getAppVersion,
   detectPlatform,
-  downloadUpdate,
   installUpdate,
   isDesktopEnvironment,
+  runInAppUpdate,
   type ReleaseInfo,
   type ReleaseAsset,
   type DownloadProgress,
@@ -75,10 +75,14 @@ export const SettingsUpdatesTab: React.FC = () => {
         const a = assets.find(x => !x.name.toLowerCase().includes('setup') && x.name.endsWith('.exe'));
         if (a) return a.downloadUrl;
       } else if (type === 'mac-pkg-arm') {
-        const a = assets.find(x => x.name.endsWith('.pkg') && x.name.includes('arm64'));
+        const a =
+          assets.find(x => x.name.endsWith('.pkg') && x.name.includes('arm64')) ||
+          assets.find(x => x.name.endsWith('.dmg') && x.name.includes('arm64'));
         if (a) return a.downloadUrl;
       } else if (type === 'mac-pkg-intel') {
-        const a = assets.find(x => x.name.endsWith('.pkg') && x.name.includes('x64'));
+        const a =
+          assets.find(x => x.name.endsWith('.pkg') && x.name.includes('x64')) ||
+          assets.find(x => x.name.endsWith('.dmg') && x.name.includes('x64'));
         if (a) return a.downloadUrl;
       } else if (type === 'android-apk') {
         const a = assets.find(x => x.name.endsWith('.apk'));
@@ -128,32 +132,20 @@ export const SettingsUpdatesTab: React.FC = () => {
   };
 
   const handleStartInAppUpdate = async (asset: ReleaseAsset) => {
-    setDownloadState("downloading");
     setDownloadError("");
-    setDownloadProgress({ percent: 0, bytesReceived: 0, totalBytes: asset.size || 0, speed: 0 });
+    const result = await runInAppUpdate({
+      asset,
+      assets: lastCheckResult.release?.assets || [],
+      onProgress: (p) => setDownloadProgress(p),
+      onStateChange: (state, filePath) => {
+        setDownloadState(state);
+        if (filePath) setDownloadedFilePath(filePath);
+      },
+    });
 
-    try {
-      const result = await downloadUpdate(asset, (p) => {
-        setDownloadProgress(p);
-      });
-
-      if (!result.success) {
-        setDownloadState("error");
-        setDownloadError(result.error || "Failed to download update package");
-        return;
-      }
-
-      setDownloadState("downloaded");
-      if (result.filePath) {
-        setDownloadedFilePath(result.filePath);
-        setDownloadState("installing");
-        setTimeout(async () => {
-          await installUpdate(result.filePath!);
-        }, 1500);
-      }
-    } catch (err: unknown) {
+    if (!result.success) {
       setDownloadState("error");
-      setDownloadError(err instanceof Error ? err.message : "Download failed");
+      setDownloadError(result.error || "Failed to install update package");
     }
   };
 
@@ -302,9 +294,13 @@ export const SettingsUpdatesTab: React.FC = () => {
           </div>
           {downloadState === "downloaded" && downloadedFilePath && (
             <button
-              onClick={() => {
+              onClick={async () => {
                 setDownloadState("installing");
-                installUpdate(downloadedFilePath);
+                const res = await installUpdate(downloadedFilePath);
+                if (!res.success) {
+                  setDownloadState("error");
+                  setDownloadError(res.error || "Failed to launch update installer");
+                }
               }}
               className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shrink-0 shadow-sm cursor-pointer"
             >
@@ -418,6 +414,7 @@ export const SettingsUpdatesTab: React.FC = () => {
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Seamless In-App Hot Update (.asar) */}
+          {(!lastCheckResult.release || Boolean(asarAsset)) && (
           <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/50 hover:border-blue-300 transition-colors flex flex-col justify-between sm:col-span-2">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2.5">
@@ -446,6 +443,7 @@ export const SettingsUpdatesTab: React.FC = () => {
               </a>
             </div>
           </div>
+          )}
 
           {/* Windows */}
           <div className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:border-blue-200 transition-colors flex flex-col justify-between">

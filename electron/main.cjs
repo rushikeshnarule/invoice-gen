@@ -7,6 +7,7 @@
 const { app, BrowserWindow, shell, Menu, ipcMain, dialog, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const originalFs = require('original-fs');
 const http = require('http');
 const https = require('https');
 const os = require('os');
@@ -988,6 +989,35 @@ ipcMain.handle('desktop:check-updates', async () => {
   }
 });
 
+function validateAsarPackage(filePath) {
+  let fd;
+  try {
+    const stats = originalFs.statSync(filePath);
+    if (!stats.isFile() || stats.size < 32) {
+      return { valid: false, error: 'Downloaded .asar update package is empty or incomplete' };
+    }
+    const header = Buffer.alloc(16);
+    fd = originalFs.openSync(filePath, 'r');
+    const bytesRead = originalFs.readSync(fd, header, 0, 16, 0);
+    if (bytesRead < 16) {
+      return { valid: false, error: 'Downloaded .asar update package header is truncated' };
+    }
+    // Chromium Pickle ASAR header layout: [4, headerPickleSize, headerPickleSize - 4, jsonLen]
+    const firstWord = header.readUInt32LE(0);
+    const headerSize = header.readUInt32LE(4);
+    if (firstWord !== 4 || headerSize < 8 || headerSize + 8 >= stats.size) {
+      return { valid: false, error: 'Downloaded file is not a valid ASAR archive' };
+    }
+    return { valid: true };
+  } catch (err) {
+    return { valid: false, error: err && err.message ? err.message : 'Unable to verify downloaded .asar archive' };
+  } finally {
+    if (fd !== undefined) {
+      try { originalFs.closeSync(fd); } catch {}
+    }
+  }
+}
+
 function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects = 10) {
   return new Promise((resolve, reject) => {
     if (maxRedirects <= 0) return reject(new Error('Too many redirects while downloading update'));
@@ -995,6 +1025,8 @@ function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects =
 
     const isHttps = fileUrl.startsWith('https');
     const client = isHttps ? https : http;
+    // Stage to .part via original-fs so Electron's ASAR virtual-fs never intercepts .asar writes.
+    const partPath = `${destPath}.part`;
 
     const req = client.get(fileUrl, {
       headers: {
@@ -1018,6 +1050,7 @@ function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects =
       }
 
       if (res.statusCode !== 200) {
+        res.resume();
         return reject(new Error(`Update server returned HTTP status ${res.statusCode}`));
       }
 
@@ -1026,7 +1059,11 @@ function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects =
       const startTime = Date.now();
       let lastProgressDispatch = 0;
 
-      const fileStream = fs.createWriteStream(destPath);
+      try {
+        if (originalFs.existsSync(partPath)) originalFs.unlinkSync(partPath);
+      } catch {}
+
+      const fileStream = originalFs.createWriteStream(partPath);
 
       res.on('data', (chunk) => {
         bytesReceived += chunk.length;
@@ -1050,17 +1087,26 @@ function downloadFileWithRedirects(fileUrl, destPath, onProgress, maxRedirects =
       res.pipe(fileStream);
 
       fileStream.on('finish', () => {
-        fileStream.close(() => resolve({ destPath, totalBytes: bytesReceived }));
+        fileStream.close(() => {
+          try {
+            if (originalFs.existsSync(destPath)) originalFs.unlinkSync(destPath);
+            originalFs.renameSync(partPath, destPath);
+            resolve({ destPath, totalBytes: bytesReceived });
+          } catch (renameErr) {
+            try { originalFs.unlinkSync(partPath); } catch {}
+            reject(renameErr);
+          }
+        });
       });
 
       fileStream.on('error', (err) => {
-        try { fs.unlinkSync(destPath); } catch {}
+        try { originalFs.unlinkSync(partPath); } catch {}
         reject(err);
       });
     });
 
     req.on('error', (err) => {
-      try { fs.unlinkSync(destPath); } catch {}
+      try { originalFs.unlinkSync(partPath); } catch {}
       reject(err);
     });
   });
@@ -1085,8 +1131,8 @@ ipcMain.handle('desktop:download-update', async (_event, { downloadUrl, fileName
       return { success: false, error: 'Invalid destination path traversal' };
     }
 
-    if (fs.existsSync(destPath)) {
-      try { fs.unlinkSync(destPath); } catch {}
+    if (originalFs.existsSync(destPath)) {
+      try { originalFs.unlinkSync(destPath); } catch {}
     }
 
     await downloadFileWithRedirects(downloadUrl, destPath, (progress) => {
@@ -1094,6 +1140,14 @@ ipcMain.handle('desktop:download-update', async (_event, { downloadUrl, fileName
         mainWindow.webContents.send('desktop:update-progress', progress);
       }
     });
+
+    if (ext === '.asar') {
+      const check = validateAsarPackage(destPath);
+      if (!check.valid) {
+        try { originalFs.unlinkSync(destPath); } catch {}
+        return { success: false, error: check.error };
+      }
+    }
 
     validDownloadedUpdates.add(destPath);
     return { success: true, filePath: destPath };
@@ -1117,7 +1171,7 @@ ipcMain.handle('desktop:install-update', async (_event, { filePath }) => {
   if (!validDownloadedUpdates.has(resolvedPath)) {
     return { success: false, error: 'Unauthorized update execution: file was not validated by the updater service' };
   }
-  if (!fs.existsSync(resolvedPath)) {
+  if (!originalFs.existsSync(resolvedPath)) {
     return { success: false, error: 'Update package file not found on disk' };
   }
 
@@ -1132,18 +1186,23 @@ ipcMain.handle('desktop:install-update', async (_event, { filePath }) => {
 
     // ─── Format 1: Direct In-App .asar Hot-Update (Zero Setup Wizard) ───
     if (ext === '.asar') {
+      const check = validateAsarPackage(resolvedPath);
+      if (!check.valid) {
+        return { success: false, error: check.error };
+      }
+
       let targetAsar = null;
 
-      // Locate current app.asar in production resources
+      // Locate current app.asar in production resources using original-fs so Electron does not lock it
       if (process.resourcesPath) {
         const candidate = path.join(process.resourcesPath, 'app.asar');
-        if (fs.existsSync(candidate)) {
+        if (originalFs.existsSync(candidate)) {
           targetAsar = candidate;
         }
       }
       if (!targetAsar) {
         const appPath = app.getAppPath();
-        if (appPath.endsWith('.asar') && fs.existsSync(appPath)) {
+        if (appPath.endsWith('.asar') && originalFs.existsSync(appPath)) {
           targetAsar = appPath;
         }
       }
