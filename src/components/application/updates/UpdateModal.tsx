@@ -41,10 +41,22 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   const [downloadedFilePath, setDownloadedFilePath] = useState<string>("");
   const [downloadError, setDownloadError] = useState<string>("");
 
+  const handleCloseModal = () => {
+    setDownloadState("idle");
+    setDownloadError("");
+    setDownloadedFilePath("");
+    onClose();
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        setDownloadState("idle");
+        setDownloadError("");
+        setDownloadedFilePath("");
+        onClose();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -116,7 +128,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         {/* Header gradient banner */}
         <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white p-6 pb-7">
           <button
-            onClick={onClose}
+            onClick={handleCloseModal}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white cursor-pointer"
             aria-label="Close"
           >
@@ -354,7 +366,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
               <RiExternalLinkLine className="size-3.5" />
             </button>
             <button
-              onClick={onClose}
+              onClick={handleCloseModal}
               className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition-colors cursor-pointer"
             >
               Remind Me Later

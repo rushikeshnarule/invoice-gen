@@ -522,7 +522,11 @@ export const InvoiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         invoiceNumber,
         invoiceDate: today,
         dueDate: today,
-        placeOfSupply: isUS ? (initialClient.state || 'California (CA)') : `${initialClient.state} (${clientStateCode})`,
+        placeOfSupply: isUS
+          ? (initialClient.state || 'California (CA)')
+          : /\(\d{2}\)/.test(initialClient.state || '')
+            ? initialClient.state
+            : `${initialClient.state} (${clientStateCode})`,
         status: 'draft',
         business: { ...businessProfile, region: isUS ? 'US' : 'IN' },
         client: { ...initialClient },

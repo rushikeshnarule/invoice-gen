@@ -239,7 +239,7 @@ const ThemePreviewComponent: React.FC<ThemePreviewProps> = ({
       {/* ─── SLEEK ADAPTIVE CANVAS TOOLBAR ─── */}
       {showControls && (
         <div
-          className="no-print sticky top-2 z-20 flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-md mb-4 text-xs select-none transition-all duration-150"
+          className="no-print sticky top-2 z-10 flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 shadow-md mb-4 text-xs select-none transition-all duration-150"
           style={{ maxWidth: '95%' }}
         >
           {/* Zoom Out Button */}

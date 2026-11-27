@@ -364,7 +364,7 @@ export const ProductsView: React.FC = () => {
               <div className="w-full sm:w-72">
                 <SearchField
                   aria-label="Filter product catalog"
-                  placeholder={isUS ? 'Search products, SKU, category or unit...' : 'Search products, HSN/SAC, category or unit...'}
+                  placeholder={isUS ? 'Search products, SKU, category...' : 'Search products, HSN/SAC...'}
                   value={searchQuery}
                   onChange={setSearchQuery}
                   size="small"
@@ -552,17 +552,19 @@ export const ProductsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Floating Action Button (FAB) */}
-      <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-30 sm:hidden">
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="flex items-center gap-2 bg-blue-600 active:bg-blue-700 text-white font-bold text-xs px-4 py-3 rounded-full shadow-lg shadow-blue-500/25 active:scale-95 transition-all touch-target-48 border border-blue-500"
-        >
-          <RiAddLine className="size-5" />
-          <span>New Product</span>
-        </button>
-      </div>
+      {/* Mobile Floating Action Button (FAB) - hidden when catalog is empty since empty state already has Add First Product */}
+      {products.length > 0 && (
+        <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 z-30 sm:hidden">
+          <button
+            type="button"
+            onClick={openAddModal}
+            className="flex items-center gap-2 bg-blue-600 active:bg-blue-700 text-white font-bold text-xs px-4 py-3 rounded-full shadow-lg shadow-blue-500/25 active:scale-95 transition-all touch-target-48 border border-blue-500"
+          >
+            <RiAddLine className="size-5" />
+            <span>New Product</span>
+          </button>
+        </div>
+      )}
 
       {/* Add / Edit Product Modal */}
       <Modal

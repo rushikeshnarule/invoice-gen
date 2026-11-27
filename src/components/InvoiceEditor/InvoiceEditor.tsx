@@ -1,7 +1,8 @@
 // ─── Real-Time Offline Invoice Editor ─────────────────────────────────
 // Desktop workstation for editing line items, taxes, clients, payments, and previewing live.
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type {
   InvoiceRenderData,
   LineItem,
@@ -117,6 +118,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   const [zoomLevel, setZoomLevel] = useState<number | 'auto'>('auto');
   const [newPresetName, setNewPresetName] = useState('');
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const actionMenuTriggerRef = useRef<HTMLDivElement | null>(null);
+  const [actionMenuPos, setActionMenuPos] = useState<{ top: number; right: number }>({ top: 58, right: 16 });
 
   // Share Invoice Modal
   const [showShareModal, setShowShareModal] = useState(false);
@@ -189,7 +192,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
       dueDate: getTodayLocalDateString(),
       placeOfSupply: isAppUS
         ? (businessProfile.state || 'California (CA)')
-        : `${businessProfile.state || 'Maharashtra'} (${extractStateCode(businessProfile.state || '', businessProfile.gstin) || '27'})`,
+        : (() => {
+            const baseState = (businessProfile.state || 'Maharashtra').trim();
+            if (/\(\d{2}\)/.test(baseState)) return baseState;
+            return `${baseState} (${extractStateCode(baseState, businessProfile.gstin) || '27'})`;
+          })(),
       status: 'draft',
       business: {
         name: businessProfile.name || '',
@@ -703,7 +710,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
   return (
     <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
       {/* ─── WORKSTATION TOP BAR (STREAMLINED, ZERO HORIZONTAL SCROLL ON DESKTOP) ─── */}
-      <div className="h-14 px-3 sm:px-4 lg:px-5 border-b border-slate-200 bg-white flex items-center justify-between gap-2 shrink-0 z-20 min-w-0 overflow-x-auto md:overflow-visible no-scrollbar">
+      <div className="h-14 px-3 sm:px-4 lg:px-5 border-b border-slate-200 bg-white flex items-center justify-between gap-2 shrink-0 z-40 min-w-0 overflow-x-auto md:overflow-visible no-scrollbar">
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <Button
             size="small"
@@ -788,25 +795,37 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
           </Button>
 
           {/* Secondary Actions Dropdown (Export Excel, Share, Print, Region) */}
-          <div className="relative shrink-0">
+          <div ref={actionMenuTriggerRef} className="relative shrink-0">
             <Button
               size="small"
               variant="secondary"
               leadingIcon={RiMoreFill}
-              onClick={() => setShowActionMenu((open) => !open)}
+              onClick={() => {
+                if (!showActionMenu && actionMenuTriggerRef.current) {
+                  const rect = actionMenuTriggerRef.current.getBoundingClientRect();
+                  setActionMenuPos({
+                    top: Math.round(rect.bottom + 6),
+                    right: Math.max(8, Math.round(window.innerWidth - rect.right)),
+                  });
+                }
+                setShowActionMenu((open) => !open);
+              }}
               className="text-xs font-semibold shrink-0"
               aria-label="More actions"
             >
               <span className="hidden sm:inline">More</span>
             </Button>
 
-            {showActionMenu && (
+            {showActionMenu && typeof document !== 'undefined' && createPortal(
               <>
                 <div
-                  className="fixed inset-0 z-40"
+                  className="fixed inset-0 z-[70]"
                   onClick={() => setShowActionMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div
+                  style={{ top: `${actionMenuPos.top}px`, right: `${actionMenuPos.right}px` }}
+                  className="fixed w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-[80] animate-in fade-in zoom-in-95 duration-150"
+                >
                   <button
                     type="button"
                     onClick={() => {
@@ -889,7 +908,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                     </div>
                   </div>
                 </div>
-              </>
+              </>,
+              document.body
             )}
           </div>
 
@@ -935,7 +955,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
         {/* LEFT PANE: HIGH-DENSITY EDITING FORM */}
         <div className={`w-full lg:w-[480px] xl:w-[560px] 2xl:w-[640px] 3xl:w-[700px] bg-white border-r border-slate-200 flex-col shrink-0 overflow-hidden transition-all duration-200 ${mobileTab === 'editor' ? 'flex flex-1 lg:flex-initial' : 'hidden lg:flex'}`}>
           {/* Form Tabs - Horizontally scrollable on mobile screens to prevent overlapping */}
-          <div className="px-3 xl:px-6 pt-2.5 xl:pt-4 pb-2 xl:pb-3 border-b border-slate-200 bg-slate-50/70 shrink-0 overflow-x-auto [scrollbar-width:none]">
+          <div className="px-2.5 xl:px-5 pt-2.5 xl:pt-4 pb-2 xl:pb-3 border-b border-slate-200 bg-slate-50/70 shrink-0 overflow-x-auto [scrollbar-width:none]">
             <SegmentedControl
               aria-label="Editor Form Tabs"
               selectedKeys={new Set([activeTab])}
@@ -948,19 +968,19 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
               }}
               className="flex min-w-max w-full bg-slate-200/70 p-0.5"
             >
-              <SegmentedControlItem id="items" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
+              <SegmentedControlItem id="items" className="text-[11px] xl:text-sm font-medium py-1 xl:py-1.5 px-2 xl:px-3 whitespace-nowrap shrink-0">
                 Items ({invoiceData.items.length})
               </SegmentedControlItem>
-              <SegmentedControlItem id="parties" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
+              <SegmentedControlItem id="parties" className="text-[11px] xl:text-sm font-medium py-1 xl:py-1.5 px-2 xl:px-3 whitespace-nowrap shrink-0">
                 Buyer &amp; Dates
               </SegmentedControlItem>
-              <SegmentedControlItem id="branding" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
+              <SegmentedControlItem id="branding" className="text-[11px] xl:text-sm font-medium py-1 xl:py-1.5 px-2 xl:px-3 whitespace-nowrap shrink-0">
                 Logo &amp; Stamp
               </SegmentedControlItem>
-              <SegmentedControlItem id="payment" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
+              <SegmentedControlItem id="payment" className="text-[11px] xl:text-sm font-medium py-1 xl:py-1.5 px-2 xl:px-3 whitespace-nowrap shrink-0">
                 Pay &amp; Terms
               </SegmentedControlItem>
-              <SegmentedControlItem id="styling" className="text-xs xl:text-sm font-medium py-1 xl:py-1.5 px-2.5 sm:px-3 whitespace-nowrap shrink-0">
+              <SegmentedControlItem id="styling" className="text-[11px] xl:text-sm font-medium py-1 xl:py-1.5 px-2 xl:px-3 whitespace-nowrap shrink-0">
                 Style &amp; Theme
               </SegmentedControlItem>
             </SegmentedControl>
@@ -975,7 +995,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({ invoiceId, onBack 
                 <div className="p-3 bg-slate-50/90 rounded-xl border border-slate-200 space-y-2.5">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className="text-[11px] font-bold text-slate-800">Invoice Classification:</span>
-                    <div className="inline-flex rounded-lg bg-slate-200/70 p-0.5 text-xs font-semibold">
+                    <div className="inline-flex flex-wrap sm:flex-nowrap max-w-full rounded-lg bg-slate-200/70 p-0.5 text-[11px] sm:text-xs font-semibold">
                       <Button
                         size="xs"
                         variant="ghost"
